@@ -1,0 +1,49 @@
+# Build
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# Logs
+Logs/
+
+# SQLite Database
+*.db
+*.db-shm
+*.db-wal
+
+# Test Results
+TestResults/
+
+# Coverage
+coverage/
+coverage.cobertura.xml
+
+# NuGet
+*.nupkg
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+
+# Publish
+publish/
+
+# Docker
+docker-data/
+
+# Temporary
+*.tmp

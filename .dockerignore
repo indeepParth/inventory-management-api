@@ -1,22 +1,32 @@
-bin/
-obj/
+# Git
+.git
+.gitignore
+
+# Visual Studio / VS Code
 .vs/
 .vscode/
 
-.git/
-.gitignore
+# Build artifacts (all projects)
+**/bin/
+**/obj/
 
+# Test
+TestResults/
+coverage/
+
+# Runtime data
 Logs/
 Data/
 
-TestResults/
-
-coverage/
-
-Docker/
-
-README.md
-
+# SQLite
 *.db
 *.db-shm
 *.db-wal
+
+# Documentation
+README.md
+LICENSE
+
+# OS
+.DS_Store
+Thumbs.db

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.320.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryManagement.API", "c:\_Projects\DotNET_Projects\InventoryManagement\InventoryManagement.API\InventoryManagement.API.csproj", "{CFF48AB7-0AC7-601C-B321-8A128D5BB412}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryManagement.API", "InventoryManagement.API\InventoryManagement.API.csproj", "{CFF48AB7-0AC7-601C-B321-8A128D5BB412}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InventoryManagement.Application", "InventoryManagement.Application\InventoryManagement.Application.csproj", "{56D9DDB2-668B-4AC3-B629-FC87846900AC}"
 EndProject

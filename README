@@ -1,0 +1,247 @@
+# Inventory Management API
+
+A production-oriented **ASP.NET Core Web API** built with **Clean Architecture**, **Vertical Slice Architecture**, **CQRS + MediatR**, **ASP.NET Identity**, **JWT Authentication**, **Refresh Token Rotation**, **Serilog**, and **Docker**.
+
+The project focuses on maintainability, scalability, and modern backend development practices rather than a simple CRUD implementation.
+
+---
+
+## Features
+
+### Architecture
+
+* Clean Architecture
+* Vertical Slice Architecture
+* CQRS with MediatR
+* Repository Pattern
+* Dependency Injection
+* FluentValidation Pipeline Behavior
+
+### Authentication & Authorization
+
+* ASP.NET Identity
+* JWT Authentication
+* Refresh Token Rotation
+* Policy-based Authorization
+
+### Product Management
+
+* Create Product
+* Update Product
+* Delete Product
+* Get Product by Id
+* Get All Products
+
+### Logging & Error Handling
+
+* Global Exception Middleware
+* Structured Logging with Serilog
+* Console and File Logging
+
+### Database
+
+* Entity Framework Core
+* SQLite
+* Automatic EF Core Migrations on Startup
+
+### DevOps
+
+* Multi-stage Docker Build
+* Docker Compose
+* Persistent Database Volume
+* Persistent Log Volume
+
+---
+
+## Architecture
+
+```
+                    Client
+                       │
+                       ▼
+              ASP.NET Core API
+                       │
+        ┌──────────────┼──────────────┐
+        ▼                             ▼
+ Authentication                Product Module
+        │                             │
+        ▼                             ▼
+ ASP.NET Identity              CQRS + MediatR
+        │                             │
+        └──────────────┬──────────────┘
+                       ▼
+                  Entity Framework
+                       ▼
+                    SQLite
+```
+
+---
+
+## Technology Stack
+
+| Technology            | Description                   |
+| --------------------- | ----------------------------- |
+| ASP.NET Core 8        | Web API Framework             |
+| C#                    | Programming Language          |
+| Entity Framework Core | ORM                           |
+| SQLite                | Database                      |
+| MediatR               | CQRS                          |
+| ASP.NET Identity      | User Management               |
+| JWT                   | Authentication                |
+| FluentValidation      | Request Validation            |
+| Serilog               | Structured Logging            |
+| Docker                | Containerization              |
+| Docker Compose        | Local Development Environment |
+| xUnit                 | Unit Testing                  |
+| Moq                   | Mocking Framework             |
+
+---
+
+## Project Structure
+
+```
+InventoryManagement.API
+
+InventoryManagement.Application
+    Features
+        Auth
+            Register
+            Login
+            RefreshAccessToken
+
+        Products
+            CreateProduct
+            UpdateProduct
+            DeleteProduct
+            GetProductById
+            GetProducts
+
+InventoryManagement.Domain
+
+InventoryManagement.Infrastructure
+
+InventoryManagement.Tests
+```
+
+---
+
+## Running the Project
+
+### Clone Repository
+
+```
+git clone <repository-url>
+cd InventoryManagement
+```
+
+### Run with Docker
+
+```
+docker compose up --build
+```
+
+Swagger UI:
+
+```
+http://localhost:8080/swagger
+```
+
+The application automatically:
+
+* Creates the database (if it does not exist)
+* Applies pending EF Core migrations
+* Starts the API
+* Persists database and log files using Docker volumes
+
+---
+
+## Authentication Flow
+
+```
+Register
+    │
+    ▼
+Login
+    │
+    ▼
+JWT Access Token
+    │
+    ▼
+API Requests
+    │
+    ▼
+Access Token Expires
+    │
+    ▼
+Refresh Token
+    │
+    ▼
+New Access Token
+```
+
+---
+
+## Implemented Features
+
+* ✅ Clean Architecture
+* ✅ Vertical Slice Architecture
+* ✅ CQRS + MediatR
+* ✅ Repository Pattern
+* ✅ ASP.NET Identity
+* ✅ JWT Authentication
+* ✅ Refresh Token Rotation
+* ✅ Policy-based Authorization
+* ✅ FluentValidation
+* ✅ Global Exception Middleware
+* ✅ Serilog Logging
+* ✅ SQLite
+* ✅ Docker
+* ✅ Docker Compose
+* ✅ Automatic EF Core Migrations
+
+---
+
+## Roadmap
+
+### Completed
+
+* Clean Architecture
+* Vertical Slice Architecture
+* CQRS
+* JWT Authentication
+* Refresh Tokens
+* Serilog
+* Docker
+* Docker Compose
+
+### Planned
+
+* Integration Tests
+* GitHub Actions CI/CD
+* Pagination / Searching / Filtering
+* Response Caching
+* API Versioning
+* OpenTelemetry
+* Redis Caching
+* SQL Server Support
+
+---
+
+## Learning Objectives
+
+This project is designed to demonstrate practical experience with:
+
+* Backend Architecture
+* Authentication & Authorization
+* API Design
+* Dependency Injection
+* Validation Pipelines
+* Logging & Monitoring
+* Containerization
+* Modern .NET Development Practices
+
+---
+
+## License
+
+This project is provided for educational and portfolio purposes.

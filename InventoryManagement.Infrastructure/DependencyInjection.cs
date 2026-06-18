@@ -23,7 +23,7 @@ namespace InventoryManagement.Infrastructure
         {
             services.AddDbContext<ApplicationDbContext>(Options =>
             {
-                Options.UseSqlite(configuration.GetConnectionString("DefaultString"));
+                Options.UseSqlite(configuration.GetConnectionString("DefaultConnection"));
             });
 
             services.AddScoped<IProductRepository, ProductRepository>();

@@ -24,16 +24,12 @@ RUN dotnet restore InventoryManagement.sln
 # Copy source code
 COPY . .
 
-RUN dotnet build \
-    InventoryManagement.API/InventoryManagement.API.csproj \
-    -c $BUILD_CONFIGURATION \
-    --no-restore
-
+# Publish
 RUN dotnet publish \
     InventoryManagement.API/InventoryManagement.API.csproj \
     -c $BUILD_CONFIGURATION \
     -o /app/publish \
-    --no-build
+    --no-restore
 
 # ==========================
 # Runtime Stage

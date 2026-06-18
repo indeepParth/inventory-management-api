@@ -14,7 +14,7 @@ obj/
 .vscode/
 
 # Logs
-Logs/
+
 
 # SQLite Database
 *.db

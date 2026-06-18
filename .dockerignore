@@ -1,0 +1,32 @@
+# Git
+.git
+.gitignore
+
+# Visual Studio / VS Code
+.vs/
+.vscode/
+
+# Build artifacts (all projects)
+**/bin/
+**/obj/
+
+# Test
+TestResults/
+coverage/
+
+# Runtime data
+Logs/
+Data/
+
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
+# Documentation
+README.md
+LICENSE
+
+# OS
+.DS_Store
+Thumbs.db

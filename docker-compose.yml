@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+
+  inventory-api:
+
+    container_name: inventory-api
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+
+    volumes:
+      - ./Data:/app/Data
+      - ./Logs:/app/Logs
+
+    restart: unless-stopped

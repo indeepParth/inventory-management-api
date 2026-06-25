@@ -17,8 +17,9 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
         public async Task GetProductByID_Should_Have_Product()
         {
             // ARRENGE
+            CancellationToken cancellationToken = new CancellationToken();
             var _repositoryMock = new Mock<IProductRepository>();
-            _repositoryMock.Setup(x => x.GetProductByIdAsync(1))
+            _repositoryMock.Setup(x => x.GetProductByIdAsync(1, cancellationToken))
                             .ReturnsAsync(new Product
                             {
                                 Id = 1,
@@ -32,8 +33,6 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
 
             Handler handler = new Handler(_repositoryMock.Object);
 
-            CancellationToken cancellationToken = new CancellationToken();
-
             // ACT
             var product = await handler.Handle(request, cancellationToken);
 
@@ -46,7 +45,7 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
 
             // ASSERT
             _repositoryMock.Verify(
-                x => x.GetProductByIdAsync(1),
+                x => x.GetProductByIdAsync(1, cancellationToken),
                 Times.Once
             );
         }
@@ -54,21 +53,20 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
         [Fact]
         public async Task GetProductById_Should_Throw_NotFoundException()
         {
+            CancellationToken cancellationToken = new CancellationToken();
             var repositoryMock = new Mock<IProductRepository>();
-            repositoryMock.Setup(x => x.GetProductByIdAsync(It.IsAny<int>()))
+            repositoryMock.Setup(x => x.GetProductByIdAsync(It.IsAny<int>(), cancellationToken))
                             .ReturnsAsync((Product?)null);
 
             Query request = new Query { Id = 1 };
 
             Handler handler = new Handler(repositoryMock.Object);
 
-            CancellationToken cancellationToken = new CancellationToken();
-
             await Assert.ThrowsAsync<NotFoundException>(()
                         => handler.Handle(request, cancellationToken));
 
             repositoryMock.Verify(
-                x => x.GetProductByIdAsync(1),
+                x => x.GetProductByIdAsync(1, cancellationToken),
                 Times.Once);
         }
     }

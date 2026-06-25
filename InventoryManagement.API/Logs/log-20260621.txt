@@ -1,0 +1,1 @@
+2026-06-21 14:21:42.632 +05:30 [ERR] An error occurred using the connection to database 'main' on server 'Data/inventory.db'.

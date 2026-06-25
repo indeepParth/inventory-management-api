@@ -17,6 +17,7 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
         public async Task Handle_Should_Update_Product()
         {
             // Arrange
+            // CancellationToken cancellationToken = new CancellationToken();
             var existingProduct = new Product
             {
                 Id = 1,
@@ -37,31 +38,29 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
 
 
             var _repositoryMock = new Mock<IProductRepository>();
-            _repositoryMock.Setup(x => x.GetProductByIdAsync(1))
+            _repositoryMock.Setup(x => x.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
                             .ReturnsAsync(existingProduct);
-            _repositoryMock.Setup(x => x.SaveChangesAsync())
+            _repositoryMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
                             .Returns(Task.CompletedTask);
 
             var handler = new Handler(_repositoryMock.Object);
 
-            CancellationToken cancellationToken = default;
-
             // ACT
-            await handler.Handle(updateDto, cancellationToken);
+            await handler.Handle(updateDto, It.IsAny<CancellationToken>());
 
             existingProduct.Should().NotBeNull();
-            existingProduct.Name.Should().Be("Old Product");
-            existingProduct.SKU.Should().Be("OLD123");
-            existingProduct.Quantity.Should().Be(5);
-            existingProduct.Price.Should().Be(50);
+            existingProduct.Name.Should().Be("Updated Product");
+            existingProduct.SKU.Should().Be("NEW123");
+            existingProduct.Quantity.Should().Be(20);
+            existingProduct.Price.Should().Be(150);
 
             // ASSERT            
             _repositoryMock.Verify(
-                x => x.GetProductByIdAsync(1),
+                x => x.GetProductByIdAsync(1, It.IsAny<CancellationToken>()),
                 Times.Once);
 
             _repositoryMock.Verify(
-                x => x.SaveChangesAsync(),
+                x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
                 Times.Once);
         }
     }

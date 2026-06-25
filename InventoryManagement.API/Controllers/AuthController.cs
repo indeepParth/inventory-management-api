@@ -15,25 +15,25 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost("Register")]
-        public IActionResult Register(Application.Features.Auth.Register.Command request)
+        public async Task<IActionResult> Register(Application.Features.Auth.Register.Command request)
         {
-            var responce = _sender.Send(request);
+            var responce = await _sender.Send(request);
 
             return Ok(responce);
         }
 
         [HttpPost("Login")]
-        public IActionResult Login(Application.Features.Auth.Login.Command request)
+        public async Task<IActionResult> Login(Application.Features.Auth.Login.Command request)
         {
-            var responce = _sender.Send(request);
+            var responce = await _sender.Send(request);
 
             return Ok(responce);
         }
 
         [HttpPost("RefreshToken")]
-        public IActionResult RefreshToken(Application.Features.Auth.RefreshAccessToken.Command request)
+        public async Task<IActionResult> RefreshToken(Application.Features.Auth.RefreshAccessToken.Command request)
         {
-            var responce = _sender.Send(request);
+            var responce = await _sender.Send(request);
 
             return Ok(responce);
         }

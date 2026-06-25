@@ -17,7 +17,10 @@ builder.Services
 
 var app = builder.Build();
 
-await app.ApplyMigrationsAsync();
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    await app.ApplyMigrationsAsync();
+}
 
 if (!app.Environment.IsProduction())
 {

@@ -18,12 +18,13 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
         {
             // Arrange
             Product? addedProduct = null;
+            // CancellationToken cancellationToken = new CancellationToken();
             
             var _repositoryMock = new Mock<IProductRepository>();
-            _repositoryMock.Setup(x => x.AddProductAsync(It.IsAny<Product>()))
-                            .Callback<Product>(p => addedProduct = p)
+            _repositoryMock.Setup(x => x.AddProductAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()))
+                            .Callback<Product, CancellationToken>((p,ct) => addedProduct = p)
                             .Returns(Task.CompletedTask);
-            _repositoryMock.Setup(x => x.SaveChangesAsync())
+            _repositoryMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
                             .Returns(Task.CompletedTask);
 
             var handler = new Handler(_repositoryMock.Object);
@@ -36,10 +37,8 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
                 Price = 99.99m
             };
 
-            CancellationToken cancellationToken = default;
-
             // ACT
-            await handler.Handle(newProduct, cancellationToken);
+            await handler.Handle(newProduct, It.IsAny<CancellationToken>());
 
             addedProduct.Should().NotBeNull();
             addedProduct.Name.Should().Be(newProduct.Name);
@@ -49,11 +48,11 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
 
             // ASSERT            
             _repositoryMock.Verify(
-                x => x.AddProductAsync(It.IsAny<Product>()),
+                x => x.AddProductAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()),
                 Times.Once);
 
             _repositoryMock.Verify(
-                x => x.SaveChangesAsync(),
+                x => x.SaveChangesAsync(It.IsAny<CancellationToken>()),
                 Times.Once);
         }
     }

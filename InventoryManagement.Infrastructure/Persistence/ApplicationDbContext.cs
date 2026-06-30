@@ -20,6 +20,8 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+        public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -91,6 +93,25 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .WithMany(x => x.Products)
                       .HasForeignKey(x => x.SupplierId)
                       .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<StockMovement>(entity =>
+            {
+                entity.Property(x => x.QuantityChange).HasPrecision(18, 3);
+                entity.Property(x => x.BalanceBefore).HasPrecision(18, 3);
+                entity.Property(x => x.BalanceAfter).HasPrecision(18, 3);
+                entity.Property(x => x.UnitCost).HasPrecision(18, 2);
+                entity.Property(x => x.SourceType).IsRequired();
+                entity.Property(x => x.CreatedBy).IsRequired();
+
+                entity.HasIndex(x => new { x.ProductId, x.OccurredAtUtc });
+                entity.HasIndex(x => new { x.MovementType, x.OccurredAtUtc });
+
+                entity.HasOne(x => x.Product)
+                      .WithMany(x => x.StockMovements)
+                      .HasForeignKey(x => x.ProductId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
             });
         }
     }

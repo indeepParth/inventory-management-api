@@ -19,9 +19,6 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
             RuleFor(x => x.DefaultSellingPrice)
                 .GreaterThan(0);
 
-            RuleFor(x => x.Quantity)
-                .GreaterThanOrEqualTo(0);
-
             RuleFor(x => x.BaseUnit)
                 .IsInEnum();
 

@@ -26,7 +26,6 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             {
                 Name = "Uncategorized product",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                Quantity = 1,
                 BaseUnit = UnitOfMeasure.Piece,
                 DefaultSellingPrice = 10
             });
@@ -43,7 +42,6 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             {
                 Name = "Invalid category product",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                Quantity = 1,
                 BaseUnit = UnitOfMeasure.Piece,
                 DefaultSellingPrice = 10,
                 CategoryId = int.MaxValue
@@ -62,7 +60,6 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             {
                 Name = "Product to update",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                Quantity = 1,
                 BaseUnit = UnitOfMeasure.Piece,
                 DefaultSellingPrice = 10,
                 CategoryId = category.Id
@@ -78,7 +75,6 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
                     product.Id,
                     product.Name,
                     product.SKU,
-                    product.Quantity,
                     product.BaseUnit,
                     product.DefaultSellingPrice,
                     int.MaxValue,

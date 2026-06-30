@@ -47,7 +47,6 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             {
                 Name = "Test Product",
                 SKU = "TEST123",
-                Quantity = 10.250m,
                 BaseUnit = UnitOfMeasure.Kilogram,
                 DefaultSellingPrice = 99.99m,
                 CategoryId = 1
@@ -59,7 +58,7 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             addedProduct.Should().NotBeNull();
             addedProduct.Name.Should().Be(newProduct.Name);
             addedProduct.SKU.Should().Be(newProduct.SKU);
-            addedProduct.Quantity.Should().Be(newProduct.Quantity);
+            addedProduct.Quantity.Should().Be(0m);
             addedProduct.BaseUnit.Should().Be(newProduct.BaseUnit);
             addedProduct.DefaultSellingPrice.Should().Be(newProduct.DefaultSellingPrice);
             addedProduct.AverageCost.Should().Be(0m);

@@ -63,7 +63,6 @@ namespace InventoryManagement.API.Controllers
                 id,
                 command.Name,
                 command.SKU,
-                command.Quantity,
                 command.BaseUnit,
                 command.DefaultSellingPrice,
                 command.CategoryId,

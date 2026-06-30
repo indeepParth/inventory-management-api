@@ -15,7 +15,14 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
     public class HandlerTest
     {
         [Fact]
-        public async Task Handle_Should_Update_Product()
+        public void Command_Should_Not_Expose_Stock_Fields()
+        {
+            typeof(Command).GetProperty("Quantity").Should().BeNull();
+            typeof(Command).GetProperty("AverageCost").Should().BeNull();
+        }
+
+        [Fact]
+        public async Task Handle_Should_Update_Metadata_Without_Changing_Stock()
         {
             // Arrange
             // CancellationToken cancellationToken = new CancellationToken();
@@ -46,7 +53,6 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
                 1,
                 "Updated Product",
                 "NEW123",
-                20.750m,
                 UnitOfMeasure.Kilogram,
                 150,
                 2,
@@ -76,7 +82,7 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
             existingProduct.Should().NotBeNull();
             existingProduct.Name.Should().Be("Updated Product");
             existingProduct.SKU.Should().Be("NEW123");
-            existingProduct.Quantity.Should().Be(20.750m);
+            existingProduct.Quantity.Should().Be(5.500m);
             existingProduct.BaseUnit.Should().Be(UnitOfMeasure.Kilogram);
             existingProduct.DefaultSellingPrice.Should().Be(150);
             existingProduct.AverageCost.Should().Be(35);

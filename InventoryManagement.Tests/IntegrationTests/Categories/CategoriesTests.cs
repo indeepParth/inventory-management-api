@@ -85,7 +85,6 @@ namespace InventoryManagement.Tests.IntegrationTests.Categories
             {
                 Name = "Milk",
                 SKU = $"MILK-{Guid.NewGuid():N}",
-                Quantity = 10,
                 BaseUnit = UnitOfMeasure.Piece,
                 DefaultSellingPrice = 50,
                 CategoryId = category.Id

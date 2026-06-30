@@ -26,7 +26,6 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             {
                 Name = "Keyboard",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                Quantity = 5.250m,
                 BaseUnit = UnitOfMeasure.Piece,
                 DefaultSellingPrice = 49.99m,
                 CategoryId = category.Id
@@ -48,8 +47,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             result.HasPreviousPage.Should().BeFalse();
             result.Items.First().CategoryId.Should().Be(category.Id);
             result.Items.First().CategoryName.Should().Be(category.Name);
-            result.Items.First().Quantity.Should().Be(5.250m);
-            result.Items.First().BaseUnit.Should().Be(UnitOfMeasure.Piece);
+            result.Items.First().Quantity.Should().Be(0m);
+            result.Items.First().BaseUnit.Should().Be(UnitOfMeasure.Piece.ToString());
             result.Items.First().DefaultSellingPrice.Should().Be(49.99m);
             result.Items.First().AverageCost.Should().Be(0m);
         }

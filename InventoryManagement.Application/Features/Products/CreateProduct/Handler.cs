@@ -50,7 +50,7 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
             {
                 Name = request.Name,
                 SKU = request.SKU,
-                Quantity = request.Quantity,
+                Quantity = 0m,
                 BaseUnit = request.BaseUnit,
                 DefaultSellingPrice = request.DefaultSellingPrice,
                 AverageCost = 0m,

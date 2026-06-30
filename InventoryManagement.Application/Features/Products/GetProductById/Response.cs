@@ -12,7 +12,7 @@ namespace InventoryManagement.Application.Features.Products.GetProductById
         public string Name { get; set; } = string.Empty;
         public string SKU { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
-        public UnitOfMeasure BaseUnit { get; set; }
+        public string BaseUnit { get; set; } = string.Empty;
         public decimal DefaultSellingPrice { get; set; }
         public decimal AverageCost { get; set; }
         public int CategoryId { get; set; }

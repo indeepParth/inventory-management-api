@@ -11,7 +11,6 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
         int Id,
         string Name,
         string SKU,
-        decimal Quantity,
         UnitOfMeasure BaseUnit,
         decimal DefaultSellingPrice,
         int CategoryId,

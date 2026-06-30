@@ -37,7 +37,7 @@ namespace InventoryManagement.Application.Features.Products.GetProducts
                     Name = p.Name,
                     SKU = p.SKU,
                     Quantity = p.Quantity,
-                    BaseUnit = p.BaseUnit,
+                    BaseUnit = p.BaseUnit.ToString(),
                     DefaultSellingPrice = p.DefaultSellingPrice,
                     AverageCost = p.AverageCost,
                     CategoryId = p.CategoryId,

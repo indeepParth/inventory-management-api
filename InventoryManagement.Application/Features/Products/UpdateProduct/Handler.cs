@@ -59,7 +59,6 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
 
             product.Name = request.Name;
             product.SKU = request.SKU;
-            product.Quantity = request.Quantity;
             product.BaseUnit = request.BaseUnit;
             product.DefaultSellingPrice = request.DefaultSellingPrice;
             product.CategoryId = request.CategoryId;

@@ -50,7 +50,7 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
             product.Name.Should().Be("Test Product");
             product.SKU.Should().Be("TEST123");
             product.Quantity.Should().Be(10.125m);
-            product.BaseUnit.Should().Be(UnitOfMeasure.CubicMeter);
+            product.BaseUnit.Should().Be(UnitOfMeasure.CubicMeter.ToString());
             product.DefaultSellingPrice.Should().Be(99.99m);
             product.AverageCost.Should().Be(75.50m);
             product.CategoryId.Should().Be(1);

@@ -32,7 +32,7 @@ namespace InventoryManagement.Application.Features.Products.GetProductById
                 Name = product.Name,
                 SKU = product.SKU,
                 Quantity = product.Quantity,
-                BaseUnit = product.BaseUnit,
+                BaseUnit = product.BaseUnit.ToString(),
                 DefaultSellingPrice = product.DefaultSellingPrice,
                 AverageCost = product.AverageCost,
                 CategoryId = product.CategoryId,

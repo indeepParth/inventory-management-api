@@ -48,7 +48,7 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProducts
             result.Items.First().CategoryId.Should().Be(1);
             result.Items.First().CategoryName.Should().Be("Dairy");
             result.Items.First().Quantity.Should().Be(10.125m);
-            result.Items.First().BaseUnit.Should().Be(UnitOfMeasure.CubicFoot);
+            result.Items.First().BaseUnit.Should().Be(UnitOfMeasure.CubicFoot.ToString());
             result.Items.First().DefaultSellingPrice.Should().Be(99.99m);
             result.Items.First().AverageCost.Should().Be(70m);
             result.PageNumber.Should().Be(1);

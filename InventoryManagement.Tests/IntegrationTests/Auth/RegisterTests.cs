@@ -17,11 +17,12 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         public async Task Register_Should_Create_User()
         {
             // Arrange
+            var unique = Guid.NewGuid().ToString("N");
             var request = new Command
             {
-                UserName = "test_User",
-                Email = "test@user.com",
-                Passward = "123456789"
+                UserName = $"test_{unique}",
+                Email = $"test_{unique}@user.com",
+                Password = "123456789"
             };
 
             // Act
@@ -39,11 +40,11 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
 
             var result =
                 await response.Content
-                    .ReadFromJsonAsync<Responce>();
+                    .ReadFromJsonAsync<Response>();
 
             result.Should().NotBeNull();
-            result.UserName.Should().Be("test_User");
-            result.Email.Should().Be("test@user.com");
+            result.UserName.Should().Be(request.UserName);
+            result.Email.Should().Be(request.Email);
         }
 
         [Fact]
@@ -52,9 +53,9 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             // Arrange
             var request = new Command
             {
-                UserName = "test_User",
-                Email = "test@user.com",
-                Passward = "123456789"
+                UserName = $"test_{Guid.NewGuid():N}",
+                Email = $"test_{Guid.NewGuid():N}@user.com",
+                Password = "123456789"
             };
 
             // First Register
@@ -64,7 +65,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             var response = await Client.PostAsJsonAsync("/api/auth/register", request);
 
             // Assert
-            response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
             var body = await response.Content.ReadAsStringAsync();
 
@@ -76,14 +77,18 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         {
             var request = new Command
             {
-                UserName = "test_User",
-                Email = "test@user.com",
-                Passward = "123"
+                UserName = $"test_{Guid.NewGuid():N}",
+                Email = $"test_{Guid.NewGuid():N}@user.com",
+                Password = "123"
             };
 
             var response = await Client.PostAsJsonAsync("/api/auth/register", request);
 
-            response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var body = await response.Content.ReadAsStringAsync();
+            body.Should().Contain("errors");
+            body.Should().Contain("Password");
         }
 
         [Fact]
@@ -92,13 +97,17 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             var request = new Command
             {
                 UserName = "",
-                Email = "test@user.com",
-                Passward = "123456789"
+                Email = $"test_{Guid.NewGuid():N}@user.com",
+                Password = "123456789"
             };
 
             var response = await Client.PostAsJsonAsync("/api/auth/register", request);
 
-            response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var body = await response.Content.ReadAsStringAsync();
+            body.Should().Contain("errors");
+            body.Should().Contain("UserName");
         }
     }
 }

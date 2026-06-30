@@ -4,7 +4,7 @@ using MediatR;
 
 namespace InventoryManagement.Application.Features.Products.DeleteProduct
 {
-    public class Handler : IRequestHandler<Command, Responce>
+    public class Handler : IRequestHandler<Command, Response>
     {
         private readonly IProductRepository _repository;
 
@@ -13,7 +13,7 @@ namespace InventoryManagement.Application.Features.Products.DeleteProduct
             _repository = repository;
         }
 
-        public async Task<Responce> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Response> Handle(Command request, CancellationToken cancellationToken)
         {
             var product = await _repository.GetProductByIdAsync(request.Id, cancellationToken);
 
@@ -23,7 +23,7 @@ namespace InventoryManagement.Application.Features.Products.DeleteProduct
             await _repository.DeleteProductAsync(product, cancellationToken);
             await _repository.SaveChangesAsync(cancellationToken);
 
-            return new Responce
+            return new Response
             {
                 Id = request.Id,
                 Message = "Product Deleted Successfully."

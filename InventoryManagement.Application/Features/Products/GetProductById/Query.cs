@@ -6,7 +6,7 @@ using MediatR;
 
 namespace InventoryManagement.Application.Features.Products.GetProductById
 {
-    public class Query : IRequest<Responce>
+    public class Query : IRequest<Response>
     {
         public int Id { get; set; }
     }

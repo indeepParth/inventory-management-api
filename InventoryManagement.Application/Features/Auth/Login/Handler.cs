@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace InventoryManagement.Application.Features.Auth.Login
 {
-    public class Handler : IRequestHandler<Command, Responce>
+    public class Handler : IRequestHandler<Command, Response>
     {
         private readonly IIdentityService _identityService;
         private readonly ITokenService _tokenService;
@@ -31,7 +31,7 @@ namespace InventoryManagement.Application.Features.Auth.Login
             _logger = logger;
         }
         
-        public async Task<Responce> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Response> Handle(Command request, CancellationToken cancellationToken)
         {
             var isValid = await _identityService.CheckPasswordAsync(
                 request.UserName,
@@ -72,7 +72,7 @@ namespace InventoryManagement.Application.Features.Auth.Login
 
             _logger.LogInformation("User {UserName} logged in successfully", request.UserName);
 
-            return new Responce
+            return new Response
             {
                 AccessToken = token,
                 RefreshToken = refreshToken,

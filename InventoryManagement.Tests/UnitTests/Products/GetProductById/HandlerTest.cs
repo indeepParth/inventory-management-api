@@ -7,6 +7,7 @@ using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Application.Features.Products.GetProductById;
 using InventoryManagement.Domain.Entities;
+using InventoryManagement.Domain.Enums;
 using Moq;
 
 namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
@@ -25,8 +26,16 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
                                 Id = 1,
                                 Name = "Test Product",
                                 SKU = "TEST123",
-                                Quantity = 10,
-                                Price = 99.99m
+                                Quantity = 10.125m,
+                                BaseUnit = UnitOfMeasure.CubicMeter,
+                                DefaultSellingPrice = 99.99m,
+                                AverageCost = 75.50m,
+                                CategoryId = 1,
+                                Category = new Category
+                                {
+                                    Id = 1,
+                                    Name = "Dairy"
+                                }
                             });
 
             Query request = new Query { Id = 1 };
@@ -40,8 +49,12 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
             product.Id.Should().Be(1);
             product.Name.Should().Be("Test Product");
             product.SKU.Should().Be("TEST123");
-            product.Quantity.Should().Be(10);
-            product.Price.Should().Be(99.99m);
+            product.Quantity.Should().Be(10.125m);
+            product.BaseUnit.Should().Be(UnitOfMeasure.CubicMeter);
+            product.DefaultSellingPrice.Should().Be(99.99m);
+            product.AverageCost.Should().Be(75.50m);
+            product.CategoryId.Should().Be(1);
+            product.CategoryName.Should().Be("Dairy");
 
             // ASSERT
             _repositoryMock.Verify(

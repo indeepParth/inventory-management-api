@@ -6,7 +6,7 @@ using MediatR;
 
 namespace InventoryManagement.Application.Features.Auth.RefreshAccessToken
 {    
-    public class Command : IRequest<Responce>
+    public class Command : IRequest<Response>
     {
         public string RefreshToken { get; set; } = string.Empty;
     }

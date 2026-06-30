@@ -12,7 +12,7 @@ using MediatR;
 
 namespace InventoryManagement.Application.Features.Auth.RefreshAccessToken
 {
-    public class Handler : IRequestHandler<Command, Responce>
+    public class Handler : IRequestHandler<Command, Response>
     {
         private readonly IRefreshTokenRepository _refreshTokenRepository;
         private readonly IIdentityService _identityService;
@@ -25,7 +25,7 @@ namespace InventoryManagement.Application.Features.Auth.RefreshAccessToken
             _tokenService = tokenService;
         }
         
-        public async Task<Responce> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Response> Handle(Command request, CancellationToken cancellationToken)
         {
             var storedToken =
         await _refreshTokenRepository.GetByTokenAsync(
@@ -77,7 +77,7 @@ namespace InventoryManagement.Application.Features.Auth.RefreshAccessToken
             await _refreshTokenRepository.SaveChangesAsync(
                 cancellationToken);
 
-            return new Responce
+            return new Response
             {
                 AccessToken = accessToken,
                 RefreshToken = newRefreshToken,

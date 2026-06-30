@@ -10,7 +10,7 @@ using MediatR;
 
 namespace InventoryManagement.Application.Features.Auth.Register
 {
-    public class Handler : IRequestHandler<Command, Responce>
+    public class Handler : IRequestHandler<Command, Response>
     {
         private readonly IIdentityService _identityService;
 
@@ -19,20 +19,20 @@ namespace InventoryManagement.Application.Features.Auth.Register
             _identityService = identityService;
         }
         
-        public async Task<Responce> Handle(Command request, CancellationToken cancellationToken)
+        public async Task<Response> Handle(Command request, CancellationToken cancellationToken)
         {
             var result = await _identityService.CreateUserAsync(
                 request.UserName,
                 request.Email,
-                request.Passward
+                request.Password
             );
 
             if (!result.success)
             {
-                throw new InvalidOperationException(string.Join(",", result.error));
+                throw new BadRequestException(string.Join(",", result.error));
             }
 
-            return new Responce
+            return new Response
             {
                 UserName = request.UserName,
                 Email = request.Email

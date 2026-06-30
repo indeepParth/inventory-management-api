@@ -19,20 +19,20 @@ namespace InventoryManagement.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllProducts([FromQuery] Application.Features.Products.GetProducts.Query query)
         {
-            var responce = await _sender.Send(new Application.Features.Products.GetProducts.Query
+            var response = await _sender.Send(new Application.Features.Products.GetProducts.Query
             {
                 PageNumber = query.PageNumber,
                 PageSize = query.PageSize,
                 Search = query.Search
             });
 
-            return Ok(responce);
+            return Ok(response);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetProductById(int id)
         {
-            var responce = await _sender.Send
+            var response = await _sender.Send
             (
                 new Application.Features.Products.GetProductById.Query
                 {
@@ -40,18 +40,18 @@ namespace InventoryManagement.API.Controllers
                 }
             );
 
-            return Ok(responce);
+            return Ok(response);
         }
 
         [HttpPost]
         public async Task<IActionResult> AddProduct([FromBody] Application.Features.Products.CreateProduct.Command command)
         {
-            var responce = await _sender.Send(command);
+            var response = await _sender.Send(command);
 
             return CreatedAtAction(
                     nameof(GetProductById),
-                    new { id = responce.Id },
-                    responce
+                    new { id = response.Id },
+                    response
             );
         }
 
@@ -64,10 +64,13 @@ namespace InventoryManagement.API.Controllers
                 command.Name,
                 command.SKU,
                 command.Quantity,
-                command.Price
+                command.BaseUnit,
+                command.DefaultSellingPrice,
+                command.CategoryId,
+                command.SupplierId
             );
-            var responce = await _sender.Send(request);
-            return Ok(responce);
+            var response = await _sender.Send(request);
+            return Ok(response);
         }
 
         [Authorize(Policy = "CanDeleteProducts")]

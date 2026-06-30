@@ -16,13 +16,7 @@ namespace InventoryManagement.Infrastructure.Repositories
 
         public async Task<List<Product>> GetAllProductAsync(int page, int pagesize, string? search, CancellationToken cancellationToken = default)
         {
-            // return await _context.Products.ToListAsync();
-            IQueryable<Product> query = _context.Products;
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                query = query.Where(p => p.Name.Contains(search));
-            }
+            var query = BuildSearchQuery(search);
             
             return await query
                         .Skip((page - 1) * pagesize)
@@ -30,9 +24,31 @@ namespace InventoryManagement.Infrastructure.Repositories
                         .ToListAsync(cancellationToken);
         }
 
+        public async Task<int> GetProductCountAsync(string? search, CancellationToken cancellationToken = default)
+        {
+            return await BuildSearchQuery(search).CountAsync(cancellationToken);
+        }
+
+        private IQueryable<Product> BuildSearchQuery(string? search)
+        {
+            IQueryable<Product> query = _context.Products
+                .Include(x => x.Category)
+                .Include(x => x.Supplier);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(p => p.Name.Contains(search));
+            }
+
+            return query;
+        }
+
         public async Task<Product?> GetProductByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            return await _context.Products.FindAsync(id, cancellationToken);
+            return await _context.Products
+                .Include(x => x.Category)
+                .Include(x => x.Supplier)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
         public async Task AddProductAsync(Product product, CancellationToken cancellationToken = default)

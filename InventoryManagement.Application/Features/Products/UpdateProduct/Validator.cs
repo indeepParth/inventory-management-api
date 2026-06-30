@@ -16,11 +16,17 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
             RuleFor(x => x.SKU)
                 .NotEmpty();
 
-            RuleFor(x => x.Price)
+            RuleFor(x => x.DefaultSellingPrice)
                 .GreaterThan(0);
 
             RuleFor(x => x.Quantity)
                 .GreaterThanOrEqualTo(0);
+
+            RuleFor(x => x.BaseUnit)
+                .IsInEnum();
+
+            RuleFor(x => x.CategoryId)
+                .GreaterThan(0);
         }
     }
 }

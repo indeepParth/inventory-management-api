@@ -22,7 +22,7 @@ namespace InventoryManagement.Application
             // services.AddAutoMapper(typeof(ProductProfile));
 
             // FluentValidation
-            // services.AddValidatorsFromAssemblyContaining<ProductCreateDtoValidator>();
+            services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
             services.AddTransient(
                 typeof(IPipelineBehavior<,>),
                 typeof(ValidationBehavior<,>));

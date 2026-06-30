@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using InventoryManagement.Application.Common.Models;
 using MediatR;
 
 namespace InventoryManagement.Application.Features.Products.GetProducts
 {
-    public class Query : IRequest<List<Responce>>
+    public class Query : IRequest<PagedResponse<Response>>
     {
         public int PageNumber { get; set; } = 1;
         public int PageSize { get; set; } = 10;

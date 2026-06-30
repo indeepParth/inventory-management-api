@@ -32,7 +32,7 @@ namespace InventoryManagement.API.Controllers
         [Authorize(Roles = "Admin")]
         public IActionResult AdminOnly()
         {
-            return Ok("Wellcome Admin");
+            return Ok("Welcome Admin");
         }
 
         [HttpGet("user-info")]

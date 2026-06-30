@@ -1,4 +1,5 @@
 using FluentValidation;
+using InventoryManagement.Application.Common.Exceptions;
 using MediatR;
 
 namespace InventoryManagement.Application.Common.Behaviors
@@ -7,11 +8,11 @@ namespace InventoryManagement.Application.Common.Behaviors
             : IPipelineBehavior<TRequest, TResponse> 
             where TRequest : notnull
     {
-        private readonly IEnumerable<IValidator<TRequest>> _validator;
+        private readonly IEnumerable<IValidator<TRequest>> _validators;
 
-        public ValidationBehavior(IEnumerable<IValidator<TRequest>> validator)
+        public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
         {
-            _validator = validator;
+            _validators = validators;
         }
 
         public async Task<TResponse> Handle(
@@ -19,21 +20,28 @@ namespace InventoryManagement.Application.Common.Behaviors
             RequestHandlerDelegate<TResponse> next,
             CancellationToken cancellationToken)
         {
-            if(_validator.Any())
+            if (_validators.Any())
             {
                 var context = new ValidationContext<TRequest>(request);
 
-                var results = Task.WhenAll(
-                    _validator.Select(v => v.ValidateAsync(context, cancellationToken))
-                );
+                var results = await Task.WhenAll(
+                    _validators.Select(v => v.ValidateAsync(context, cancellationToken)));
 
-                var failurer = results.Result
+                var failures = results
                     .SelectMany(e => e.Errors)
                     .Where(e => e != null)
                     .ToList();
 
-                if (failurer.Any())
-                    throw new ValidationException(failurer);
+                if (failures.Any())
+                {
+                    var errors = failures
+                        .GroupBy(e => e.PropertyName)
+                        .ToDictionary(
+                            e => e.Key,
+                            e => e.Select(x => x.ErrorMessage).ToArray());
+
+                    throw new InventoryManagement.Application.Common.Exceptions.ValidationException(errors);
+                }
             }
 
             return await next();

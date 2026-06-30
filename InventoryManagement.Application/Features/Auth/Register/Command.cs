@@ -6,10 +6,10 @@ using MediatR;
 
 namespace InventoryManagement.Application.Features.Auth.Register
 {    
-    public class Command : IRequest<Responce>
+    public class Command : IRequest<Response>
     {
         public string UserName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public string Passward { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

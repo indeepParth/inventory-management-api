@@ -6,7 +6,7 @@ using MediatR;
 
 namespace InventoryManagement.Application.Features.Products.DeleteProduct
 {
-    public class Command : IRequest<Responce>
+    public class Command : IRequest<Response>
     {
         public int Id { get; set; }
     }

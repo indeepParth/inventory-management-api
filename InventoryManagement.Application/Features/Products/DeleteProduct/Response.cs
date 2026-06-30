@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace InventoryManagement.Application.Features.Products.DeleteProduct
 {
-    public class Responce
+    public class Response
     {
         public int Id { get; set; }
         public string Message { get; set; } = string.Empty;

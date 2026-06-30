@@ -19,7 +19,7 @@ namespace InventoryManagement.Application.Features.Auth.Register
                 .NotEmpty()
                 .EmailAddress();
 
-            RuleFor(x => x.Passward)
+            RuleFor(x => x.Password)
                 .NotEmpty()
                 .MinimumLength(6);
         }

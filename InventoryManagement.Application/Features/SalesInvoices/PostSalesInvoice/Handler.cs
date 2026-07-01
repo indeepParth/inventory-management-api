@@ -97,9 +97,10 @@ namespace InventoryManagement.Application.Features.SalesInvoices.PostSalesInvoic
                                 transactionToken);
                         foreach (var challan in challans.Where(x =>
                             x.Items.All(item => item.SalesInvoiceItems.Any(link =>
-                                link.SalesInvoiceId == invoice.Id ||
-                                link.SalesInvoice.Status ==
-                                    SalesInvoiceStatus.Posted))))
+                                link.IsChallanAllocationActive &&
+                                (link.SalesInvoiceId == invoice.Id ||
+                                 link.SalesInvoice.Status ==
+                                    SalesInvoiceStatus.Posted)))))
                         {
                             challan.Status = DeliveryChallanStatus.Invoiced;
                             challan.InvoicedAtUtc = postedAtUtc;

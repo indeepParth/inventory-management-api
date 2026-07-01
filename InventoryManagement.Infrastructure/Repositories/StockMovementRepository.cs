@@ -97,6 +97,21 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Select(x => (decimal?)x.UnitCost)
                 .FirstOrDefaultAsync(cancellationToken);
         }
+
+        public Task<List<StockMovement>> GetSalesInvoiceMovementsForUpdateAsync(
+            int salesInvoiceId,
+            CancellationToken cancellationToken = default)
+        {
+            var sourceId = salesInvoiceId.ToString();
+            return _context.StockMovements
+                .Include(x => x.Product)
+                .Where(x =>
+                    x.MovementType == StockMovementType.Sale &&
+                    x.SourceType == "SalesInvoice" &&
+                    x.SourceId == sourceId)
+                .OrderBy(x => x.Id)
+                .ToListAsync(cancellationToken);
+        }
         private IQueryable<StockMovement> BuildQuery(
             int? productId,
             StockMovementType? movementType,

@@ -55,7 +55,9 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
                         "Only Posted delivery challans may be invoiced.");
                 }
 
-                if (challanItems.Any(x => x.SalesInvoiceItems.Count != 0))
+                if (challanItems.Any(x =>
+                    x.SalesInvoiceItems.Any(link =>
+                        link.IsChallanAllocationActive)))
                 {
                     throw new BadRequestException(
                         "One or more delivery challan items have already been invoiced.");
@@ -103,7 +105,8 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
                         TaxAmount = tax,
                         LineTotal = lineSubtotal + tax,
                         DeliveryChallanItemId = source.Id,
-                        DeliveryChallanItem = source
+                        DeliveryChallanItem = source,
+                        IsChallanAllocationActive = true
                     });
                     invoice.Subtotal += lineSubtotal;
                     invoice.TaxAmount += tax;

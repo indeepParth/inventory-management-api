@@ -37,5 +37,9 @@ namespace InventoryManagement.Application.Common.Persistence
             int deliveryChallanId,
             int productId,
             CancellationToken cancellationToken = default);
+
+        Task<List<StockMovement>> GetSalesInvoiceMovementsForUpdateAsync(
+            int salesInvoiceId,
+            CancellationToken cancellationToken = default);
     }
 }

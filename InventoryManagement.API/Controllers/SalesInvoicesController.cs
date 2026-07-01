@@ -66,5 +66,15 @@ namespace InventoryManagement.API.Controllers
                     Id = id
                 }));
         }
+
+        [HttpPost("{id}/cancel")]
+        public async Task<IActionResult> CancelInvoice(int id)
+        {
+            return Ok(await _sender.Send(
+                new Application.Features.SalesInvoices.CancelSalesInvoice.Command
+                {
+                    Id = id
+                }));
+        }
     }
 }

@@ -593,6 +593,204 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        [Fact]
+        public async Task Cancel_Draft_Should_Have_No_Stock_Or_Debt_Effects()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            var invoice = await CreateInvoiceAsync(
+                seed,
+                $"CANCEL-DRAFT-{Guid.NewGuid():N}",
+                new DateTime(2026, 7, 1));
+
+            var response = await Client.PostAsync(
+                $"/api/sales-invoices/{invoice.Id}/cancel",
+                null);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var cancelled = await response.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            cancelled.Should().NotBeNull();
+            cancelled!.Status.Should().Be(SalesInvoiceStatus.Cancelled);
+            cancelled.CancelledAtUtc.Should().NotBeNull();
+
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            (await db.Products.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.ProductId))
+                .Quantity.Should().Be(seed.StockQuantity);
+            (await db.Customers.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.CustomerId))
+                .BalanceDue.Should().Be(0);
+            (await db.StockMovements.CountAsync(x =>
+                x.SourceId == invoice.Id.ToString() &&
+                x.SourceType.Contains("SalesInvoice"))).Should().Be(0);
+        }
+
+        [Fact]
+        public async Task Cancel_Posted_Direct_Should_Restore_Stock_Debt_And_Be_Idempotent()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            var invoice = await CreateInvoiceAsync(
+                seed,
+                $"CANCEL-DIRECT-{Guid.NewGuid():N}",
+                new DateTime(2026, 7, 1));
+            (await Client.PostAsync(
+                $"/api/sales-invoices/{invoice.Id}/post",
+                null)).EnsureSuccessStatusCode();
+
+            var response = await Client.PostAsync(
+                $"/api/sales-invoices/{invoice.Id}/cancel",
+                null);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var cancelled = await response.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            cancelled.Should().NotBeNull();
+            cancelled!.Status.Should().Be(SalesInvoiceStatus.Cancelled);
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                (await db.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.ProductId))
+                    .Quantity.Should().Be(seed.StockQuantity);
+                (await db.Customers.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.CustomerId))
+                    .BalanceDue.Should().Be(0);
+                var movements = await db.StockMovements.AsNoTracking()
+                    .Where(x => x.SourceId == invoice.Id.ToString() &&
+                        (x.SourceType == "SalesInvoice" ||
+                         x.SourceType == "SalesInvoiceCancellation"))
+                    .OrderBy(x => x.Id)
+                    .ToListAsync();
+                movements.Should().HaveCount(2);
+                movements[0].MovementType.Should().Be(StockMovementType.Sale);
+                movements[1].MovementType.Should().Be(StockMovementType.Reversal);
+                movements[1].QuantityChange
+                    .Should().Be(-movements[0].QuantityChange);
+            }
+
+            var repeated = await Client.PostAsync(
+                $"/api/sales-invoices/{invoice.Id}/cancel",
+                null);
+            repeated.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            using var verificationScope = _factory.Services.CreateScope();
+            var verificationDb = verificationScope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
+            (await verificationDb.StockMovements.CountAsync(x =>
+                x.SourceId == invoice.Id.ToString() &&
+                (x.SourceType == "SalesInvoice" ||
+                 x.SourceType == "SalesInvoiceCancellation"))).Should().Be(2);
+        }
+
+        [Fact]
+        public async Task Cancel_Challan_Invoice_Should_Release_Challan_Without_Stock_Change()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            var challan = await CreateAndPostChallanAsync(
+                seed, 2, $"DC-CANCEL-{Guid.NewGuid():N}");
+
+            int challanItemId;
+            decimal stockAfterChallan;
+            int movementCount;
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                challanItemId = await db.DeliveryChallanItems
+                    .Where(x => x.DeliveryChallanId == challan.Id)
+                    .Select(x => x.Id)
+                    .SingleAsync();
+                stockAfterChallan = (await db.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.ProductId)).Quantity;
+                movementCount = await db.StockMovements.CountAsync(
+                    x => x.ProductId == seed.ProductId);
+            }
+
+            var draft = await CreateChallanInvoiceAsync(
+                challanItemId,
+                $"DC-CANCEL-INV-{Guid.NewGuid():N}");
+            (await Client.PostAsync(
+                $"/api/sales-invoices/{draft.Id}/post",
+                null)).EnsureSuccessStatusCode();
+
+            var response = await Client.PostAsync(
+                $"/api/sales-invoices/{draft.Id}/cancel",
+                null);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                (await db.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.ProductId))
+                    .Quantity.Should().Be(stockAfterChallan);
+                (await db.StockMovements.CountAsync(
+                    x => x.ProductId == seed.ProductId))
+                    .Should().Be(movementCount);
+                (await db.Customers.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.CustomerId))
+                    .BalanceDue.Should().Be(0);
+                var restoredChallan = await db.DeliveryChallans.AsNoTracking()
+                    .SingleAsync(x => x.Id == challan.Id);
+                restoredChallan.Status.Should().Be(DeliveryChallanStatus.Posted);
+                restoredChallan.InvoicedAtUtc.Should().BeNull();
+                (await db.SalesInvoiceItems.AsNoTracking()
+                    .SingleAsync(x => x.SalesInvoiceId == draft.Id))
+                    .IsChallanAllocationActive.Should().BeFalse();
+            }
+
+            var replacement = await Client.PostAsJsonAsync(
+                "/api/sales-invoices/from-challans",
+                new InventoryManagement.Application.Features.SalesInvoices
+                    .CreateFromChallans.Command
+                {
+                    InvoiceNumber = $"REINVOICE-{Guid.NewGuid():N}",
+                    InvoiceDate = new DateTime(2026, 7, 3),
+                    Items =
+                    {
+                        new ChallanItemInput
+                        {
+                            DeliveryChallanItemId = challanItemId,
+                            SellingUnitPrice = 45
+                        }
+                    }
+                });
+            replacement.StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+
+        [Fact]
+        public async Task Cancel_Paid_Invoice_Should_Be_Rejected()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            var invoice = await CreateInvoiceAsync(
+                seed,
+                $"PAID-{Guid.NewGuid():N}",
+                new DateTime(2026, 7, 1));
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                var persisted = await db.SalesInvoices
+                    .SingleAsync(x => x.Id == invoice.Id);
+                persisted.Status = SalesInvoiceStatus.Paid;
+                await db.SaveChangesAsync();
+            }
+
+            var response = await Client.PostAsync(
+                $"/api/sales-invoices/{invoice.Id}/cancel",
+                null);
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         private async Task<SeedResult> SeedDependenciesAsync()
         {
             using var scope = _factory.Services.CreateScope();
@@ -734,6 +932,31 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             postResponse.EnsureSuccessStatusCode();
             return (await postResponse.Content
                 .ReadFromJsonAsync<DeliveryChallanResponse>())!;
+        }
+
+        private async Task<SalesInvoiceResponse> CreateChallanInvoiceAsync(
+            int challanItemId,
+            string invoiceNumber)
+        {
+            var response = await Client.PostAsJsonAsync(
+                "/api/sales-invoices/from-challans",
+                new InventoryManagement.Application.Features.SalesInvoices
+                    .CreateFromChallans.Command
+                {
+                    InvoiceNumber = invoiceNumber,
+                    InvoiceDate = new DateTime(2026, 7, 2),
+                    Items =
+                    {
+                        new ChallanItemInput
+                        {
+                            DeliveryChallanItemId = challanItemId,
+                            SellingUnitPrice = 40
+                        }
+                    }
+                });
+            response.EnsureSuccessStatusCode();
+            return (await response.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>())!;
         }
 
         private sealed record SeedResult(

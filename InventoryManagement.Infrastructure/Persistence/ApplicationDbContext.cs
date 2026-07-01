@@ -242,7 +242,9 @@ namespace InventoryManagement.Infrastructure.Persistence
             {
                 entity.HasIndex(x => x.DeliveryChallanItemId)
                     .IsUnique()
-                    .HasFilter("\"DeliveryChallanItemId\" IS NOT NULL");
+                    .HasFilter(
+                        "\"DeliveryChallanItemId\" IS NOT NULL AND " +
+                        "\"IsChallanAllocationActive\" = 1");
                 entity.Property(x => x.Quantity).HasPrecision(18, 3);
                 entity.Property(x => x.SellingUnitPrice).HasPrecision(18, 2);
                 entity.Property(x => x.TaxRate).HasPrecision(9, 4);

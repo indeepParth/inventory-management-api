@@ -15,5 +15,6 @@ namespace InventoryManagement.Domain.Entities
         public decimal? CostAtSale { get; set; }
         public int? DeliveryChallanItemId { get; set; }
         public DeliveryChallanItem? DeliveryChallanItem { get; set; }
+        public bool IsChallanAllocationActive { get; set; }
     }
 }

@@ -28,6 +28,10 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<PurchaseItem> PurchaseItems => Set<PurchaseItem>();
 
+        public DbSet<DeliveryChallan> DeliveryChallans => Set<DeliveryChallan>();
+
+        public DbSet<DeliveryChallanItem> DeliveryChallanItems => Set<DeliveryChallanItem>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -182,6 +186,32 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .HasForeignKey(x => x.ProductId)
                       .OnDelete(DeleteBehavior.Restrict)
                       .IsRequired();
+            });
+
+            builder.Entity<DeliveryChallan>(entity =>
+            {
+                entity.HasIndex(x => x.ChallanNumber).IsUnique();
+                entity.Property(x => x.ChallanNumber).HasMaxLength(50).IsRequired();
+                entity.Property(x => x.Status).IsRequired();
+                entity.Property(x => x.VehicleNumber).HasMaxLength(50);
+                entity.Property(x => x.DriverName).HasMaxLength(150);
+                entity.Property(x => x.DeliveryAddress).HasMaxLength(500).IsRequired();
+                entity.Property(x => x.Notes).HasMaxLength(1000);
+                entity.Property(x => x.CreatedBy).IsRequired();
+                entity.HasOne(x => x.Customer).WithMany()
+                    .HasForeignKey(x => x.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
+            });
+
+            builder.Entity<DeliveryChallanItem>(entity =>
+            {
+                entity.Property(x => x.Quantity).HasPrecision(18, 3);
+                entity.HasOne(x => x.DeliveryChallan).WithMany(x => x.Items)
+                    .HasForeignKey(x => x.DeliveryChallanId)
+                    .OnDelete(DeleteBehavior.Cascade).IsRequired();
+                entity.HasOne(x => x.Product).WithMany()
+                    .HasForeignKey(x => x.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
             });
         }
     }

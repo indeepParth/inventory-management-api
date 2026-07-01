@@ -1,5 +1,6 @@
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Domain.Entities;
+using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,50 @@ namespace InventoryManagement.Infrastructure.Repositories
             _context = context;
         }
 
+        public async Task<List<SalesInvoice>> GetAllAsync(
+            int pageNumber,
+            int pageSize,
+            int? customerId,
+            SalesInvoiceStatus? status,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            string? invoiceNumber,
+            CancellationToken cancellationToken = default)
+        {
+            return await BuildFilteredQuery(
+                    customerId,
+                    status,
+                    dateFrom,
+                    dateTo,
+                    invoiceNumber)
+                .AsNoTracking()
+                .Include(x => x.Customer)
+                .Include(x => x.Items)
+                    .ThenInclude(x => x.Product)
+                .OrderByDescending(x => x.InvoiceDate)
+                .ThenByDescending(x => x.Id)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public Task<int> GetCountAsync(
+            int? customerId,
+            SalesInvoiceStatus? status,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            string? invoiceNumber,
+            CancellationToken cancellationToken = default)
+        {
+            return BuildFilteredQuery(
+                    customerId,
+                    status,
+                    dateFrom,
+                    dateTo,
+                    invoiceNumber)
+                .CountAsync(cancellationToken);
+        }
+
         public Task<SalesInvoice?> GetByIdAsync(
             int id,
             CancellationToken cancellationToken = default)
@@ -26,12 +71,34 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
+        public Task<SalesInvoice?> GetForUpdateAsync(
+            int id,
+            CancellationToken cancellationToken = default)
+        {
+            return _context.SalesInvoices
+                .Include(x => x.Customer)
+                .Include(x => x.Items)
+                    .ThenInclude(x => x.Product)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        }
+
         public Task<bool> InvoiceNumberExistsAsync(
             string invoiceNumber,
             CancellationToken cancellationToken = default)
         {
             return _context.SalesInvoices.AnyAsync(
                 x => x.InvoiceNumber == invoiceNumber,
+                cancellationToken);
+        }
+
+        public Task<bool> InvoiceNumberExistsForOtherAsync(
+            string invoiceNumber,
+            int invoiceId,
+            CancellationToken cancellationToken = default)
+        {
+            return _context.SalesInvoices.AnyAsync(
+                x => x.Id != invoiceId &&
+                     x.InvoiceNumber == invoiceNumber,
                 cancellationToken);
         }
 
@@ -50,9 +117,52 @@ namespace InventoryManagement.Infrastructure.Repositories
             await _context.SalesInvoices.AddAsync(invoice, cancellationToken);
         }
 
+        public void RemoveItems(IEnumerable<SalesInvoiceItem> items)
+        {
+            _context.SalesInvoiceItems.RemoveRange(items);
+        }
+
         public Task SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             return _context.SaveChangesAsync(cancellationToken);
+        }
+
+        private IQueryable<SalesInvoice> BuildFilteredQuery(
+            int? customerId,
+            SalesInvoiceStatus? status,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            string? invoiceNumber)
+        {
+            IQueryable<SalesInvoice> query = _context.SalesInvoices;
+
+            if (customerId.HasValue)
+            {
+                query = query.Where(x => x.CustomerId == customerId.Value);
+            }
+
+            if (status.HasValue)
+            {
+                query = query.Where(x => x.Status == status.Value);
+            }
+
+            if (dateFrom.HasValue)
+            {
+                query = query.Where(x => x.InvoiceDate >= dateFrom.Value);
+            }
+
+            if (dateTo.HasValue)
+            {
+                query = query.Where(x => x.InvoiceDate <= dateTo.Value);
+            }
+
+            if (!string.IsNullOrWhiteSpace(invoiceNumber))
+            {
+                var value = invoiceNumber.Trim();
+                query = query.Where(x => x.InvoiceNumber.Contains(value));
+            }
+
+            return query;
         }
     }
 }

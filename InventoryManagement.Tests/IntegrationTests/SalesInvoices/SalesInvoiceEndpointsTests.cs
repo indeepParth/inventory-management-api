@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using InventoryManagement.Application.Common.Models;
 using InventoryManagement.Application.Features.SalesInvoices;
 using InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvoice;
 using InventoryManagement.Domain.Entities;
@@ -9,6 +10,10 @@ using InventoryManagement.Infrastructure.Persistence;
 using InventoryManagement.Tests.IntegrationTests.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using UpdateSalesInvoiceCommand =
+    InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvoice.Command;
+using UpdateSalesInvoiceItemInput =
+    InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvoice.SalesInvoiceItemInput;
 
 namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
 {
@@ -105,6 +110,103 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             body.Should().Contain("traceId");
         }
 
+        [Fact]
+        public async Task List_Should_Page_And_Apply_All_Filters()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            var matchingNumber = $"MATCH-{Guid.NewGuid():N}";
+            await CreateInvoiceAsync(
+                seed,
+                matchingNumber,
+                new DateTime(2026, 7, 10));
+            await CreateInvoiceAsync(
+                seed,
+                $"OTHER-{Guid.NewGuid():N}",
+                new DateTime(2026, 6, 1));
+
+            var response = await Client.GetAsync(
+                $"/api/sales-invoices?pageNumber=1&pageSize=1" +
+                $"&customerId={seed.CustomerId}&status=Draft" +
+                "&dateFrom=2026-07-01&dateTo=2026-07-31" +
+                $"&invoiceNumber={matchingNumber[..12]}");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var page = await response.Content
+                .ReadFromJsonAsync<PagedResponse<SalesInvoiceResponse>>();
+            page.Should().NotBeNull();
+            page!.Items.Should().ContainSingle(x =>
+                x.InvoiceNumber == matchingNumber);
+            page.PageNumber.Should().Be(1);
+            page.PageSize.Should().Be(1);
+            page.TotalCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task Update_Draft_Should_Recalculate_Totals_And_Reject_Paid_Invoice()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            var created = await CreateInvoiceAsync(
+                seed,
+                $"EDIT-{Guid.NewGuid():N}",
+                new DateTime(2026, 7, 1));
+            var update = new UpdateSalesInvoiceCommand(
+                0,
+                $"EDITED-{Guid.NewGuid():N}",
+                seed.CustomerId,
+                new DateTime(2026, 7, 2),
+                4,
+                2,
+                " Edited draft ",
+                new List<UpdateSalesInvoiceItemInput>
+                {
+                    new()
+                    {
+                        ProductId = seed.ProductId,
+                        Quantity = 3,
+                        SellingUnitPrice = 20,
+                        TaxRate = 5
+                    }
+                });
+
+            var response = await Client.PutAsJsonAsync(
+                $"/api/sales-invoices/{created.Id}",
+                update);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var updated = await response.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            updated.Should().NotBeNull();
+            updated!.Status.Should().Be(SalesInvoiceStatus.Draft);
+            updated.Subtotal.Should().Be(60);
+            updated.TaxAmount.Should().Be(3);
+            updated.GrandTotal.Should().Be(61);
+            updated.BalanceDue.Should().Be(61);
+            updated.AmountPaid.Should().Be(0);
+            updated.Notes.Should().Be("Edited draft");
+            updated.Items.Should().ContainSingle();
+            updated.Items[0].CostAtSale.Should().BeNull();
+            updated.CreatedAtUtc.Should().Be(created.CreatedAtUtc);
+            updated.CreatedBy.Should().Be(created.CreatedBy);
+            updated.UpdatedAtUtc.Should().BeAfter(created.UpdatedAtUtc);
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                var invoice = await db.SalesInvoices
+                    .SingleAsync(x => x.Id == created.Id);
+                invoice.Status = SalesInvoiceStatus.Paid;
+                await db.SaveChangesAsync();
+            }
+
+            var rejected = await Client.PutAsJsonAsync(
+                $"/api/sales-invoices/{created.Id}",
+                update);
+            rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         private async Task<SeedResult> SeedDependenciesAsync()
         {
             using var scope = _factory.Services.CreateScope();
@@ -159,6 +261,33 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 challan.Items.Single().Id,
                 product.Quantity,
                 await db.StockMovements.CountAsync(x => x.ProductId == product.Id));
+        }
+
+        private async Task<SalesInvoiceResponse> CreateInvoiceAsync(
+            SeedResult seed,
+            string invoiceNumber,
+            DateTime invoiceDate)
+        {
+            var response = await Client.PostAsJsonAsync(
+                "/api/sales-invoices",
+                new Command
+                {
+                    InvoiceNumber = invoiceNumber,
+                    CustomerId = seed.CustomerId,
+                    InvoiceDate = invoiceDate,
+                    Items =
+                    {
+                        new SalesInvoiceItemInput
+                        {
+                            ProductId = seed.ProductId,
+                            Quantity = 1,
+                            SellingUnitPrice = 10
+                        }
+                    }
+                });
+            response.EnsureSuccessStatusCode();
+            return (await response.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>())!;
         }
 
         private sealed record SeedResult(

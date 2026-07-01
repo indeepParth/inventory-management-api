@@ -18,6 +18,8 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<Supplier> Suppliers => Set<Supplier>();
 
+        public DbSet<Customer> Customers => Set<Customer>();
+
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
         public DbSet<StockMovement> StockMovements => Set<StockMovement>();
@@ -67,6 +69,30 @@ namespace InventoryManagement.Infrastructure.Persistence
 
                 entity.Property(x => x.GstNumber)
                       .UseCollation("NOCASE");
+            });
+
+            builder.Entity<Customer>(entity =>
+            {
+                entity.HasIndex(x => x.Name)
+                      .IsUnique();
+
+                entity.HasIndex(x => x.GstNumber)
+                      .IsUnique();
+
+                entity.Property(x => x.Name)
+                      .UseCollation("NOCASE")
+                      .HasMaxLength(150)
+                      .IsRequired();
+
+                entity.Property(x => x.ContactPerson).HasMaxLength(150);
+                entity.Property(x => x.Phone).HasMaxLength(30);
+                entity.Property(x => x.Email).HasMaxLength(254);
+                entity.Property(x => x.BillingAddress).HasMaxLength(500);
+                entity.Property(x => x.DeliveryAddress).HasMaxLength(500);
+                entity.Property(x => x.GstNumber)
+                      .UseCollation("NOCASE")
+                      .HasMaxLength(15);
+                entity.Property(x => x.CreditLimit).HasPrecision(18, 2);
             });
 
             builder.Entity<Product>(entity =>

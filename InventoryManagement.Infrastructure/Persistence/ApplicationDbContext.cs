@@ -32,6 +32,10 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<DeliveryChallanItem> DeliveryChallanItems => Set<DeliveryChallanItem>();
 
+        public DbSet<SalesInvoice> SalesInvoices => Set<SalesInvoice>();
+
+        public DbSet<SalesInvoiceItem> SalesInvoiceItems => Set<SalesInvoiceItem>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -211,7 +215,45 @@ namespace InventoryManagement.Infrastructure.Persistence
                     .OnDelete(DeleteBehavior.Cascade).IsRequired();
                 entity.HasOne(x => x.Product).WithMany()
                     .HasForeignKey(x => x.ProductId)
+                      .OnDelete(DeleteBehavior.Restrict).IsRequired();
+            });
+
+            builder.Entity<SalesInvoice>(entity =>
+            {
+                entity.HasIndex(x => x.InvoiceNumber).IsUnique();
+                entity.Property(x => x.InvoiceNumber).HasMaxLength(50).IsRequired();
+                entity.Property(x => x.Status).IsRequired();
+                entity.Property(x => x.Subtotal).HasPrecision(18, 2);
+                entity.Property(x => x.Discount).HasPrecision(18, 2);
+                entity.Property(x => x.TaxAmount).HasPrecision(18, 2);
+                entity.Property(x => x.OtherCharges).HasPrecision(18, 2);
+                entity.Property(x => x.GrandTotal).HasPrecision(18, 2);
+                entity.Property(x => x.AmountPaid).HasPrecision(18, 2);
+                entity.Property(x => x.BalanceDue).HasPrecision(18, 2);
+                entity.Property(x => x.Notes).HasMaxLength(1000);
+                entity.Property(x => x.CreatedBy).IsRequired();
+                entity.HasOne(x => x.Customer).WithMany()
+                    .HasForeignKey(x => x.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict).IsRequired();
+            });
+
+            builder.Entity<SalesInvoiceItem>(entity =>
+            {
+                entity.Property(x => x.Quantity).HasPrecision(18, 3);
+                entity.Property(x => x.SellingUnitPrice).HasPrecision(18, 2);
+                entity.Property(x => x.TaxRate).HasPrecision(9, 4);
+                entity.Property(x => x.TaxAmount).HasPrecision(18, 2);
+                entity.Property(x => x.LineTotal).HasPrecision(18, 2);
+                entity.Property(x => x.CostAtSale).HasPrecision(18, 2);
+                entity.HasOne(x => x.SalesInvoice).WithMany(x => x.Items)
+                    .HasForeignKey(x => x.SalesInvoiceId)
+                    .OnDelete(DeleteBehavior.Cascade).IsRequired();
+                entity.HasOne(x => x.Product).WithMany()
+                    .HasForeignKey(x => x.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                entity.HasOne(x => x.DeliveryChallanItem).WithMany()
+                    .HasForeignKey(x => x.DeliveryChallanItemId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

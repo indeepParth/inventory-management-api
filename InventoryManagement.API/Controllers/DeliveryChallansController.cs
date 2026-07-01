@@ -50,5 +50,13 @@ namespace InventoryManagement.API.Controllers
                 {
                     Id = id
                 }));
+
+        [HttpPost("{id}/cancel")]
+        public async Task<IActionResult> Cancel(int id) =>
+            Ok(await _sender.Send(
+                new Application.Features.DeliveryChallans.CancelDeliveryChallan.Command
+                {
+                    Id = id
+                }));
     }
 }

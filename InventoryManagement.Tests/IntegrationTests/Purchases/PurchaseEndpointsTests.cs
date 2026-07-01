@@ -3,12 +3,15 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Application.Features.Purchases;
 using InventoryManagement.Application.Features.Purchases.CreatePurchase;
+using InventoryManagement.Application.Common.Models;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
 using InventoryManagement.Tests.IntegrationTests.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using UpdatePurchaseCommand = InventoryManagement.Application.Features.Purchases.UpdatePurchase.Command;
+using UpdatePurchaseItemInput = InventoryManagement.Application.Features.Purchases.UpdatePurchase.PurchaseItemInput;
 
 namespace InventoryManagement.Tests.IntegrationTests.Purchases
 {
@@ -95,6 +98,101 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        [Fact]
+        public async Task List_Should_Page_And_Apply_All_Filters()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedPurchaseDependenciesAsync();
+            var matchingNumber = $"MATCH-{Guid.NewGuid():N}";
+            var matchingBill = $"FILTER-{Guid.NewGuid():N}";
+
+            await CreatePurchaseAsync(
+                seed,
+                matchingNumber,
+                matchingBill,
+                new DateTime(2026, 7, 10));
+            await CreatePurchaseAsync(
+                seed,
+                $"OTHER-{Guid.NewGuid():N}",
+                $"OTHER-{Guid.NewGuid():N}",
+                new DateTime(2026, 6, 1));
+
+            var response = await Client.GetAsync(
+                $"/api/purchases?pageNumber=1&pageSize=1" +
+                $"&supplierId={seed.SupplierId}&status=Draft" +
+                "&dateFrom=2026-07-01&dateTo=2026-07-31" +
+                $"&purchaseNumber={matchingNumber[..12]}" +
+                $"&supplierBillNumber={matchingBill[..12]}");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var page = await response.Content
+                .ReadFromJsonAsync<PagedResponse<PurchaseResponse>>();
+            page.Should().NotBeNull();
+            page!.Items.Should().ContainSingle(x =>
+                x.PurchaseNumber == matchingNumber &&
+                x.SupplierBillNumber == matchingBill);
+            page.PageNumber.Should().Be(1);
+            page.PageSize.Should().Be(1);
+            page.TotalCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task Update_Draft_Should_Replace_Lines_Without_Changing_Stock()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedPurchaseDependenciesAsync();
+            var created = await CreatePurchaseAsync(
+                seed,
+                $"EDIT-{Guid.NewGuid():N}",
+                null,
+                new DateTime(2026, 7, 1));
+
+            var update = new UpdatePurchaseCommand(
+                0,
+                $"EDITED-{Guid.NewGuid():N}",
+                seed.SupplierId,
+                $"EDIT-BILL-{Guid.NewGuid():N}",
+                new DateTime(2026, 7, 2),
+                4,
+                2,
+                "Replaced draft",
+                new List<UpdatePurchaseItemInput>
+                {
+                    new()
+                    {
+                        ProductId = seed.ProductId,
+                        Quantity = 3,
+                        UnitCost = 20,
+                        TaxRate = 5
+                    }
+                });
+
+            var response = await Client.PutAsJsonAsync(
+                $"/api/purchases/{created.Id}",
+                update);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var updated = await response.Content.ReadFromJsonAsync<PurchaseResponse>();
+            updated.Should().NotBeNull();
+            updated!.Status.Should().Be(PurchaseStatus.Draft);
+            updated.Subtotal.Should().Be(60);
+            updated.TaxAmount.Should().Be(3);
+            updated.GrandTotal.Should().Be(61);
+            updated.Items.Should().ContainSingle();
+            updated.Items[0].Quantity.Should().Be(3);
+            updated.CreatedAtUtc.Should().Be(created.CreatedAtUtc);
+            updated.CreatedBy.Should().Be(created.CreatedBy);
+
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var product = await db.Products.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.ProductId);
+            product.Quantity.Should().Be(seed.Quantity);
+            product.AverageCost.Should().Be(seed.AverageCost);
+            (await db.StockMovements.CountAsync(x => x.ProductId == seed.ProductId))
+                .Should().Be(seed.StockMovementCount);
+        }
+
         private async Task<SeedResult> SeedPurchaseDependenciesAsync()
         {
             using var scope = _factory.Services.CreateScope();
@@ -132,6 +230,32 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
                 product.Quantity,
                 product.AverageCost,
                 await db.StockMovements.CountAsync(x => x.ProductId == product.Id));
+        }
+
+        private async Task<PurchaseResponse> CreatePurchaseAsync(
+            SeedResult seed,
+            string purchaseNumber,
+            string? supplierBillNumber,
+            DateTime billDate)
+        {
+            var response = await Client.PostAsJsonAsync("/api/purchases", new Command
+            {
+                PurchaseNumber = purchaseNumber,
+                SupplierId = seed.SupplierId,
+                SupplierBillNumber = supplierBillNumber,
+                BillDate = billDate,
+                Items =
+                {
+                    new PurchaseItemInput
+                    {
+                        ProductId = seed.ProductId,
+                        Quantity = 1,
+                        UnitCost = 10
+                    }
+                }
+            });
+            response.EnsureSuccessStatusCode();
+            return (await response.Content.ReadFromJsonAsync<PurchaseResponse>())!;
         }
 
         private sealed record SeedResult(

@@ -167,6 +167,44 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
                 .StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        [Fact]
+        public async Task Deactivate_Should_Be_Idempotent_And_Keep_Customer_Queryable()
+        {
+            await AuthenticateAsync();
+            var customer = await CreateCustomerAsync();
+
+            var firstResponse = await Client.PatchAsync(
+                $"/api/customers/{customer.Id}/deactivate",
+                null);
+            firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var firstResult = await firstResponse.Content.ReadFromJsonAsync<CustomerResponse>();
+            firstResult.Should().NotBeNull();
+            firstResult!.IsActive.Should().BeFalse();
+
+            var secondResponse = await Client.PatchAsync(
+                $"/api/customers/{customer.Id}/deactivate",
+                null);
+            secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var secondResult = await secondResponse.Content.ReadFromJsonAsync<CustomerResponse>();
+            secondResult.Should().NotBeNull();
+            secondResult!.IsActive.Should().BeFalse();
+            secondResult.UpdatedAtUtc.Should().Be(firstResult.UpdatedAtUtc);
+
+            var getResponse = await Client.GetAsync($"/api/customers/{customer.Id}");
+            getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var fetched = await getResponse.Content.ReadFromJsonAsync<CustomerResponse>();
+            fetched.Should().NotBeNull();
+            fetched!.IsActive.Should().BeFalse();
+
+            var listResponse = await Client.GetAsync(
+                $"/api/customers?search={Uri.EscapeDataString(customer.Name)}&isActive=false");
+            listResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var page = await listResponse.Content
+                .ReadFromJsonAsync<PagedResponse<CustomerResponse>>();
+            page.Should().NotBeNull();
+            page!.Items.Should().ContainSingle(x => x.Id == customer.Id);
+        }
+
         private async Task<CustomerResponse> CreateCustomerAsync()
         {
             var response = await Client.PostAsJsonAsync("/api/customers", ValidCommand());

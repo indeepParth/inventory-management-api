@@ -45,5 +45,12 @@ namespace InventoryManagement.API.Controllers
         {
             return Ok(await _sender.Send(command with { Id = id }));
         }
+
+        [HttpPatch("{id}/deactivate")]
+        public async Task<IActionResult> DeactivateCustomer(int id)
+        {
+            return Ok(await _sender.Send(
+                new Application.Features.Customers.DeactivateCustomer.Command { Id = id }));
+        }
     }
 }

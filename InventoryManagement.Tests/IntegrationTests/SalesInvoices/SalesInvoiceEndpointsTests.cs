@@ -4,6 +4,7 @@ using FluentAssertions;
 using InventoryManagement.Application.Common.Models;
 using InventoryManagement.Application.Features.SalesInvoices;
 using InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvoice;
+using InventoryManagement.Application.Features.DeliveryChallans;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
@@ -14,6 +15,12 @@ using UpdateSalesInvoiceCommand =
     InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvoice.Command;
 using UpdateSalesInvoiceItemInput =
     InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvoice.SalesInvoiceItemInput;
+using CreateChallanCommand =
+    InventoryManagement.Application.Features.DeliveryChallans.CreateDeliveryChallan.Command;
+using CreateChallanItemInput =
+    InventoryManagement.Application.Features.DeliveryChallans.CreateDeliveryChallan.DeliveryChallanItemInput;
+using ChallanItemInput =
+    InventoryManagement.Application.Features.SalesInvoices.CreateFromChallans.ChallanItemInput;
 
 namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
 {
@@ -50,8 +57,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                             ProductId = seed.ProductId,
                             Quantity = 2.5m,
                             SellingUnitPrice = 40,
-                            TaxRate = 18,
-                            DeliveryChallanItemId = seed.DeliveryChallanItemId
+                            TaxRate = 18
                         }
                     }
                 });
@@ -70,8 +76,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             created.Items.Should().ContainSingle();
             created.Items[0].LineTotal.Should().Be(118);
             created.Items[0].CostAtSale.Should().BeNull();
-            created.Items[0].DeliveryChallanItemId
-                .Should().Be(seed.DeliveryChallanItemId);
+            created.Items[0].DeliveryChallanItemId.Should().BeNull();
 
             var getResponse = await Client.GetAsync(
                 $"/api/sales-invoices/{created.Id}");
@@ -437,6 +442,157 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             }
         }
 
+        [Fact]
+        public async Task Challan_Invoice_Should_Create_Debt_Without_Reducing_Stock_Twice()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            var firstChallan = await CreateAndPostChallanAsync(
+                seed, 2, $"DC-A-{Guid.NewGuid():N}");
+            var secondChallan = await CreateAndPostChallanAsync(
+                seed, 3, $"DC-B-{Guid.NewGuid():N}");
+
+            int firstItemId;
+            int secondItemId;
+            decimal stockAfterChallans;
+            int movementCountAfterChallans;
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                firstItemId = await db.DeliveryChallanItems
+                    .Where(x => x.DeliveryChallanId == firstChallan.Id)
+                    .Select(x => x.Id)
+                    .SingleAsync();
+                secondItemId = await db.DeliveryChallanItems
+                    .Where(x => x.DeliveryChallanId == secondChallan.Id)
+                    .Select(x => x.Id)
+                    .SingleAsync();
+                stockAfterChallans = (await db.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.ProductId)).Quantity;
+                movementCountAfterChallans = await db.StockMovements.CountAsync(
+                    x => x.ProductId == seed.ProductId);
+            }
+
+            var createResponse = await Client.PostAsJsonAsync(
+                "/api/sales-invoices/from-challans",
+                new InventoryManagement.Application.Features.SalesInvoices
+                    .CreateFromChallans.Command
+                {
+                    InvoiceNumber = $"DC-INV-{Guid.NewGuid():N}",
+                    InvoiceDate = new DateTime(2026, 7, 2),
+                    Items =
+                    {
+                        new ChallanItemInput
+                        {
+                            DeliveryChallanItemId = firstItemId,
+                            SellingUnitPrice = 40,
+                            TaxRate = 5
+                        },
+                        new ChallanItemInput
+                        {
+                            DeliveryChallanItemId = secondItemId,
+                            SellingUnitPrice = 50,
+                            TaxRate = 10
+                        }
+                    }
+                });
+
+            createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+            var draft = await createResponse.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            draft.Should().NotBeNull();
+            draft!.Items.Select(x => x.Quantity).Should().Equal(2, 3);
+            draft.Items.Select(x => x.DeliveryChallanItemId)
+                .Should().Equal(firstItemId, secondItemId);
+
+            var duplicateResponse = await Client.PostAsJsonAsync(
+                "/api/sales-invoices/from-challans",
+                new InventoryManagement.Application.Features.SalesInvoices
+                    .CreateFromChallans.Command
+                {
+                    InvoiceNumber = $"DUP-{Guid.NewGuid():N}",
+                    InvoiceDate = new DateTime(2026, 7, 2),
+                    Items =
+                    {
+                        new ChallanItemInput
+                        {
+                            DeliveryChallanItemId = firstItemId,
+                            SellingUnitPrice = 40
+                        }
+                    }
+                });
+            duplicateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var postResponse = await Client.PostAsync(
+                $"/api/sales-invoices/{draft.Id}/post",
+                null);
+            postResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var posted = await postResponse.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            posted.Should().NotBeNull();
+            posted!.Items.Should().OnlyContain(x => x.CostAtSale == 25);
+
+            using var verificationScope = _factory.Services.CreateScope();
+            var verificationDb = verificationScope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
+            (await verificationDb.Products.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.ProductId))
+                .Quantity.Should().Be(stockAfterChallans);
+            (await verificationDb.StockMovements.CountAsync(
+                x => x.ProductId == seed.ProductId))
+                .Should().Be(movementCountAfterChallans);
+            (await verificationDb.Customers.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.CustomerId))
+                .BalanceDue.Should().Be(draft.GrandTotal);
+            var challans = await verificationDb.DeliveryChallans.AsNoTracking()
+                .Where(x => x.Id == firstChallan.Id || x.Id == secondChallan.Id)
+                .ToListAsync();
+            challans.Should().OnlyContain(x =>
+                x.Status == DeliveryChallanStatus.Invoiced &&
+                x.InvoicedAtUtc != null);
+        }
+
+        [Fact]
+        public async Task Challan_Invoice_Should_Reject_Different_Customers()
+        {
+            await AuthenticateAsync();
+            var first = await SeedDependenciesAsync();
+            var second = await SeedDependenciesAsync();
+            var firstChallan = await CreateAndPostChallanAsync(
+                first, 1, $"DC-C-{Guid.NewGuid():N}");
+            var secondChallan = await CreateAndPostChallanAsync(
+                second, 1, $"DC-D-{Guid.NewGuid():N}");
+
+            List<int> itemIds;
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                itemIds = await db.DeliveryChallanItems
+                    .Where(x => x.DeliveryChallanId == firstChallan.Id ||
+                                x.DeliveryChallanId == secondChallan.Id)
+                    .Select(x => x.Id)
+                    .ToListAsync();
+            }
+
+            var response = await Client.PostAsJsonAsync(
+                "/api/sales-invoices/from-challans",
+                new InventoryManagement.Application.Features.SalesInvoices
+                    .CreateFromChallans.Command
+                {
+                    InvoiceNumber = $"MIXED-CUSTOMER-{Guid.NewGuid():N}",
+                    InvoiceDate = new DateTime(2026, 7, 2),
+                    Items = itemIds.Select(x => new ChallanItemInput
+                    {
+                        DeliveryChallanItemId = x,
+                        SellingUnitPrice = 10
+                    }).ToList()
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         private async Task<SeedResult> SeedDependenciesAsync()
         {
             using var scope = _factory.Services.CreateScope();
@@ -544,6 +700,40 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             db.Products.Add(product);
             await db.SaveChangesAsync();
             return new ProductSeedResult(product.Id);
+        }
+
+        private async Task<DeliveryChallanResponse> CreateAndPostChallanAsync(
+            SeedResult seed,
+            decimal quantity,
+            string challanNumber)
+        {
+            var createResponse = await Client.PostAsJsonAsync(
+                "/api/delivery-challans",
+                new CreateChallanCommand
+                {
+                    ChallanNumber = challanNumber,
+                    CustomerId = seed.CustomerId,
+                    ChallanDate = new DateTime(2026, 7, 1),
+                    DeliveryAddress = "Test address",
+                    Items =
+                    {
+                        new CreateChallanItemInput
+                        {
+                            ProductId = seed.ProductId,
+                            Quantity = quantity
+                        }
+                    }
+                });
+            createResponse.EnsureSuccessStatusCode();
+            var challan = await createResponse.Content
+                .ReadFromJsonAsync<DeliveryChallanResponse>();
+            challan.Should().NotBeNull();
+            var postResponse = await Client.PostAsync(
+                $"/api/delivery-challans/{challan!.Id}/post",
+                null);
+            postResponse.EnsureSuccessStatusCode();
+            return (await postResponse.Content
+                .ReadFromJsonAsync<DeliveryChallanResponse>())!;
         }
 
         private sealed record SeedResult(

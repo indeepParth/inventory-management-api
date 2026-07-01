@@ -8,5 +8,7 @@ namespace InventoryManagement.Domain.Entities
         public int ProductId { get; set; }
         public Product Product { get; set; } = null!;
         public decimal Quantity { get; set; }
+        public ICollection<SalesInvoiceItem> SalesInvoiceItems { get; set; } =
+            new List<SalesInvoiceItem>();
     }
 }

@@ -79,6 +79,8 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Customer)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
+                .Include(x => x.Items)
+                    .ThenInclude(x => x.DeliveryChallanItem)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
@@ -108,6 +110,33 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             return _context.DeliveryChallanItems
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        }
+
+        public Task<List<DeliveryChallanItem>> GetChallanItemsForInvoiceAsync(
+            IReadOnlyCollection<int> ids,
+            CancellationToken cancellationToken = default)
+        {
+            return _context.DeliveryChallanItems
+                .Include(x => x.Product)
+                .Include(x => x.DeliveryChallan)
+                    .ThenInclude(x => x.Customer)
+                .Include(x => x.SalesInvoiceItems)
+                .Where(x => ids.Contains(x.Id))
+                .ToListAsync(cancellationToken);
+        }
+
+        public Task<List<DeliveryChallan>> GetLinkedChallansForUpdateAsync(
+            int invoiceId,
+            CancellationToken cancellationToken = default)
+        {
+            return _context.DeliveryChallans
+                .Include(x => x.Items)
+                    .ThenInclude(x => x.SalesInvoiceItems)
+                        .ThenInclude(x => x.SalesInvoice)
+                .Where(x => x.Items.Any(item =>
+                    item.SalesInvoiceItems.Any(invoiceItem =>
+                        invoiceItem.SalesInvoiceId == invoiceId)))
+                .ToListAsync(cancellationToken);
         }
 
         public async Task AddAsync(

@@ -240,6 +240,9 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<SalesInvoiceItem>(entity =>
             {
+                entity.HasIndex(x => x.DeliveryChallanItemId)
+                    .IsUnique()
+                    .HasFilter("\"DeliveryChallanItemId\" IS NOT NULL");
                 entity.Property(x => x.Quantity).HasPrecision(18, 3);
                 entity.Property(x => x.SellingUnitPrice).HasPrecision(18, 2);
                 entity.Property(x => x.TaxRate).HasPrecision(9, 4);
@@ -252,7 +255,8 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.HasOne(x => x.Product).WithMany()
                     .HasForeignKey(x => x.ProductId)
                     .OnDelete(DeleteBehavior.Restrict).IsRequired();
-                entity.HasOne(x => x.DeliveryChallanItem).WithMany()
+                entity.HasOne(x => x.DeliveryChallanItem)
+                    .WithMany(x => x.SalesInvoiceItems)
                     .HasForeignKey(x => x.DeliveryChallanItemId)
                     .OnDelete(DeleteBehavior.Restrict);
             });

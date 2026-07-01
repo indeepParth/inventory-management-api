@@ -82,6 +82,21 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
         }
 
+        public Task<decimal?> GetDeliveryChallanItemCostAsync(
+            int deliveryChallanId,
+            int productId,
+            CancellationToken cancellationToken = default)
+        {
+            var sourceId = deliveryChallanId.ToString();
+            return _context.StockMovements
+                .Where(x =>
+                    x.MovementType == StockMovementType.Sale &&
+                    x.SourceType == "DeliveryChallan" &&
+                    x.SourceId == sourceId &&
+                    x.ProductId == productId)
+                .Select(x => (decimal?)x.UnitCost)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
         private IQueryable<StockMovement> BuildQuery(
             int? productId,
             StockMovementType? movementType,

@@ -26,6 +26,12 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
             Command request,
             CancellationToken cancellationToken)
         {
+            if (request.Items.Any(x => x.DeliveryChallanItemId.HasValue))
+            {
+                throw new BadRequestException(
+                    "Delivery challan invoice items cannot be replaced here.");
+            }
+
             var invoice = await _invoiceRepository.GetForUpdateAsync(
                 request.Id,
                 cancellationToken) ??
@@ -73,25 +79,6 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
                     throw new NotFoundException($"Product {input.ProductId} not found.");
                 }
 
-                DeliveryChallanItem? challanItem = null;
-                if (input.DeliveryChallanItemId.HasValue)
-                {
-                    challanItem = await _invoiceRepository.GetDeliveryChallanItemAsync(
-                        input.DeliveryChallanItemId.Value,
-                        cancellationToken);
-                    if (challanItem is null)
-                    {
-                        throw new NotFoundException(
-                            $"Delivery challan item {input.DeliveryChallanItemId.Value} not found.");
-                    }
-
-                    if (challanItem.ProductId != product.Id)
-                    {
-                        throw new BadRequestException(
-                            "Delivery challan item product does not match invoice item product.");
-                    }
-                }
-
                 var lineSubtotal = RoundMoney(input.Quantity * input.SellingUnitPrice);
                 var taxAmount = RoundMoney(lineSubtotal * input.TaxRate / 100m);
                 replacementItems.Add(new SalesInvoiceItem
@@ -104,9 +91,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
                     TaxRate = input.TaxRate,
                     TaxAmount = taxAmount,
                     LineTotal = lineSubtotal + taxAmount,
-                    CostAtSale = null,
-                    DeliveryChallanItemId = challanItem?.Id,
-                    DeliveryChallanItem = challanItem
+                    CostAtSale = null
                 });
                 subtotal += lineSubtotal;
                 taxAmountTotal += taxAmount;

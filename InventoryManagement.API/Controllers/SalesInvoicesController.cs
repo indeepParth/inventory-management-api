@@ -41,6 +41,14 @@ namespace InventoryManagement.API.Controllers
             return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
         }
 
+        [HttpPost("from-challans")]
+        public async Task<IActionResult> CreateFromChallans(
+            [FromBody] Application.Features.SalesInvoices.CreateFromChallans.Command command)
+        {
+            var response = await _sender.Send(command);
+            return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
+        }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateDraft(
             int id,

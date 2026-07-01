@@ -37,6 +37,12 @@ namespace InventoryManagement.Application.Common.Persistence
         Task<DeliveryChallanItem?> GetDeliveryChallanItemAsync(
             int id,
             CancellationToken cancellationToken = default);
+        Task<List<DeliveryChallanItem>> GetChallanItemsForInvoiceAsync(
+            IReadOnlyCollection<int> ids,
+            CancellationToken cancellationToken = default);
+        Task<List<DeliveryChallan>> GetLinkedChallansForUpdateAsync(
+            int invoiceId,
+            CancellationToken cancellationToken = default);
         Task AddAsync(
             SalesInvoice invoice,
             CancellationToken cancellationToken = default);

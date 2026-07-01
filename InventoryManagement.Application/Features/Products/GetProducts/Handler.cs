@@ -41,9 +41,7 @@ namespace InventoryManagement.Application.Features.Products.GetProducts
                     DefaultSellingPrice = p.DefaultSellingPrice,
                     AverageCost = p.AverageCost,
                     CategoryId = p.CategoryId,
-                    CategoryName = p.Category.Name,
-                    SupplierId = p.SupplierId,
-                    SupplierName = p.Supplier?.Name
+                    CategoryName = p.Category.Name
                 }).ToList();
 
             return new PagedResponse<Response>

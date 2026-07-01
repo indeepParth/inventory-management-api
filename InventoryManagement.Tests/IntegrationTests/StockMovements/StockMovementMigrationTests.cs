@@ -16,7 +16,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
                 Path.GetTempPath(),
                 $"inventory-ledger-migration-{Guid.NewGuid():N}.db");
             var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-                .UseSqlite($"Data Source={databasePath}")
+                .UseSqlite($"Data Source={databasePath};Pooling=False")
                 .Options;
 
             try
@@ -31,10 +31,10 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
                     VALUES ('Migration category', 'Test', 1, '2026-06-30 00:00:00');
 
                     INSERT INTO Products
-                        (Name, SKU, Quantity, BaseUnit, DefaultSellingPrice, AverageCost, CategoryId, SupplierId)
+                        (Name, SKU, Quantity, BaseUnit, DefaultSellingPrice, AverageCost, CategoryId)
                     VALUES
-                        ('Nonzero', 'MIG-1', 7.5, 4, 12, 8.25, 1, NULL),
-                        ('Zero', 'MIG-2', 0, 4, 12, 3.50, 1, NULL);
+                        ('Nonzero', 'MIG-1', 7.5, 4, 12, 8.25, 1),
+                        ('Zero', 'MIG-2', 0, 4, 12, 3.50, 1);
                     """);
 
                 await migrator.MigrateAsync("20260630051810_AddStockMovementLedger");

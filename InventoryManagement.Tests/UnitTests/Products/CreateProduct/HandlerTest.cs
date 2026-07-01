@@ -28,7 +28,6 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             
             var _repositoryMock = new Mock<IProductRepository>();
             var categoryRepositoryMock = new Mock<ICategoryRepository>();
-            var supplierRepositoryMock = new Mock<ISupplierRepository>();
             categoryRepositoryMock
                 .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(category);
@@ -40,8 +39,7 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
 
             var handler = new Handler(
                 _repositoryMock.Object,
-                categoryRepositoryMock.Object,
-                supplierRepositoryMock.Object);
+                categoryRepositoryMock.Object);
 
             var newProduct = new Command
             {
@@ -63,6 +61,9 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             addedProduct.DefaultSellingPrice.Should().Be(newProduct.DefaultSellingPrice);
             addedProduct.AverageCost.Should().Be(0m);
             addedProduct.CategoryId.Should().Be(newProduct.CategoryId);
+            typeof(Command).GetProperty("SupplierId").Should().BeNull();
+            typeof(Response).GetProperty("SupplierId").Should().BeNull();
+            typeof(Response).GetProperty("SupplierName").Should().BeNull();
 
             // ASSERT            
             _repositoryMock.Verify(

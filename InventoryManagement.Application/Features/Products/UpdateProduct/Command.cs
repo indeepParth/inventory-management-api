@@ -13,7 +13,6 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
         string SKU,
         UnitOfMeasure BaseUnit,
         decimal DefaultSellingPrice,
-        int CategoryId,
-        int? SupplierId
+        int CategoryId
     ) : IRequest<Response>;
 }

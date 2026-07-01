@@ -65,8 +65,7 @@ namespace InventoryManagement.API.Controllers
                 command.SKU,
                 command.BaseUnit,
                 command.DefaultSellingPrice,
-                command.CategoryId,
-                command.SupplierId
+                command.CategoryId
             );
             var response = await _sender.Send(request);
             return Ok(response);

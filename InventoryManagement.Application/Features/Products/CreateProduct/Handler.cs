@@ -10,16 +10,13 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
     {
         private readonly IProductRepository _repository;
         private readonly ICategoryRepository _categoryRepository;
-        private readonly ISupplierRepository _supplierRepository;
 
         public Handler(
             IProductRepository repository,
-            ICategoryRepository categoryRepository,
-            ISupplierRepository supplierRepository)
+            ICategoryRepository categoryRepository)
         {
             _repository = repository;
             _categoryRepository = categoryRepository;
-            _supplierRepository = supplierRepository;
         }
 
         public async Task<Response> Handle(Command request, CancellationToken cancellationToken)
@@ -31,21 +28,6 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
                 throw new NotFoundException("Category not found.");
             }
 
-            Supplier? supplier = null;
-            if (request.SupplierId.HasValue)
-            {
-                supplier = await _supplierRepository.GetByIdAsync(request.SupplierId.Value, cancellationToken);
-                if (supplier is null)
-                {
-                    throw new NotFoundException("Supplier not found.");
-                }
-
-                if (!supplier.IsActive)
-                {
-                    throw new BadRequestException("Inactive supplier cannot be assigned to a product.");
-                }
-            }
-
             var product = new Product
             {
                 Name = request.Name,
@@ -54,8 +36,7 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
                 BaseUnit = request.BaseUnit,
                 DefaultSellingPrice = request.DefaultSellingPrice,
                 AverageCost = 0m,
-                CategoryId = request.CategoryId,
-                SupplierId = request.SupplierId
+                CategoryId = request.CategoryId
             };
 
             await _repository.AddProductAsync(product);
@@ -71,9 +52,7 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
                 DefaultSellingPrice = product.DefaultSellingPrice,
                 AverageCost = product.AverageCost,
                 CategoryId = category.Id,
-                CategoryName = category.Name,
-                SupplierId = supplier?.Id,
-                SupplierName = supplier?.Name
+                CategoryName = category.Name
             };
         }
     }

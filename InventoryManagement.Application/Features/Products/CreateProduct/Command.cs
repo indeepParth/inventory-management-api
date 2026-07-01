@@ -10,6 +10,5 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
         public UnitOfMeasure BaseUnit { get; set; }
         public decimal DefaultSellingPrice { get; set; }
         public int CategoryId { get; set; }
-        public int? SupplierId { get; set; }
     }
 }

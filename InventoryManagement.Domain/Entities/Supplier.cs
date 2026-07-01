@@ -11,6 +11,5 @@ namespace InventoryManagement.Domain.Entities
         public string? GstNumber { get; set; }
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; }
-        public ICollection<Product> Products { get; set; } = new List<Product>();
     }
 }

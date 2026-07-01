@@ -88,11 +88,6 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .HasForeignKey(x => x.CategoryId)
                       .OnDelete(DeleteBehavior.Restrict)
                       .IsRequired();
-
-                entity.HasOne(x => x.Supplier)
-                      .WithMany(x => x.Products)
-                      .HasForeignKey(x => x.SupplierId)
-                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<StockMovement>(entity =>

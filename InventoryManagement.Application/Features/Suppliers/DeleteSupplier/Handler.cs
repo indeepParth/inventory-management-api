@@ -18,11 +18,6 @@ namespace InventoryManagement.Application.Features.Suppliers.DeleteSupplier
             var supplier = await _repository.GetByIdAsync(request.Id, cancellationToken)
                 ?? throw new NotFoundException("Supplier not found.");
 
-            if (await _repository.HasProductsAsync(request.Id, cancellationToken))
-            {
-                throw new BadRequestException("Supplier cannot be deleted because it has products.");
-            }
-
             _repository.Delete(supplier);
             await _repository.SaveChangesAsync(cancellationToken);
 

@@ -19,6 +19,9 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
         {
             typeof(Command).GetProperty("Quantity").Should().BeNull();
             typeof(Command).GetProperty("AverageCost").Should().BeNull();
+            typeof(Command).GetProperty("SupplierId").Should().BeNull();
+            typeof(Response).GetProperty("SupplierId").Should().BeNull();
+            typeof(Response).GetProperty("SupplierName").Should().BeNull();
         }
 
         [Fact]
@@ -55,14 +58,12 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
                 "NEW123",
                 UnitOfMeasure.Kilogram,
                 150,
-                2,
-                null
+                2
             );
 
 
             var _repositoryMock = new Mock<IProductRepository>();
             var categoryRepositoryMock = new Mock<ICategoryRepository>();
-            var supplierRepositoryMock = new Mock<ISupplierRepository>();
             categoryRepositoryMock
                 .Setup(x => x.GetByIdAsync(2, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(category);
@@ -73,8 +74,7 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
 
             var handler = new Handler(
                 _repositoryMock.Object,
-                categoryRepositoryMock.Object,
-                supplierRepositoryMock.Object);
+                categoryRepositoryMock.Object);
 
             // ACT
             await handler.Handle(updateDto, It.IsAny<CancellationToken>());

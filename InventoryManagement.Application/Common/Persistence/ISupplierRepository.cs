@@ -17,7 +17,6 @@ namespace InventoryManagement.Application.Common.Persistence
         Task<Supplier?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<Supplier?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
         Task<Supplier?> GetByGstNumberAsync(string gstNumber, CancellationToken cancellationToken = default);
-        Task<bool> HasProductsAsync(int id, CancellationToken cancellationToken = default);
         Task AddAsync(Supplier supplier, CancellationToken cancellationToken = default);
         void Delete(Supplier supplier);
         Task SaveChangesAsync(CancellationToken cancellationToken = default);

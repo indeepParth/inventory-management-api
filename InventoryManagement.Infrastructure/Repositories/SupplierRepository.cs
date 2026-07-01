@@ -51,11 +51,6 @@ namespace InventoryManagement.Infrastructure.Repositories
             return _context.Suppliers.FirstOrDefaultAsync(x => x.GstNumber == gstNumber, cancellationToken);
         }
 
-        public Task<bool> HasProductsAsync(int id, CancellationToken cancellationToken = default)
-        {
-            return _context.Products.AnyAsync(x => x.SupplierId == id, cancellationToken);
-        }
-
         public async Task AddAsync(Supplier supplier, CancellationToken cancellationToken = default)
         {
             await _context.Suppliers.AddAsync(supplier, cancellationToken);

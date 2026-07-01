@@ -77,8 +77,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
                     product.SKU,
                     product.BaseUnit,
                     product.DefaultSellingPrice,
-                    int.MaxValue,
-                    product.SupplierId));
+                    int.MaxValue));
 
             updateResponse.StatusCode.Should().Be(HttpStatusCode.NotFound);
         }

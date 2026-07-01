@@ -14,16 +14,13 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
     {
         private readonly IProductRepository _repository;
         private readonly ICategoryRepository _categoryRepository;
-        private readonly ISupplierRepository _supplierRepository;
 
         public Handler(
             IProductRepository repository,
-            ICategoryRepository categoryRepository,
-            ISupplierRepository supplierRepository)
+            ICategoryRepository categoryRepository)
         {
             _repository = repository;
             _categoryRepository = categoryRepository;
-            _supplierRepository = supplierRepository;
         }
         
         public async Task<Response> Handle(Command request, CancellationToken cancellationToken)
@@ -42,27 +39,11 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
                 throw new NotFoundException("Category not found.");
             }
 
-            Supplier? supplier = null;
-            if (request.SupplierId.HasValue)
-            {
-                supplier = await _supplierRepository.GetByIdAsync(request.SupplierId.Value, cancellationToken);
-                if (supplier is null)
-                {
-                    throw new NotFoundException("Supplier not found.");
-                }
-
-                if (!supplier.IsActive)
-                {
-                    throw new BadRequestException("Inactive supplier cannot be assigned to a product.");
-                }
-            }
-
             product.Name = request.Name;
             product.SKU = request.SKU;
             product.BaseUnit = request.BaseUnit;
             product.DefaultSellingPrice = request.DefaultSellingPrice;
             product.CategoryId = request.CategoryId;
-            product.SupplierId = request.SupplierId;
 
             await _repository.SaveChangesAsync(cancellationToken);
 
@@ -76,9 +57,7 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
                 DefaultSellingPrice = product.DefaultSellingPrice,
                 AverageCost = product.AverageCost,
                 CategoryId = category.Id,
-                CategoryName = category.Name,
-                SupplierId = supplier?.Id,
-                SupplierName = supplier?.Name
+                CategoryName = category.Name
             };
         }
     }

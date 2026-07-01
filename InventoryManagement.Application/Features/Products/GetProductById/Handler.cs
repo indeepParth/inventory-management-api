@@ -36,9 +36,7 @@ namespace InventoryManagement.Application.Features.Products.GetProductById
                 DefaultSellingPrice = product.DefaultSellingPrice,
                 AverageCost = product.AverageCost,
                 CategoryId = product.CategoryId,
-                CategoryName = product.Category.Name,
-                SupplierId = product.SupplierId,
-                SupplierName = product.Supplier?.Name
+                CategoryName = product.Category.Name
             }; 
         }
     }

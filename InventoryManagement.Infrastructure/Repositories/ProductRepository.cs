@@ -32,8 +32,7 @@ namespace InventoryManagement.Infrastructure.Repositories
         private IQueryable<Product> BuildSearchQuery(string? search)
         {
             IQueryable<Product> query = _context.Products
-                .Include(x => x.Category)
-                .Include(x => x.Supplier);
+                .Include(x => x.Category);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -47,7 +46,6 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             return await _context.Products
                 .Include(x => x.Category)
-                .Include(x => x.Supplier)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 

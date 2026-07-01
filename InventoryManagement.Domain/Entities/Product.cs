@@ -14,8 +14,6 @@ namespace InventoryManagement.Domain.Entities
         public decimal AverageCost { get; set; }
         public int CategoryId { get; set; }
         public Category Category { get; set; } = null!;
-        public int? SupplierId { get; set; }
-        public Supplier? Supplier { get; set; }
         public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
     }
 }

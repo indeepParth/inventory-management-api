@@ -16,6 +16,13 @@ namespace InventoryManagement.API.Controllers
             _sender = sender;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetCustomers(
+            [FromQuery] Application.Features.Customers.GetCustomers.Query query)
+        {
+            return Ok(await _sender.Send(query));
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCustomerById(int id)
         {
@@ -29,6 +36,14 @@ namespace InventoryManagement.API.Controllers
         {
             var response = await _sender.Send(command);
             return CreatedAtAction(nameof(GetCustomerById), new { id = response.Id }, response);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateCustomer(
+            int id,
+            [FromBody] Application.Features.Customers.UpdateCustomer.Command command)
+        {
+            return Ok(await _sender.Send(command with { Id = id }));
         }
     }
 }

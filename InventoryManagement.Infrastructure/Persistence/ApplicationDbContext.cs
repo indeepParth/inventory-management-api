@@ -24,6 +24,10 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<StockMovement> StockMovements => Set<StockMovement>();
 
+        public DbSet<Purchase> Purchases => Set<Purchase>();
+
+        public DbSet<PurchaseItem> PurchaseItems => Set<PurchaseItem>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -130,6 +134,51 @@ namespace InventoryManagement.Infrastructure.Persistence
 
                 entity.HasOne(x => x.Product)
                       .WithMany(x => x.StockMovements)
+                      .HasForeignKey(x => x.ProductId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
+            });
+
+            builder.Entity<Purchase>(entity =>
+            {
+                entity.HasIndex(x => x.PurchaseNumber)
+                      .IsUnique();
+
+                entity.HasIndex(x => new { x.SupplierId, x.SupplierBillNumber })
+                      .IsUnique();
+
+                entity.Property(x => x.PurchaseNumber).IsRequired();
+                entity.Property(x => x.Status).IsRequired();
+                entity.Property(x => x.Subtotal).HasPrecision(18, 2);
+                entity.Property(x => x.Discount).HasPrecision(18, 2);
+                entity.Property(x => x.TaxAmount).HasPrecision(18, 2);
+                entity.Property(x => x.OtherCharges).HasPrecision(18, 2);
+                entity.Property(x => x.GrandTotal).HasPrecision(18, 2);
+                entity.Property(x => x.CreatedBy).IsRequired();
+
+                entity.HasOne(x => x.Supplier)
+                      .WithMany()
+                      .HasForeignKey(x => x.SupplierId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
+            });
+
+            builder.Entity<PurchaseItem>(entity =>
+            {
+                entity.Property(x => x.Quantity).HasPrecision(18, 3);
+                entity.Property(x => x.UnitCost).HasPrecision(18, 2);
+                entity.Property(x => x.TaxRate).HasPrecision(9, 4);
+                entity.Property(x => x.TaxAmount).HasPrecision(18, 2);
+                entity.Property(x => x.LineTotal).HasPrecision(18, 2);
+
+                entity.HasOne(x => x.Purchase)
+                      .WithMany(x => x.Items)
+                      .HasForeignKey(x => x.PurchaseId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
+
+                entity.HasOne(x => x.Product)
+                      .WithMany()
                       .HasForeignKey(x => x.ProductId)
                       .OnDelete(DeleteBehavior.Restrict)
                       .IsRequired();

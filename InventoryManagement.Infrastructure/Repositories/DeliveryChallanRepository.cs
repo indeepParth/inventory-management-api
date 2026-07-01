@@ -38,14 +38,50 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Items).ThenInclude(x => x.Product)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
+        public Task<DeliveryChallan?> GetForUpdateAsync(
+            int id, CancellationToken cancellationToken = default) =>
+            _context.DeliveryChallans
+                .Include(x => x.Customer)
+                .Include(x => x.Items).ThenInclude(x => x.Product)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
         public Task<bool> ChallanNumberExistsAsync(
             string challanNumber, CancellationToken cancellationToken = default) =>
             _context.DeliveryChallans.AnyAsync(
                 x => x.ChallanNumber == challanNumber, cancellationToken);
 
+        public Task<bool> ChallanNumberExistsForOtherAsync(
+            string challanNumber, int deliveryChallanId,
+            CancellationToken cancellationToken = default) =>
+            _context.DeliveryChallans.AnyAsync(
+                x => x.Id != deliveryChallanId &&
+                     x.ChallanNumber == challanNumber,
+                cancellationToken);
+
         public async Task AddAsync(
             DeliveryChallan challan, CancellationToken cancellationToken = default) =>
             await _context.DeliveryChallans.AddAsync(challan, cancellationToken);
+
+        public void RemoveItems(IEnumerable<DeliveryChallanItem> items) =>
+            _context.DeliveryChallanItems.RemoveRange(items);
+
+        public async Task ExecuteInTransactionAsync(
+            Func<CancellationToken, Task> operation,
+            CancellationToken cancellationToken = default)
+        {
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                await operation(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                throw;
+            }
+        }
 
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
             _context.SaveChangesAsync(cancellationToken);

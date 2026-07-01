@@ -6,7 +6,7 @@ namespace InventoryManagement.API.Controllers
 {
     [Authorize]
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/delivery-challans")]
     public class DeliveryChallansController : ControllerBase
     {
         private readonly ISender _sender;
@@ -36,5 +36,19 @@ namespace InventoryManagement.API.Controllers
                 new { id = response.Id },
                 response);
         }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateDraft(
+            int id,
+            [FromBody] Application.Features.DeliveryChallans.UpdateDeliveryChallan.Command command) =>
+            Ok(await _sender.Send(command with { Id = id }));
+
+        [HttpPost("{id}/post")]
+        public async Task<IActionResult> Post(int id) =>
+            Ok(await _sender.Send(
+                new Application.Features.DeliveryChallans.PostDeliveryChallan.Command
+                {
+                    Id = id
+                }));
     }
 }

@@ -24,11 +24,22 @@ namespace InventoryManagement.Application.Common.Persistence
         Task<DeliveryChallan?> GetByIdAsync(
             int id,
             CancellationToken cancellationToken = default);
+        Task<DeliveryChallan?> GetForUpdateAsync(
+            int id,
+            CancellationToken cancellationToken = default);
         Task<bool> ChallanNumberExistsAsync(
             string challanNumber,
             CancellationToken cancellationToken = default);
+        Task<bool> ChallanNumberExistsForOtherAsync(
+            string challanNumber,
+            int deliveryChallanId,
+            CancellationToken cancellationToken = default);
         Task AddAsync(
             DeliveryChallan challan,
+            CancellationToken cancellationToken = default);
+        void RemoveItems(IEnumerable<DeliveryChallanItem> items);
+        Task ExecuteInTransactionAsync(
+            Func<CancellationToken, Task> operation,
             CancellationToken cancellationToken = default);
         Task SaveChangesAsync(CancellationToken cancellationToken = default);
     }

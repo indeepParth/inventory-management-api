@@ -105,6 +105,7 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .UseCollation("NOCASE")
                       .HasMaxLength(15);
                 entity.Property(x => x.CreditLimit).HasPrecision(18, 2);
+                entity.Property(x => x.BalanceDue).HasPrecision(18, 2);
             });
 
             builder.Entity<Product>(entity =>

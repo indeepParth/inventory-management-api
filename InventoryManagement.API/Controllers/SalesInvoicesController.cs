@@ -48,5 +48,15 @@ namespace InventoryManagement.API.Controllers
         {
             return Ok(await _sender.Send(command with { Id = id }));
         }
+
+        [HttpPost("{id}/post")]
+        public async Task<IActionResult> PostDirectInvoice(int id)
+        {
+            return Ok(await _sender.Send(
+                new Application.Features.SalesInvoices.PostSalesInvoice.Command
+                {
+                    Id = id
+                }));
+        }
     }
 }

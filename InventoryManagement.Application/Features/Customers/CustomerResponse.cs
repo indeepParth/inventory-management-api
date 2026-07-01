@@ -11,6 +11,7 @@ namespace InventoryManagement.Application.Features.Customers
         public string? DeliveryAddress { get; set; }
         public string? GstNumber { get; set; }
         public decimal CreditLimit { get; set; }
+        public decimal BalanceDue { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedAtUtc { get; set; }
         public DateTime UpdatedAtUtc { get; set; }

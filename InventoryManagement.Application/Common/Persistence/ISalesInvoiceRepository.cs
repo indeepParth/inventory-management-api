@@ -41,6 +41,9 @@ namespace InventoryManagement.Application.Common.Persistence
             SalesInvoice invoice,
             CancellationToken cancellationToken = default);
         void RemoveItems(IEnumerable<SalesInvoiceItem> items);
+        Task ExecuteInTransactionAsync(
+            Func<CancellationToken, Task> operation,
+            CancellationToken cancellationToken = default);
         Task SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

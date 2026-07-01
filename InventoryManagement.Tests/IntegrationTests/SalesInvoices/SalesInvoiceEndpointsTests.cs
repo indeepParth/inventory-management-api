@@ -207,6 +207,236 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
+        [Fact]
+        public async Task Post_Direct_Invoice_Should_Update_Stock_Debt_And_Profit_Data_Once()
+        {
+            await AuthenticateAsync();
+            var first = await SeedDependenciesAsync();
+            var second = await SeedAdditionalProductAsync(8, 11);
+            var createResponse = await Client.PostAsJsonAsync(
+                "/api/sales-invoices",
+                new Command
+                {
+                    InvoiceNumber = $"POST-{Guid.NewGuid():N}",
+                    CustomerId = first.CustomerId,
+                    InvoiceDate = new DateTime(2026, 7, 1),
+                    Items =
+                    {
+                        new SalesInvoiceItemInput
+                        {
+                            ProductId = first.ProductId,
+                            Quantity = 2,
+                            SellingUnitPrice = 40
+                        },
+                        new SalesInvoiceItemInput
+                        {
+                            ProductId = first.ProductId,
+                            Quantity = 1,
+                            SellingUnitPrice = 50
+                        },
+                        new SalesInvoiceItemInput
+                        {
+                            ProductId = second.ProductId,
+                            Quantity = 3,
+                            SellingUnitPrice = 20
+                        }
+                    }
+                });
+            createResponse.EnsureSuccessStatusCode();
+            var invoice = await createResponse.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            invoice.Should().NotBeNull();
+
+            var postResponse = await Client.PostAsync(
+                $"/api/sales-invoices/{invoice!.Id}/post",
+                null);
+
+            postResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var posted = await postResponse.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            posted.Should().NotBeNull();
+            posted!.Status.Should().Be(SalesInvoiceStatus.Posted);
+            posted.PostedAtUtc.Should().NotBeNull();
+            posted.Items.Where(x => x.ProductId == first.ProductId)
+                .Should().OnlyContain(x => x.CostAtSale == 25);
+            posted.Items.Single(x => x.ProductId == second.ProductId)
+                .CostAtSale.Should().Be(11);
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                var firstProduct = await db.Products
+                    .SingleAsync(x => x.Id == first.ProductId);
+                var secondProduct = await db.Products
+                    .SingleAsync(x => x.Id == second.ProductId);
+                firstProduct.Quantity.Should().Be(9.5m);
+                secondProduct.Quantity.Should().Be(5);
+                (await db.Customers.SingleAsync(x => x.Id == first.CustomerId))
+                    .BalanceDue.Should().Be(invoice.GrandTotal);
+
+                var movements = await db.StockMovements.AsNoTracking()
+                    .Where(x => x.SourceType == "SalesInvoice" &&
+                                x.SourceId == invoice.Id.ToString())
+                    .OrderBy(x => x.Id)
+                    .ToListAsync();
+                movements.Should().HaveCount(3);
+                movements.Should().OnlyContain(x =>
+                    x.MovementType == StockMovementType.Sale);
+                movements.Select(x => x.QuantityChange)
+                    .Should().Equal(-2, -1, -3);
+                movements.Select(x => x.UnitCost)
+                    .Should().Equal(25, 25, 11);
+
+                firstProduct.AverageCost = 99;
+                secondProduct.AverageCost = 88;
+                await db.SaveChangesAsync();
+            }
+
+            var fetched = await Client.GetFromJsonAsync<SalesInvoiceResponse>(
+                $"/api/sales-invoices/{invoice.Id}");
+            fetched.Should().NotBeNull();
+            fetched!.Items.Where(x => x.ProductId == first.ProductId)
+                .Should().OnlyContain(x => x.CostAtSale == 25);
+            fetched.Items.Single(x => x.ProductId == second.ProductId)
+                .CostAtSale.Should().Be(11);
+
+            var repeatedResponse = await Client.PostAsync(
+                $"/api/sales-invoices/{invoice.Id}/post",
+                null);
+            repeatedResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var repeated = await repeatedResponse.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            repeated.Should().BeEquivalentTo(posted);
+
+            using var verificationScope = _factory.Services.CreateScope();
+            var verificationDb = verificationScope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
+            (await verificationDb.Products.AsNoTracking()
+                .SingleAsync(x => x.Id == first.ProductId))
+                .Quantity.Should().Be(9.5m);
+            (await verificationDb.StockMovements.CountAsync(x =>
+                x.SourceType == "SalesInvoice" &&
+                x.SourceId == invoice.Id.ToString())).Should().Be(3);
+        }
+
+        [Fact]
+        public async Task Post_Should_Reject_Aggregate_Insufficient_Stock_Atomically()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            var createResponse = await Client.PostAsJsonAsync(
+                "/api/sales-invoices",
+                new Command
+                {
+                    InvoiceNumber = $"SHORT-{Guid.NewGuid():N}",
+                    CustomerId = seed.CustomerId,
+                    InvoiceDate = new DateTime(2026, 7, 1),
+                    Items =
+                    {
+                        new SalesInvoiceItemInput
+                        {
+                            ProductId = seed.ProductId,
+                            Quantity = 7,
+                            SellingUnitPrice = 10
+                        },
+                        new SalesInvoiceItemInput
+                        {
+                            ProductId = seed.ProductId,
+                            Quantity = 6,
+                            SellingUnitPrice = 10
+                        }
+                    }
+                });
+            createResponse.EnsureSuccessStatusCode();
+            var invoice = await createResponse.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            invoice.Should().NotBeNull();
+
+            var response = await Client.PostAsync(
+                $"/api/sales-invoices/{invoice!.Id}/post",
+                null);
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            (await db.Products.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.ProductId))
+                .Quantity.Should().Be(seed.StockQuantity);
+            (await db.Customers.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.CustomerId))
+                .BalanceDue.Should().Be(0);
+            var persisted = await db.SalesInvoices.AsNoTracking()
+                .Include(x => x.Items)
+                .SingleAsync(x => x.Id == invoice.Id);
+            persisted.Status.Should().Be(SalesInvoiceStatus.Draft);
+            persisted.PostedAtUtc.Should().BeNull();
+            persisted.Items.Should().OnlyContain(x => x.CostAtSale == null);
+            (await db.StockMovements.CountAsync(x =>
+                x.SourceType == "SalesInvoice" &&
+                x.SourceId == invoice.Id.ToString())).Should().Be(0);
+        }
+
+        [Fact]
+        public async Task Post_Should_Roll_Back_When_A_Movement_Insert_Fails()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            var invoice = await CreateInvoiceAsync(
+                seed,
+                $"ROLLBACK-{Guid.NewGuid():N}",
+                new DateTime(2026, 7, 1));
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                await db.Database.ExecuteSqlRawAsync(
+                    """
+                    CREATE TRIGGER FailSalesInvoiceMovement
+                    BEFORE INSERT ON StockMovements
+                    BEGIN
+                        SELECT RAISE(ABORT, 'forced sales posting failure');
+                    END;
+                    """);
+            }
+
+            try
+            {
+                var response = await Client.PostAsync(
+                    $"/api/sales-invoices/{invoice.Id}/post",
+                    null);
+                response.StatusCode.Should()
+                    .Be(HttpStatusCode.InternalServerError);
+
+                using var scope = _factory.Services.CreateScope();
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                (await db.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.ProductId))
+                    .Quantity.Should().Be(seed.StockQuantity);
+                (await db.Customers.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.CustomerId))
+                    .BalanceDue.Should().Be(0);
+                var persisted = await db.SalesInvoices.AsNoTracking()
+                    .Include(x => x.Items)
+                    .SingleAsync(x => x.Id == invoice.Id);
+                persisted.Status.Should().Be(SalesInvoiceStatus.Draft);
+                persisted.Items.Should().OnlyContain(x => x.CostAtSale == null);
+                (await db.StockMovements.CountAsync(x =>
+                    x.SourceType == "SalesInvoice" &&
+                    x.SourceId == invoice.Id.ToString())).Should().Be(0);
+            }
+            finally
+            {
+                using var scope = _factory.Services.CreateScope();
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                await db.Database.ExecuteSqlRawAsync(
+                    "DROP TRIGGER IF EXISTS FailSalesInvoiceMovement;");
+            }
+        }
+
         private async Task<SeedResult> SeedDependenciesAsync()
         {
             using var scope = _factory.Services.CreateScope();
@@ -290,11 +520,39 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 .ReadFromJsonAsync<SalesInvoiceResponse>())!;
         }
 
+        private async Task<ProductSeedResult> SeedAdditionalProductAsync(
+            decimal quantity,
+            decimal averageCost)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var suffix = Guid.NewGuid().ToString("N");
+            var product = new Product
+            {
+                Name = $"Additional invoice product {suffix}",
+                SKU = $"INV-ADD-{suffix}",
+                Quantity = quantity,
+                AverageCost = averageCost,
+                Category = new Category
+                {
+                    Name = $"Additional invoice category {suffix}",
+                    Description = "Test",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                }
+            };
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+            return new ProductSeedResult(product.Id);
+        }
+
         private sealed record SeedResult(
             int CustomerId,
             int ProductId,
             int DeliveryChallanItemId,
             decimal StockQuantity,
             int StockMovementCount);
+
+        private sealed record ProductSeedResult(int ProductId);
     }
 }

@@ -17,6 +17,7 @@ namespace InventoryManagement.Application.Features.Customers
                 DeliveryAddress = customer.DeliveryAddress,
                 GstNumber = customer.GstNumber,
                 CreditLimit = customer.CreditLimit,
+                BalanceDue = customer.BalanceDue,
                 IsActive = customer.IsActive,
                 CreatedAtUtc = customer.CreatedAtUtc,
                 UpdatedAtUtc = customer.UpdatedAtUtc

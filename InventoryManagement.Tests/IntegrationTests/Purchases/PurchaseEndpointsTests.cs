@@ -359,6 +359,157 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
             }
         }
 
+        [Fact]
+        public async Task Cancel_Draft_Should_Not_Change_Stock_And_Should_Be_Idempotent()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedPurchaseDependenciesAsync();
+            var purchase = await CreatePurchaseAsync(
+                seed,
+                $"CANCEL-DRAFT-{Guid.NewGuid():N}",
+                null,
+                new DateTime(2026, 7, 1));
+
+            var firstResponse = await Client.PostAsync(
+                $"/api/purchases/{purchase.Id}/cancel",
+                null);
+
+            firstResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var firstResult = await firstResponse.Content
+                .ReadFromJsonAsync<PurchaseResponse>();
+            firstResult.Should().NotBeNull();
+            firstResult!.Status.Should().Be(PurchaseStatus.Cancelled);
+            firstResult.CancelledAtUtc.Should().NotBeNull();
+
+            var secondResponse = await Client.PostAsync(
+                $"/api/purchases/{purchase.Id}/cancel",
+                null);
+            secondResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var secondResult = await secondResponse.Content
+                .ReadFromJsonAsync<PurchaseResponse>();
+            secondResult.Should().NotBeNull();
+            secondResult!.CancelledAtUtc.Should().Be(firstResult.CancelledAtUtc);
+
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var product = await db.Products.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.ProductId);
+            product.Quantity.Should().Be(seed.Quantity);
+            product.AverageCost.Should().Be(seed.AverageCost);
+            (await db.StockMovements.CountAsync(x =>
+                x.MovementType == StockMovementType.Reversal &&
+                x.SourceId == purchase.Id.ToString())).Should().Be(0);
+        }
+
+        [Fact]
+        public async Task Cancel_Posted_Should_Restore_Stock_And_Preserve_Original_Movement()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedPurchaseDependenciesAsync();
+            var createResponse = await Client.PostAsJsonAsync("/api/purchases", new Command
+            {
+                PurchaseNumber = $"CANCEL-POSTED-{Guid.NewGuid():N}",
+                SupplierId = seed.SupplierId,
+                BillDate = new DateTime(2026, 7, 1),
+                Items =
+                {
+                    new PurchaseItemInput
+                    {
+                        ProductId = seed.ProductId,
+                        Quantity = 2.5m,
+                        UnitCost = 40
+                    }
+                }
+            });
+            var purchase = await createResponse.Content.ReadFromJsonAsync<PurchaseResponse>();
+            purchase.Should().NotBeNull();
+            (await Client.PostAsync($"/api/purchases/{purchase!.Id}/post", null))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var cancelResponse = await Client.PostAsync(
+                $"/api/purchases/{purchase.Id}/cancel",
+                null);
+
+            cancelResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var cancelled = await cancelResponse.Content
+                .ReadFromJsonAsync<PurchaseResponse>();
+            cancelled.Should().NotBeNull();
+            cancelled!.Status.Should().Be(PurchaseStatus.Cancelled);
+            cancelled.CancelledAtUtc.Should().NotBeNull();
+
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var product = await db.Products.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.ProductId);
+            product.Quantity.Should().Be(seed.Quantity);
+            product.AverageCost.Should().Be(seed.AverageCost);
+
+            var movements = await db.StockMovements.AsNoTracking()
+                .Where(x => x.SourceId == purchase.Id.ToString())
+                .OrderBy(x => x.Id)
+                .ToListAsync();
+            movements.Should().HaveCount(2);
+            movements[0].MovementType.Should().Be(StockMovementType.Purchase);
+            movements[0].QuantityChange.Should().Be(2.5m);
+            movements[1].MovementType.Should().Be(StockMovementType.Reversal);
+            movements[1].QuantityChange.Should().Be(-2.5m);
+            movements[1].BalanceBefore.Should().Be(15);
+            movements[1].BalanceAfter.Should().Be(12.5m);
+            movements[1].SourceType.Should().Be("PurchaseCancellation");
+        }
+
+        [Fact]
+        public async Task Cancel_Posted_Should_Reject_Insufficient_Remaining_Stock()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedPurchaseDependenciesAsync();
+            var createResponse = await Client.PostAsJsonAsync("/api/purchases", new Command
+            {
+                PurchaseNumber = $"CANCEL-BLOCKED-{Guid.NewGuid():N}",
+                SupplierId = seed.SupplierId,
+                BillDate = new DateTime(2026, 7, 1),
+                Items =
+                {
+                    new PurchaseItemInput
+                    {
+                        ProductId = seed.ProductId,
+                        Quantity = 2,
+                        UnitCost = 40
+                    }
+                }
+            });
+            var purchase = await createResponse.Content.ReadFromJsonAsync<PurchaseResponse>();
+            purchase.Should().NotBeNull();
+            (await Client.PostAsync($"/api/purchases/{purchase!.Id}/post", null))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var product = await db.Products.SingleAsync(x => x.Id == seed.ProductId);
+                product.Quantity = 1;
+                await db.SaveChangesAsync();
+            }
+
+            var response = await Client.PostAsync(
+                $"/api/purchases/{purchase.Id}/cancel",
+                null);
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            using var verificationScope = _factory.Services.CreateScope();
+            var verificationDb = verificationScope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
+            (await verificationDb.Purchases.AsNoTracking()
+                .SingleAsync(x => x.Id == purchase.Id))
+                .Status.Should().Be(PurchaseStatus.Posted);
+            (await verificationDb.Products.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.ProductId))
+                .Quantity.Should().Be(1);
+            (await verificationDb.StockMovements.CountAsync(x =>
+                x.MovementType == StockMovementType.Reversal &&
+                x.SourceId == purchase.Id.ToString())).Should().Be(0);
+        }
+
         private async Task<SeedResult> SeedPurchaseDependenciesAsync()
         {
             using var scope = _factory.Services.CreateScope();

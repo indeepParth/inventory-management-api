@@ -50,6 +50,22 @@ namespace InventoryManagement.Infrastructure.Repositories
             await _context.StockMovements.AddAsync(stockMovement, cancellationToken);
         }
 
+        public Task<List<StockMovement>> GetPurchaseMovementsForUpdateAsync(
+            int purchaseId,
+            CancellationToken cancellationToken = default)
+        {
+            var sourceId = purchaseId.ToString();
+
+            return _context.StockMovements
+                .Include(x => x.Product)
+                .Where(x =>
+                    x.MovementType == StockMovementType.Purchase &&
+                    x.SourceType == "Purchase" &&
+                    x.SourceId == sourceId)
+                .OrderByDescending(x => x.Id)
+                .ToListAsync(cancellationToken);
+        }
+
         private IQueryable<StockMovement> BuildQuery(
             int? productId,
             StockMovementType? movementType,

@@ -52,5 +52,12 @@ namespace InventoryManagement.API.Controllers
             return Ok(await _sender.Send(
                 new Application.Features.Purchases.PostPurchase.Command { Id = id }));
         }
+
+        [HttpPost("{id}/cancel")]
+        public async Task<IActionResult> CancelPurchase(int id)
+        {
+            return Ok(await _sender.Send(
+                new Application.Features.Purchases.CancelPurchase.Command { Id = id }));
+        }
     }
 }

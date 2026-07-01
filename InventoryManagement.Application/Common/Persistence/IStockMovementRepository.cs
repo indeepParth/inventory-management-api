@@ -24,5 +24,9 @@ namespace InventoryManagement.Application.Common.Persistence
         Task AddAsync(
             StockMovement stockMovement,
             CancellationToken cancellationToken = default);
+
+        Task<List<StockMovement>> GetPurchaseMovementsForUpdateAsync(
+            int purchaseId,
+            CancellationToken cancellationToken = default);
     }
 }

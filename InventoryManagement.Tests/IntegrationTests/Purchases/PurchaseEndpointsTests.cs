@@ -193,6 +193,172 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
                 .Should().Be(seed.StockMovementCount);
         }
 
+        [Fact]
+        public async Task Post_Should_Apply_Multiple_And_Repeated_Items_Only_Once()
+        {
+            await AuthenticateAsync();
+            var first = await SeedPurchaseDependenciesAsync();
+            var second = await SeedAdditionalProductAsync(4, 10);
+            var createResponse = await Client.PostAsJsonAsync("/api/purchases", new Command
+            {
+                PurchaseNumber = $"POST-{Guid.NewGuid():N}",
+                SupplierId = first.SupplierId,
+                BillDate = new DateTime(2026, 7, 1),
+                Items =
+                {
+                    new PurchaseItemInput
+                    {
+                        ProductId = first.ProductId,
+                        Quantity = 2.5m,
+                        UnitCost = 40
+                    },
+                    new PurchaseItemInput
+                    {
+                        ProductId = first.ProductId,
+                        Quantity = 5,
+                        UnitCost = 20
+                    },
+                    new PurchaseItemInput
+                    {
+                        ProductId = second.ProductId,
+                        Quantity = 1,
+                        UnitCost = 30
+                    }
+                }
+            });
+            var purchase = await createResponse.Content.ReadFromJsonAsync<PurchaseResponse>();
+            purchase.Should().NotBeNull();
+
+            var postResponse = await Client.PostAsync(
+                $"/api/purchases/{purchase!.Id}/post",
+                null);
+
+            postResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var posted = await postResponse.Content.ReadFromJsonAsync<PurchaseResponse>();
+            posted.Should().NotBeNull();
+            posted!.Status.Should().Be(PurchaseStatus.Posted);
+            posted.PostedAtUtc.Should().NotBeNull();
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var firstProduct = await db.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == first.ProductId);
+                var secondProduct = await db.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == second.ProductId);
+                firstProduct.Quantity.Should().Be(20);
+                firstProduct.AverageCost.Should().Be(30);
+                secondProduct.Quantity.Should().Be(5);
+                secondProduct.AverageCost.Should().Be(14);
+
+                var movements = await db.StockMovements.AsNoTracking()
+                    .Where(x => x.SourceType == "Purchase" &&
+                                x.SourceId == purchase.Id.ToString())
+                    .OrderBy(x => x.Id)
+                    .ToListAsync();
+                movements.Should().HaveCount(3);
+                movements[0].BalanceBefore.Should().Be(12.5m);
+                movements[0].BalanceAfter.Should().Be(15);
+                movements[1].BalanceBefore.Should().Be(15);
+                movements[1].BalanceAfter.Should().Be(20);
+                movements[2].BalanceBefore.Should().Be(4);
+                movements[2].BalanceAfter.Should().Be(5);
+            }
+
+            var repeatedResponse = await Client.PostAsync(
+                $"/api/purchases/{purchase.Id}/post",
+                null);
+            repeatedResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            using var verificationScope = _factory.Services.CreateScope();
+            var verificationDb = verificationScope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
+            (await verificationDb.Products.AsNoTracking()
+                .SingleAsync(x => x.Id == first.ProductId))
+                .Quantity.Should().Be(20);
+            (await verificationDb.StockMovements.CountAsync(x =>
+                x.SourceType == "Purchase" &&
+                x.SourceId == purchase.Id.ToString())).Should().Be(3);
+        }
+
+        [Fact]
+        public async Task Post_Should_Roll_Back_All_Changes_When_A_Ledger_Insert_Fails()
+        {
+            await AuthenticateAsync();
+            var first = await SeedPurchaseDependenciesAsync();
+            var second = await SeedAdditionalProductAsync(7, 11);
+            var createResponse = await Client.PostAsJsonAsync("/api/purchases", new Command
+            {
+                PurchaseNumber = $"ROLLBACK-{Guid.NewGuid():N}",
+                SupplierId = first.SupplierId,
+                BillDate = new DateTime(2026, 7, 1),
+                Items =
+                {
+                    new PurchaseItemInput
+                    {
+                        ProductId = first.ProductId,
+                        Quantity = 2,
+                        UnitCost = 50
+                    },
+                    new PurchaseItemInput
+                    {
+                        ProductId = second.ProductId,
+                        Quantity = 3,
+                        UnitCost = 20
+                    }
+                }
+            });
+            var purchase = await createResponse.Content.ReadFromJsonAsync<PurchaseResponse>();
+            purchase.Should().NotBeNull();
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                await db.Database.ExecuteSqlRawAsync(
+                    """
+                    CREATE TRIGGER FailPurchaseMovement
+                    BEFORE INSERT ON StockMovements
+                    BEGIN
+                        SELECT RAISE(ABORT, 'forced posting failure');
+                    END;
+                    """);
+            }
+
+            try
+            {
+                var response = await Client.PostAsync(
+                    $"/api/purchases/{purchase!.Id}/post",
+                    null);
+                response.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+
+                using var verificationScope = _factory.Services.CreateScope();
+                var verificationDb = verificationScope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                var firstAfter = await verificationDb.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == first.ProductId);
+                var secondAfter = await verificationDb.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == second.ProductId);
+                firstAfter.Quantity.Should().Be(first.Quantity);
+                firstAfter.AverageCost.Should().Be(first.AverageCost);
+                secondAfter.Quantity.Should().Be(second.Quantity);
+                secondAfter.AverageCost.Should().Be(second.AverageCost);
+                (await verificationDb.Purchases.AsNoTracking()
+                    .SingleAsync(x => x.Id == purchase.Id))
+                    .Status.Should().Be(PurchaseStatus.Draft);
+                (await verificationDb.StockMovements.CountAsync(x =>
+                    x.SourceType == "Purchase" &&
+                    x.SourceId == purchase.Id.ToString())).Should().Be(0);
+            }
+            finally
+            {
+                using var cleanupScope = _factory.Services.CreateScope();
+                var cleanupDb = cleanupScope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                await cleanupDb.Database.ExecuteSqlRawAsync(
+                    "DROP TRIGGER IF EXISTS FailPurchaseMovement;");
+            }
+        }
+
         private async Task<SeedResult> SeedPurchaseDependenciesAsync()
         {
             using var scope = _factory.Services.CreateScope();
@@ -258,6 +424,35 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
             return (await response.Content.ReadFromJsonAsync<PurchaseResponse>())!;
         }
 
+        private async Task<ProductSeedResult> SeedAdditionalProductAsync(
+            decimal quantity,
+            decimal averageCost)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var suffix = Guid.NewGuid().ToString("N");
+            var product = new Product
+            {
+                Name = $"Additional purchase product {suffix}",
+                SKU = $"ADD-{suffix}",
+                Quantity = quantity,
+                AverageCost = averageCost,
+                Category = new Category
+                {
+                    Name = $"Additional purchase category {suffix}",
+                    Description = "Test",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                }
+            };
+            db.Products.Add(product);
+            await db.SaveChangesAsync();
+            return new ProductSeedResult(
+                product.Id,
+                product.Quantity,
+                product.AverageCost);
+        }
+
         private sealed record SeedResult(
             int SupplierId,
             string SupplierName,
@@ -267,5 +462,10 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
             decimal Quantity,
             decimal AverageCost,
             int StockMovementCount);
+
+        private sealed record ProductSeedResult(
+            int ProductId,
+            decimal Quantity,
+            decimal AverageCost);
     }
 }

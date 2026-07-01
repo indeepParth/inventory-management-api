@@ -43,6 +43,13 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .CountAsync(cancellationToken);
         }
 
+        public async Task AddAsync(
+            StockMovement stockMovement,
+            CancellationToken cancellationToken = default)
+        {
+            await _context.StockMovements.AddAsync(stockMovement, cancellationToken);
+        }
+
         private IQueryable<StockMovement> BuildQuery(
             int? productId,
             StockMovementType? movementType,

@@ -45,5 +45,12 @@ namespace InventoryManagement.API.Controllers
         {
             return Ok(await _sender.Send(command with { Id = id }));
         }
+
+        [HttpPost("{id}/post")]
+        public async Task<IActionResult> PostPurchase(int id)
+        {
+            return Ok(await _sender.Send(
+                new Application.Features.Purchases.PostPurchase.Command { Id = id }));
+        }
     }
 }

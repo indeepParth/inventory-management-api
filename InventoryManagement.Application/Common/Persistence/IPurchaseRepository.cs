@@ -43,6 +43,9 @@ namespace InventoryManagement.Application.Common.Persistence
             CancellationToken cancellationToken = default);
         Task AddAsync(Purchase purchase, CancellationToken cancellationToken = default);
         void RemoveItems(IEnumerable<PurchaseItem> items);
+        Task ExecuteInTransactionAsync(
+            Func<CancellationToken, Task> operation,
+            CancellationToken cancellationToken = default);
         Task SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

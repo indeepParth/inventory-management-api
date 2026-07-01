@@ -20,5 +20,9 @@ namespace InventoryManagement.Application.Common.Persistence
             DateTime? fromDate,
             DateTime? toDate,
             CancellationToken cancellationToken = default);
+
+        Task AddAsync(
+            StockMovement stockMovement,
+            CancellationToken cancellationToken = default);
     }
 }

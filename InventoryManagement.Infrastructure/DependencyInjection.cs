@@ -34,6 +34,7 @@ namespace InventoryManagement.Infrastructure
             services.AddScoped<IPurchaseRepository, PurchaseRepository>();
             services.AddScoped<IDeliveryChallanRepository, DeliveryChallanRepository>();
             services.AddScoped<ISalesInvoiceRepository, SalesInvoiceRepository>();
+            services.AddScoped<IPaymentRepository, PaymentRepository>();
             services.AddScoped<IIdentityService, IdentityService>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 

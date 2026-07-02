@@ -36,6 +36,8 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<SalesInvoiceItem> SalesInvoiceItems => Set<SalesInvoiceItem>();
 
+        public DbSet<Payment> Payments => Set<Payment>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -260,6 +262,29 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.HasOne(x => x.DeliveryChallanItem)
                     .WithMany(x => x.SalesInvoiceItems)
                     .HasForeignKey(x => x.DeliveryChallanItemId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Payment>(entity =>
+            {
+                entity.HasIndex(x => x.ReceiptNumber).IsUnique();
+                entity.HasIndex(x => new { x.CustomerId, x.PaymentDate });
+                entity.HasIndex(x => x.SalesInvoiceId);
+                entity.HasIndex(x => x.ReversesPaymentId).IsUnique();
+                entity.Property(x => x.ReceiptNumber).HasMaxLength(50).IsRequired();
+                entity.Property(x => x.Amount).HasPrecision(18, 2);
+                entity.Property(x => x.Method).IsRequired();
+                entity.Property(x => x.ExternalReference).HasMaxLength(150);
+                entity.Property(x => x.Note).HasMaxLength(1000);
+                entity.Property(x => x.CreatedBy).IsRequired();
+                entity.HasOne(x => x.Customer).WithMany()
+                    .HasForeignKey(x => x.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                entity.HasOne(x => x.SalesInvoice).WithMany()
+                    .HasForeignKey(x => x.SalesInvoiceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.ReversesPayment).WithOne(x => x.Reversal)
+                    .HasForeignKey<Payment>(x => x.ReversesPaymentId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

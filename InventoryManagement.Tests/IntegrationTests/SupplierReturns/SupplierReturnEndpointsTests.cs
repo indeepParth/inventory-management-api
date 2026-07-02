@@ -46,6 +46,10 @@ namespace InventoryManagement.Tests.IntegrationTests.SupplierReturns
                 $"/api/supplier-returns/{supplierReturn.Id}/post",
                 null);
             post.StatusCode.Should().Be(HttpStatusCode.OK);
+            var repeatedPost = await Client.PostAsync(
+                $"/api/supplier-returns/{supplierReturn.Id}/post",
+                null);
+            repeatedPost.StatusCode.Should().Be(HttpStatusCode.OK);
 
             using (var scope = _factory.Services.CreateScope())
             {
@@ -73,6 +77,10 @@ namespace InventoryManagement.Tests.IntegrationTests.SupplierReturns
             var cancelled = await cancel.Content
                 .ReadFromJsonAsync<SupplierReturnResponse>();
             cancelled!.Status.Should().Be(SupplierReturnStatus.Cancelled);
+            var repeatedCancel = await Client.PostAsync(
+                $"/api/supplier-returns/{supplierReturn.Id}/cancel",
+                null);
+            repeatedCancel.StatusCode.Should().Be(HttpStatusCode.OK);
 
             using var finalScope = _factory.Services.CreateScope();
             var finalDb = finalScope.ServiceProvider
@@ -87,6 +95,11 @@ namespace InventoryManagement.Tests.IntegrationTests.SupplierReturns
                 x.SourceType == "SupplierReturnCancellation" &&
                 x.SourceId == supplierReturn.Id.ToString()))
                 .QuantityChange.Should().Be(2);
+            (await finalDb.StockMovements.CountAsync(x =>
+                x.SourceId == supplierReturn.Id.ToString() &&
+                (x.SourceType == "SupplierReturn" ||
+                 x.SourceType == "SupplierReturnCancellation")))
+                .Should().Be(2);
         }
 
         [Fact]

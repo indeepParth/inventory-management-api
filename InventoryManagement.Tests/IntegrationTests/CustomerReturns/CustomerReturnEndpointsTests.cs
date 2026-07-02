@@ -67,6 +67,10 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
                 $"/api/customer-returns/{draft.Id}/post",
                 null);
             post.StatusCode.Should().Be(HttpStatusCode.OK);
+            var repeatedPost = await Client.PostAsync(
+                $"/api/customer-returns/{draft.Id}/post",
+                null);
+            repeatedPost.StatusCode.Should().Be(HttpStatusCode.OK);
 
             using (var scope = _factory.Services.CreateScope())
             {
@@ -92,6 +96,10 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
             var cancelled = await cancel.Content
                 .ReadFromJsonAsync<CustomerReturnResponse>();
             cancelled!.Status.Should().Be(CustomerReturnStatus.Cancelled);
+            var repeatedCancel = await Client.PostAsync(
+                $"/api/customer-returns/{draft.Id}/cancel",
+                null);
+            repeatedCancel.StatusCode.Should().Be(HttpStatusCode.OK);
 
             using var finalScope = _factory.Services.CreateScope();
             var finalDb = finalScope.ServiceProvider
@@ -104,6 +112,11 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
                 x.SourceType == "CustomerReturnCancellation" &&
                 x.SourceId == draft.Id.ToString()))
                 .QuantityChange.Should().Be(-2);
+            (await finalDb.StockMovements.CountAsync(x =>
+                x.SourceId == draft.Id.ToString() &&
+                (x.SourceType == "CustomerReturn" ||
+                 x.SourceType == "CustomerReturnCancellation")))
+                .Should().Be(2);
         }
 
         [Fact]

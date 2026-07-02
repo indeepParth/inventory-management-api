@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Features.InventoryReports.GetCurrentStock;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +30,32 @@ namespace InventoryManagement.Infrastructure.Repositories
             return await BuildSearchQuery(search).CountAsync(cancellationToken);
         }
 
+        public Task<List<Product>> GetCurrentStockReportAsync(
+            int pageNumber,
+            int pageSize,
+            int? categoryId,
+            string? search,
+            StockQuantityFilter? stock,
+            CancellationToken cancellationToken = default)
+        {
+            return BuildCurrentStockReportQuery(categoryId, search, stock)
+                .OrderBy(x => x.Name)
+                .ThenBy(x => x.Id)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public Task<int> GetCurrentStockReportCountAsync(
+            int? categoryId,
+            string? search,
+            StockQuantityFilter? stock,
+            CancellationToken cancellationToken = default)
+        {
+            return BuildCurrentStockReportQuery(categoryId, search, stock)
+                .CountAsync(cancellationToken);
+        }
+
         private IQueryable<Product> BuildSearchQuery(string? search)
         {
             IQueryable<Product> query = _context.Products
@@ -38,6 +65,29 @@ namespace InventoryManagement.Infrastructure.Repositories
             {
                 query = query.Where(p => p.Name.Contains(search));
             }
+
+            return query;
+        }
+
+        private IQueryable<Product> BuildCurrentStockReportQuery(
+            int? categoryId,
+            string? search,
+            StockQuantityFilter? stock)
+        {
+            IQueryable<Product> query = _context.Products
+                .AsNoTracking()
+                .Include(x => x.Category);
+
+            if (categoryId.HasValue)
+                query = query.Where(x => x.CategoryId == categoryId.Value);
+
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(x => x.Name.Contains(search) || x.SKU.Contains(search));
+
+            if (stock == StockQuantityFilter.Positive)
+                query = query.Where(x => x.Quantity > 0);
+            else if (stock == StockQuantityFilter.Zero)
+                query = query.Where(x => x.Quantity == 0);
 
             return query;
         }

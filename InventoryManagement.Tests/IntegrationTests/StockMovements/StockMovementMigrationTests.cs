@@ -39,7 +39,19 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
 
                 await migrator.MigrateAsync("20260630051810_AddStockMovementLedger");
 
-                var movements = await db.StockMovements.AsNoTracking().ToListAsync();
+                var movements = await db.StockMovements
+                    .AsNoTracking()
+                    .Select(x => new
+                    {
+                        x.MovementType,
+                        x.QuantityChange,
+                        x.BalanceBefore,
+                        x.BalanceAfter,
+                        x.UnitCost,
+                        x.SourceType,
+                        x.CreatedBy
+                    })
+                    .ToListAsync();
 
                 movements.Should().ContainSingle();
                 movements[0].MovementType.Should().Be(StockMovementType.OpeningStock);

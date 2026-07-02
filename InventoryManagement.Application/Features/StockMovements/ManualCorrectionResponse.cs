@@ -1,12 +1,12 @@
 using InventoryManagement.Domain.Enums;
 
-namespace InventoryManagement.Domain.Entities
+namespace InventoryManagement.Application.Features.StockMovements
 {
-    public class StockMovement
+    public class ManualCorrectionResponse
     {
         public int Id { get; set; }
         public int ProductId { get; set; }
-        public Product Product { get; set; } = null!;
+        public string ProductName { get; set; } = string.Empty;
         public StockMovementType MovementType { get; set; }
         public decimal QuantityChange { get; set; }
         public decimal BalanceBefore { get; set; }

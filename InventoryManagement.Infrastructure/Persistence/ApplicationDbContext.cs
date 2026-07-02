@@ -148,6 +148,7 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.BalanceAfter).HasPrecision(18, 3);
                 entity.Property(x => x.UnitCost).HasPrecision(18, 2);
                 entity.Property(x => x.SourceType).IsRequired();
+                entity.Property(x => x.Reason).HasMaxLength(500);
                 entity.Property(x => x.CreatedBy).IsRequired();
 
                 entity.HasIndex(x => new { x.ProductId, x.OccurredAtUtc });

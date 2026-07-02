@@ -22,5 +22,31 @@ namespace InventoryManagement.API.Controllers
         {
             return Ok(await _sender.Send(query));
         }
+
+        [HttpPost("damage")]
+        public async Task<IActionResult> RecordDamage(
+            [FromBody] Application.Features.StockMovements
+                .RecordDamage.Command command)
+        {
+            return Ok(await _sender.Send(command));
+        }
+
+        [HttpPost("adjustment")]
+        public async Task<IActionResult> RecordAdjustment(
+            [FromBody] Application.Features.StockMovements
+                .RecordAdjustment.Command command)
+        {
+            return Ok(await _sender.Send(command));
+        }
+
+        [HttpPost("{id}/reverse")]
+        public async Task<IActionResult> Reverse(
+            int id,
+            [FromBody] Application.Features.StockMovements
+                .ReverseManualCorrection.Command command)
+        {
+            command.Id = id;
+            return Ok(await _sender.Send(command));
+        }
     }
 }

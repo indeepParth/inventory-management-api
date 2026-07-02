@@ -46,6 +46,7 @@ namespace InventoryManagement.Application.Features.StockMovements.GetStockMoveme
                     SourceType = x.SourceType,
                     SourceId = x.SourceId,
                     Reference = x.Reference,
+                    Reason = x.Reason,
                     Note = x.Note,
                     OccurredAtUtc = x.OccurredAtUtc,
                     CreatedBy = x.CreatedBy

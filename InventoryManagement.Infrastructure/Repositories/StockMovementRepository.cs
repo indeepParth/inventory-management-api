@@ -112,6 +112,68 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .OrderBy(x => x.Id)
                 .ToListAsync(cancellationToken);
         }
+
+        public Task<Product?> GetProductForUpdateAsync(
+            int productId,
+            CancellationToken cancellationToken = default)
+        {
+            return _context.Products.FirstOrDefaultAsync(
+                x => x.Id == productId,
+                cancellationToken);
+        }
+
+        public Task<StockMovement?> GetManualCorrectionForUpdateAsync(
+            int movementId,
+            CancellationToken cancellationToken = default)
+        {
+            return _context.StockMovements
+                .Include(x => x.Product)
+                .FirstOrDefaultAsync(
+                    x => x.Id == movementId &&
+                         x.SourceType == "ManualCorrection" &&
+                         (x.MovementType == StockMovementType.Damage ||
+                          x.MovementType == StockMovementType.Adjustment),
+                    cancellationToken);
+        }
+
+        public Task<StockMovement?> GetCorrectionReversalAsync(
+            int movementId,
+            CancellationToken cancellationToken = default)
+        {
+            var sourceId = movementId.ToString();
+            return _context.StockMovements
+                .AsNoTracking()
+                .Include(x => x.Product)
+                .FirstOrDefaultAsync(
+                    x => x.MovementType == StockMovementType.Reversal &&
+                         x.SourceType == "ManualCorrectionReversal" &&
+                         x.SourceId == sourceId,
+                    cancellationToken);
+        }
+
+        public async Task ExecuteInTransactionAsync(
+            Func<CancellationToken, Task> operation,
+            CancellationToken cancellationToken = default)
+        {
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                await operation(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(CancellationToken.None);
+                throw;
+            }
+        }
+
+        public Task SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            return _context.SaveChangesAsync(cancellationToken);
+        }
+
         private IQueryable<StockMovement> BuildQuery(
             int? productId,
             StockMovementType? movementType,

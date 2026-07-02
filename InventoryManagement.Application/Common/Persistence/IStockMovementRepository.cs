@@ -41,5 +41,23 @@ namespace InventoryManagement.Application.Common.Persistence
         Task<List<StockMovement>> GetSalesInvoiceMovementsForUpdateAsync(
             int salesInvoiceId,
             CancellationToken cancellationToken = default);
+
+        Task<Product?> GetProductForUpdateAsync(
+            int productId,
+            CancellationToken cancellationToken = default);
+
+        Task<StockMovement?> GetManualCorrectionForUpdateAsync(
+            int movementId,
+            CancellationToken cancellationToken = default);
+
+        Task<StockMovement?> GetCorrectionReversalAsync(
+            int movementId,
+            CancellationToken cancellationToken = default);
+
+        Task ExecuteInTransactionAsync(
+            Func<CancellationToken, Task> operation,
+            CancellationToken cancellationToken = default);
+
+        Task SaveChangesAsync(CancellationToken cancellationToken = default);
     }
 }

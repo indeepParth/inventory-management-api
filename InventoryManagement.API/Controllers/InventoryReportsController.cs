@@ -2,6 +2,7 @@ using CurrentStock = InventoryManagement.Application.Features.InventoryReports.G
 using ProductStockLedger = InventoryManagement.Application.Features.InventoryReports.GetProductStockLedger;
 using PurchaseRegister = InventoryManagement.Application.Features.InventoryReports.GetPurchaseRegister;
 using SalesRegister = InventoryManagement.Application.Features.InventoryReports.GetSalesRegister;
+using GrossProfit = InventoryManagement.Application.Features.InventoryReports.GetGrossProfit;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,6 +46,13 @@ public class InventoryReportsController : ControllerBase
     [HttpGet("sales-register")]
     public async Task<IActionResult> GetSalesRegister(
         [FromQuery] SalesRegister.Query query)
+    {
+        return Ok(await _sender.Send(query));
+    }
+
+    [HttpGet("gross-profit")]
+    public async Task<IActionResult> GetGrossProfit(
+        [FromQuery] GrossProfit.Query query)
     {
         return Ok(await _sender.Send(query));
     }

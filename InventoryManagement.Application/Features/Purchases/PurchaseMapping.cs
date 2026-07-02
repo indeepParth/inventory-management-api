@@ -29,6 +29,7 @@ namespace InventoryManagement.Application.Features.Purchases
                 CreatedBy = purchase.CreatedBy,
                 Items = purchase.Items.Select(item => new PurchaseItemResponse
                 {
+                    Id = item.Id,
                     ProductId = item.ProductId,
                     ProductName = item.Product.Name,
                     ProductSku = item.Product.SKU,

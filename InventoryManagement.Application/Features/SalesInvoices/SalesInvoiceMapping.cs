@@ -29,6 +29,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices
                 CreatedBy = invoice.CreatedBy,
                 Items = invoice.Items.Select(item => new SalesInvoiceItemResponse
                 {
+                    Id = item.Id,
                     ProductId = item.ProductId,
                     ProductName = item.Product.Name,
                     ProductSku = item.Product.SKU,

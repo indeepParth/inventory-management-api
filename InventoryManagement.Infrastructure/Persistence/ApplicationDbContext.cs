@@ -36,6 +36,11 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<SalesInvoiceItem> SalesInvoiceItems => Set<SalesInvoiceItem>();
 
+        public DbSet<CustomerReturn> CustomerReturns => Set<CustomerReturn>();
+
+        public DbSet<CustomerReturnItem> CustomerReturnItems =>
+            Set<CustomerReturnItem>();
+
         public DbSet<Payment> Payments => Set<Payment>();
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -265,6 +270,44 @@ namespace InventoryManagement.Infrastructure.Persistence
                     .WithMany(x => x.SalesInvoiceItems)
                     .HasForeignKey(x => x.DeliveryChallanItemId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<CustomerReturn>(entity =>
+            {
+                entity.HasIndex(x => x.ReturnNumber).IsUnique();
+                entity.HasIndex(x => new { x.SalesInvoiceId, x.ReturnDate });
+                entity.Property(x => x.ReturnNumber).HasMaxLength(50).IsRequired();
+                entity.Property(x => x.Status).IsRequired();
+                entity.Property(x => x.Subtotal).HasPrecision(18, 2);
+                entity.Property(x => x.TaxAmount).HasPrecision(18, 2);
+                entity.Property(x => x.GrandTotal).HasPrecision(18, 2);
+                entity.Property(x => x.Notes).HasMaxLength(1000);
+                entity.Property(x => x.CreatedBy).IsRequired();
+                entity.HasOne(x => x.SalesInvoice).WithMany()
+                    .HasForeignKey(x => x.SalesInvoiceId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                entity.HasOne(x => x.Customer).WithMany()
+                    .HasForeignKey(x => x.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
+            });
+
+            builder.Entity<CustomerReturnItem>(entity =>
+            {
+                entity.Property(x => x.Quantity).HasPrecision(18, 3);
+                entity.Property(x => x.SellingUnitPrice).HasPrecision(18, 2);
+                entity.Property(x => x.TaxRate).HasPrecision(9, 4);
+                entity.Property(x => x.TaxAmount).HasPrecision(18, 2);
+                entity.Property(x => x.LineTotal).HasPrecision(18, 2);
+                entity.Property(x => x.CostAtSale).HasPrecision(18, 2);
+                entity.HasOne(x => x.CustomerReturn).WithMany(x => x.Items)
+                    .HasForeignKey(x => x.CustomerReturnId)
+                    .OnDelete(DeleteBehavior.Cascade).IsRequired();
+                entity.HasOne(x => x.SalesInvoiceItem).WithMany()
+                    .HasForeignKey(x => x.SalesInvoiceItemId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                entity.HasOne(x => x.Product).WithMany()
+                    .HasForeignKey(x => x.ProductId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
             });
 
             builder.Entity<Payment>(entity =>

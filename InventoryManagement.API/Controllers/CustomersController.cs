@@ -30,6 +30,15 @@ namespace InventoryManagement.API.Controllers
                 new Application.Features.Customers.GetCustomerById.Query { Id = id }));
         }
 
+        [HttpGet("{id}/statement")]
+        public async Task<IActionResult> GetStatement(
+            int id,
+            [FromQuery] Application.Features.Statements.CustomerStatement.Query query)
+        {
+            query.CustomerId = id;
+            return Ok(await _sender.Send(query));
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateCustomer(
             [FromBody] Application.Features.Customers.CreateCustomer.Command command)

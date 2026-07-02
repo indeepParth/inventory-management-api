@@ -30,6 +30,15 @@ namespace InventoryManagement.API.Controllers
                 new Application.Features.Suppliers.GetSupplierById.Query { Id = id }));
         }
 
+        [HttpGet("{id}/statement")]
+        public async Task<IActionResult> GetStatement(
+            int id,
+            [FromQuery] Application.Features.Statements.SupplierStatement.Query query)
+        {
+            query.SupplierId = id;
+            return Ok(await _sender.Send(query));
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateSupplier(
             [FromBody] Application.Features.Suppliers.CreateSupplier.Command command)

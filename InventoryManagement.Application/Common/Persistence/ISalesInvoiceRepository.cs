@@ -21,6 +21,32 @@ namespace InventoryManagement.Application.Common.Persistence
             DateTime? dateTo,
             string? invoiceNumber,
             CancellationToken cancellationToken = default);
+        Task<List<SalesInvoice>> GetRegisterAsync(
+            int pageNumber,
+            int pageSize,
+            int? customerId,
+            int? productId,
+            bool? isFromDeliveryChallan,
+            SalesInvoiceStatus? status,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            CancellationToken cancellationToken = default);
+        Task<int> GetRegisterCountAsync(
+            int? customerId,
+            int? productId,
+            bool? isFromDeliveryChallan,
+            SalesInvoiceStatus? status,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            CancellationToken cancellationToken = default);
+        Task<List<SalesInvoice>> GetRegisterSummaryAsync(
+            int? customerId,
+            int? productId,
+            bool? isFromDeliveryChallan,
+            SalesInvoiceStatus? status,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            CancellationToken cancellationToken = default);
         Task<SalesInvoice?> GetByIdAsync(
             int id,
             CancellationToken cancellationToken = default);

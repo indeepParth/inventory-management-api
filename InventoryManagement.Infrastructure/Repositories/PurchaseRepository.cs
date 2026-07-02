@@ -63,6 +63,40 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .CountAsync(cancellationToken);
         }
 
+        public Task<List<Purchase>> GetRegisterAsync(
+            int pageNumber, int pageSize, int? supplierId, int? productId,
+            PurchaseStatus? status, DateTime? dateFrom, DateTime? dateTo,
+            CancellationToken cancellationToken = default)
+        {
+            return BuildRegisterQuery(supplierId, productId, status, dateFrom, dateTo)
+                .AsNoTracking()
+                .Include(x => x.Supplier)
+                .Include(x => x.Items).ThenInclude(x => x.Product)
+                .OrderByDescending(x => x.BillDate).ThenByDescending(x => x.Id)
+                .Skip((pageNumber - 1) * pageSize).Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public Task<int> GetRegisterCountAsync(
+            int? supplierId, int? productId, PurchaseStatus? status,
+            DateTime? dateFrom, DateTime? dateTo,
+            CancellationToken cancellationToken = default)
+        {
+            return BuildRegisterQuery(supplierId, productId, status, dateFrom, dateTo)
+                .CountAsync(cancellationToken);
+        }
+
+        public Task<List<Purchase>> GetRegisterSummaryAsync(
+            int? supplierId, int? productId, PurchaseStatus? status,
+            DateTime? dateFrom, DateTime? dateTo,
+            CancellationToken cancellationToken = default)
+        {
+            return BuildRegisterQuery(supplierId, productId, status, dateFrom, dateTo)
+                .AsNoTracking()
+                .Include(x => x.Items)
+                .ToListAsync(cancellationToken);
+        }
+
         public Task<Purchase?> GetByIdAsync(
             int id,
             CancellationToken cancellationToken = default)
@@ -208,6 +242,22 @@ namespace InventoryManagement.Infrastructure.Repositories
                 query = query.Where(x =>
                     x.SupplierBillNumber != null &&
                     x.SupplierBillNumber.Contains(value));
+            }
+
+            return query;
+        }
+
+        private IQueryable<Purchase> BuildRegisterQuery(
+            int? supplierId, int? productId, PurchaseStatus? status,
+            DateTime? dateFrom, DateTime? dateTo)
+        {
+            var query = BuildFilteredQuery(
+                supplierId, status, dateFrom, dateTo, null, null);
+
+            if (productId.HasValue)
+            {
+                query = query.Where(x =>
+                    x.Items.Any(item => item.ProductId == productId.Value));
             }
 
             return query;

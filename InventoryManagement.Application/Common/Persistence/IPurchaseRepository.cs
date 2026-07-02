@@ -23,6 +23,29 @@ namespace InventoryManagement.Application.Common.Persistence
             string? purchaseNumber,
             string? supplierBillNumber,
             CancellationToken cancellationToken = default);
+        Task<List<Purchase>> GetRegisterAsync(
+            int pageNumber,
+            int pageSize,
+            int? supplierId,
+            int? productId,
+            PurchaseStatus? status,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            CancellationToken cancellationToken = default);
+        Task<int> GetRegisterCountAsync(
+            int? supplierId,
+            int? productId,
+            PurchaseStatus? status,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            CancellationToken cancellationToken = default);
+        Task<List<Purchase>> GetRegisterSummaryAsync(
+            int? supplierId,
+            int? productId,
+            PurchaseStatus? status,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            CancellationToken cancellationToken = default);
         Task<Purchase?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<Purchase?> GetForUpdateAsync(int id, CancellationToken cancellationToken = default);
         Task<bool> PurchaseNumberExistsAsync(

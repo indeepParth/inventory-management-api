@@ -59,6 +59,47 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .CountAsync(cancellationToken);
         }
 
+        public Task<List<SalesInvoice>> GetRegisterAsync(
+            int pageNumber, int pageSize, int? customerId, int? productId,
+            bool? isFromDeliveryChallan, SalesInvoiceStatus? status,
+            DateTime? dateFrom, DateTime? dateTo,
+            CancellationToken cancellationToken = default)
+        {
+            return BuildRegisterQuery(
+                    customerId, productId, isFromDeliveryChallan, status,
+                    dateFrom, dateTo)
+                .AsNoTracking()
+                .Include(x => x.Customer)
+                .Include(x => x.Items).ThenInclude(x => x.Product)
+                .OrderByDescending(x => x.InvoiceDate).ThenByDescending(x => x.Id)
+                .Skip((pageNumber - 1) * pageSize).Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
+
+        public Task<int> GetRegisterCountAsync(
+            int? customerId, int? productId, bool? isFromDeliveryChallan,
+            SalesInvoiceStatus? status, DateTime? dateFrom, DateTime? dateTo,
+            CancellationToken cancellationToken = default)
+        {
+            return BuildRegisterQuery(
+                    customerId, productId, isFromDeliveryChallan, status,
+                    dateFrom, dateTo)
+                .CountAsync(cancellationToken);
+        }
+
+        public Task<List<SalesInvoice>> GetRegisterSummaryAsync(
+            int? customerId, int? productId, bool? isFromDeliveryChallan,
+            SalesInvoiceStatus? status, DateTime? dateFrom, DateTime? dateTo,
+            CancellationToken cancellationToken = default)
+        {
+            return BuildRegisterQuery(
+                    customerId, productId, isFromDeliveryChallan, status,
+                    dateFrom, dateTo)
+                .AsNoTracking()
+                .Include(x => x.Items)
+                .ToListAsync(cancellationToken);
+        }
+
         public Task<SalesInvoice?> GetByIdAsync(
             int id,
             CancellationToken cancellationToken = default)
@@ -208,6 +249,31 @@ namespace InventoryManagement.Infrastructure.Repositories
             {
                 var value = invoiceNumber.Trim();
                 query = query.Where(x => x.InvoiceNumber.Contains(value));
+            }
+
+            return query;
+        }
+
+        private IQueryable<SalesInvoice> BuildRegisterQuery(
+            int? customerId, int? productId, bool? isFromDeliveryChallan,
+            SalesInvoiceStatus? status, DateTime? dateFrom, DateTime? dateTo)
+        {
+            var query = BuildFilteredQuery(
+                customerId, status, dateFrom, dateTo, null);
+
+            if (productId.HasValue)
+            {
+                query = query.Where(x =>
+                    x.Items.Any(item => item.ProductId == productId.Value));
+            }
+
+            if (isFromDeliveryChallan.HasValue)
+            {
+                query = isFromDeliveryChallan.Value
+                    ? query.Where(x =>
+                        x.Items.Any(item => item.DeliveryChallanItemId.HasValue))
+                    : query.Where(x =>
+                        x.Items.All(item => !item.DeliveryChallanItemId.HasValue));
             }
 
             return query;

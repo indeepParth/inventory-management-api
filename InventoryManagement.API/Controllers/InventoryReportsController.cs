@@ -1,5 +1,7 @@
 using CurrentStock = InventoryManagement.Application.Features.InventoryReports.GetCurrentStock;
 using ProductStockLedger = InventoryManagement.Application.Features.InventoryReports.GetProductStockLedger;
+using PurchaseRegister = InventoryManagement.Application.Features.InventoryReports.GetPurchaseRegister;
+using SalesRegister = InventoryManagement.Application.Features.InventoryReports.GetSalesRegister;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -30,6 +32,20 @@ public class InventoryReportsController : ControllerBase
         [FromQuery] ProductStockLedger.Query query)
     {
         query.ProductId = productId;
+        return Ok(await _sender.Send(query));
+    }
+
+    [HttpGet("purchase-register")]
+    public async Task<IActionResult> GetPurchaseRegister(
+        [FromQuery] PurchaseRegister.Query query)
+    {
+        return Ok(await _sender.Send(query));
+    }
+
+    [HttpGet("sales-register")]
+    public async Task<IActionResult> GetSalesRegister(
+        [FromQuery] SalesRegister.Query query)
+    {
         return Ok(await _sender.Send(query));
     }
 }

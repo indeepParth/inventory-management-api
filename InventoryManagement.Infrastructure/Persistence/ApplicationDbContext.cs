@@ -165,6 +165,8 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.TaxAmount).HasPrecision(18, 2);
                 entity.Property(x => x.OtherCharges).HasPrecision(18, 2);
                 entity.Property(x => x.GrandTotal).HasPrecision(18, 2);
+                entity.Property(x => x.AmountPaid).HasPrecision(18, 2);
+                entity.Property(x => x.BalanceDue).HasPrecision(18, 2);
                 entity.Property(x => x.CreatedBy).IsRequired();
 
                 entity.HasOne(x => x.Supplier)
@@ -270,6 +272,8 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.HasIndex(x => x.ReceiptNumber).IsUnique();
                 entity.HasIndex(x => new { x.CustomerId, x.PaymentDate });
                 entity.HasIndex(x => x.SalesInvoiceId);
+                entity.HasIndex(x => new { x.SupplierId, x.PaymentDate });
+                entity.HasIndex(x => x.PurchaseId);
                 entity.HasIndex(x => x.ReversesPaymentId).IsUnique();
                 entity.Property(x => x.ReceiptNumber).HasMaxLength(50).IsRequired();
                 entity.Property(x => x.Amount).HasPrecision(18, 2);
@@ -279,9 +283,15 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.CreatedBy).IsRequired();
                 entity.HasOne(x => x.Customer).WithMany()
                     .HasForeignKey(x => x.CustomerId)
-                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                    .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(x => x.SalesInvoice).WithMany()
                     .HasForeignKey(x => x.SalesInvoiceId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Supplier).WithMany()
+                    .HasForeignKey(x => x.SupplierId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Purchase).WithMany()
+                    .HasForeignKey(x => x.PurchaseId)
                     .OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(x => x.ReversesPayment).WithOne(x => x.Reversal)
                     .HasForeignKey<Payment>(x => x.ReversesPaymentId)

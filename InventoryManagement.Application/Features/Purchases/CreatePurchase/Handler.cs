@@ -113,6 +113,8 @@ namespace InventoryManagement.Application.Features.Purchases.CreatePurchase
                 purchase.Discount +
                 purchase.TaxAmount +
                 purchase.OtherCharges);
+            purchase.AmountPaid = 0;
+            purchase.BalanceDue = purchase.GrandTotal;
 
             await _purchaseRepository.AddAsync(purchase, cancellationToken);
             await _purchaseRepository.SaveChangesAsync(cancellationToken);

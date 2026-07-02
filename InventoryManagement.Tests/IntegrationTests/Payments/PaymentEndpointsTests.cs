@@ -181,6 +181,151 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
             page.PageSize.Should().Be(1);
         }
 
+        [Fact]
+        public async Task Supplier_Payments_Should_Progress_Purchase_To_Paid_And_Filter()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedPostedPurchaseAsync(100);
+            var firstNumber = $"SUP-PAY-{Guid.NewGuid():N}";
+
+            var firstResponse = await Client.PostAsJsonAsync("/api/payments", new Command
+            {
+                ReceiptNumber = firstNumber,
+                SupplierId = seed.SupplierId,
+                PurchaseId = seed.PurchaseId,
+                PaymentDate = new DateTime(2026, 7, 2),
+                Amount = 40,
+                Method = PaymentMethod.BankTransfer,
+                ExternalReference = " BANK-42 "
+            });
+
+            firstResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+            var first = await firstResponse.Content.ReadFromJsonAsync<PaymentResponse>();
+            first.Should().NotBeNull();
+            first!.CustomerId.Should().BeNull();
+            first.SupplierId.Should().Be(seed.SupplierId);
+            first.PurchaseId.Should().Be(seed.PurchaseId);
+            first.Amount.Should().Be(40);
+            first.ExternalReference.Should().Be("BANK-42");
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var purchase = await db.Purchases.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.PurchaseId);
+                purchase.AmountPaid.Should().Be(40);
+                purchase.BalanceDue.Should().Be(60);
+                purchase.Status.Should().Be(PurchaseStatus.PartiallyPaid);
+            }
+
+            (await Client.PostAsJsonAsync("/api/payments", new Command
+            {
+                ReceiptNumber = $"SUP-PAY-{Guid.NewGuid():N}",
+                SupplierId = seed.SupplierId,
+                PurchaseId = seed.PurchaseId,
+                PaymentDate = new DateTime(2026, 7, 3),
+                Amount = 60,
+                Method = PaymentMethod.Cheque
+            })).EnsureSuccessStatusCode();
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var purchase = await db.Purchases.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.PurchaseId);
+                purchase.AmountPaid.Should().Be(100);
+                purchase.BalanceDue.Should().Be(0);
+                purchase.Status.Should().Be(PurchaseStatus.Paid);
+            }
+
+            var getResponse = await Client.GetAsync(
+                $"/api/payments?pageNumber=1&pageSize=1" +
+                $"&supplierId={seed.SupplierId}&purchaseId={seed.PurchaseId}" +
+                $"&method=BankTransfer&receiptNumber={firstNumber[..14]}");
+            getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var page = await getResponse.Content
+                .ReadFromJsonAsync<PagedResponse<PaymentResponse>>();
+            page.Should().NotBeNull();
+            page!.Items.Should().ContainSingle(x => x.Id == first.Id);
+            page.TotalCount.Should().Be(1);
+        }
+
+        [Fact]
+        public async Task Supplier_Overpayment_Should_Roll_Back_All_Changes()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedPostedPurchaseAsync(100);
+            var paymentNumber = $"SUP-OVER-{Guid.NewGuid():N}";
+
+            var response = await Client.PostAsJsonAsync("/api/payments", new Command
+            {
+                ReceiptNumber = paymentNumber,
+                SupplierId = seed.SupplierId,
+                PurchaseId = seed.PurchaseId,
+                PaymentDate = new DateTime(2026, 7, 2),
+                Amount = 100.01m,
+                Method = PaymentMethod.Cash
+            });
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            (await db.Payments.CountAsync(x => x.ReceiptNumber == paymentNumber))
+                .Should().Be(0);
+            var purchase = await db.Purchases.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.PurchaseId);
+            purchase.AmountPaid.Should().Be(0);
+            purchase.BalanceDue.Should().Be(100);
+            purchase.Status.Should().Be(PurchaseStatus.Posted);
+        }
+
+        [Fact]
+        public async Task Supplier_Payment_Reversal_Should_Create_Compensating_Record()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedPostedPurchaseAsync(100);
+            var createResponse = await Client.PostAsJsonAsync("/api/payments", new Command
+            {
+                ReceiptNumber = $"SUP-ORIG-{Guid.NewGuid():N}",
+                SupplierId = seed.SupplierId,
+                PurchaseId = seed.PurchaseId,
+                PaymentDate = new DateTime(2026, 7, 2),
+                Amount = 100,
+                Method = PaymentMethod.UPI
+            });
+            var original = (await createResponse.Content
+                .ReadFromJsonAsync<PaymentResponse>())!;
+
+            var reverseResponse = await Client.PostAsJsonAsync(
+                $"/api/payments/{original.Id}/reverse",
+                new InventoryManagement.Application.Features.Payments.ReversePayment.Command
+                {
+                    ReceiptNumber = $"SUP-REV-{Guid.NewGuid():N}",
+                    PaymentDate = new DateTime(2026, 7, 3),
+                    Note = "Returned by supplier"
+                });
+
+            reverseResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var reversal = await reverseResponse.Content
+                .ReadFromJsonAsync<PaymentResponse>();
+            reversal.Should().NotBeNull();
+            reversal!.Amount.Should().Be(-100);
+            reversal.SupplierId.Should().Be(seed.SupplierId);
+            reversal.PurchaseId.Should().Be(seed.PurchaseId);
+            reversal.ReversesPaymentId.Should().Be(original.Id);
+
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var purchase = await db.Purchases.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.PurchaseId);
+            purchase.AmountPaid.Should().Be(0);
+            purchase.BalanceDue.Should().Be(100);
+            purchase.Status.Should().Be(PurchaseStatus.Posted);
+            (await db.Payments.CountAsync(x =>
+                x.Id == original.Id || x.ReversesPaymentId == original.Id))
+                .Should().Be(2);
+        }
+
         private async Task<SeedResult> SeedPostedInvoiceAsync(decimal total)
         {
             using var scope = _factory.Services.CreateScope();
@@ -212,6 +357,35 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
             return new SeedResult(customer.Id, invoice.Id);
         }
 
+        private async Task<SupplierSeedResult> SeedPostedPurchaseAsync(decimal total)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var suffix = Guid.NewGuid().ToString("N");
+            var supplier = new Supplier
+            {
+                Name = $"Payment supplier {suffix}",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+            var purchase = new Purchase
+            {
+                PurchaseNumber = $"PAY-PUR-{suffix}",
+                Supplier = supplier,
+                BillDate = new DateTime(2026, 7, 1),
+                Status = PurchaseStatus.Posted,
+                GrandTotal = total,
+                BalanceDue = total,
+                CreatedAtUtc = DateTime.UtcNow,
+                PostedAtUtc = DateTime.UtcNow,
+                CreatedBy = "test"
+            };
+            db.Purchases.Add(purchase);
+            await db.SaveChangesAsync();
+            return new SupplierSeedResult(supplier.Id, purchase.Id);
+        }
+
         private sealed record SeedResult(int CustomerId, int InvoiceId);
+        private sealed record SupplierSeedResult(int SupplierId, int PurchaseId);
     }
 }

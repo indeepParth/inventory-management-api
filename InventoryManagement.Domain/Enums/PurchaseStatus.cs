@@ -4,6 +4,8 @@ namespace InventoryManagement.Domain.Enums
     {
         Draft = 0,
         Posted = 1,
-        Cancelled = 2
+        Cancelled = 2,
+        PartiallyPaid = 3,
+        Paid = 4
     }
 }

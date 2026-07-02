@@ -6,10 +6,14 @@ namespace InventoryManagement.Application.Features.Payments
     {
         public int Id { get; set; }
         public string ReceiptNumber { get; set; } = string.Empty;
-        public int CustomerId { get; set; }
-        public string CustomerName { get; set; } = string.Empty;
+        public int? CustomerId { get; set; }
+        public string? CustomerName { get; set; }
         public int? SalesInvoiceId { get; set; }
         public string? InvoiceNumber { get; set; }
+        public int? SupplierId { get; set; }
+        public string? SupplierName { get; set; }
+        public int? PurchaseId { get; set; }
+        public string? PurchaseNumber { get; set; }
         public DateTime PaymentDate { get; set; }
         public decimal Amount { get; set; }
         public PaymentMethod Method { get; set; }

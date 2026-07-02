@@ -28,39 +28,72 @@ namespace InventoryManagement.Application.Features.Payments.CreatePayment
                 if (await _payments.ReceiptNumberExistsAsync(receiptNumber, transactionToken))
                     throw new BadRequestException("Receipt number already exists.");
 
-                var customer = await _payments.GetCustomerForUpdateAsync(
-                    request.CustomerId, transactionToken) ??
-                    throw new NotFoundException("Customer not found.");
-
+                Customer? customer = null;
                 SalesInvoice? invoice = null;
-                if (request.SalesInvoiceId.HasValue)
+                Supplier? supplier = null;
+                Purchase? purchase = null;
+                if (request.CustomerId.HasValue)
                 {
-                    invoice = await _payments.GetInvoiceForUpdateAsync(
-                        request.SalesInvoiceId.Value, transactionToken) ??
-                        throw new NotFoundException("Sales invoice not found.");
-                    if (invoice.CustomerId != customer.Id)
+                    customer = await _payments.GetCustomerForUpdateAsync(
+                        request.CustomerId.Value, transactionToken) ??
+                        throw new NotFoundException("Customer not found.");
+                    if (request.SalesInvoiceId.HasValue)
+                    {
+                        invoice = await _payments.GetInvoiceForUpdateAsync(
+                            request.SalesInvoiceId.Value, transactionToken) ??
+                            throw new NotFoundException("Sales invoice not found.");
+                        if (invoice.CustomerId != customer.Id)
+                            throw new BadRequestException(
+                                "Sales invoice does not belong to the customer.");
+                        if (invoice.Status is not (SalesInvoiceStatus.Posted or
+                            SalesInvoiceStatus.PartiallyPaid))
+                            throw new BadRequestException(
+                                "Payments may only be applied to an unpaid posted invoice.");
+                        if (request.Amount > invoice.BalanceDue)
+                            throw new BadRequestException(
+                                "Payment exceeds invoice balance due.");
+                    }
+                    else if (request.Amount > customer.BalanceDue)
+                    {
                         throw new BadRequestException(
-                            "Sales invoice does not belong to the customer.");
-                    if (invoice.Status is not (SalesInvoiceStatus.Posted or
-                        SalesInvoiceStatus.PartiallyPaid))
-                        throw new BadRequestException(
-                            "Payments may only be applied to an unpaid posted invoice.");
-                    if (request.Amount > invoice.BalanceDue)
-                        throw new BadRequestException("Payment exceeds invoice balance due.");
+                            "Payment exceeds customer balance due.");
+                    }
                 }
-                else if (request.Amount > customer.BalanceDue)
+                else
                 {
-                    throw new BadRequestException("Payment exceeds customer balance due.");
+                    supplier = await _payments.GetSupplierForUpdateAsync(
+                        request.SupplierId!.Value, transactionToken) ??
+                        throw new NotFoundException("Supplier not found.");
+                    if (request.PurchaseId.HasValue)
+                    {
+                        purchase = await _payments.GetPurchaseForUpdateAsync(
+                            request.PurchaseId.Value, transactionToken) ??
+                            throw new NotFoundException("Purchase not found.");
+                        if (purchase.SupplierId != supplier.Id)
+                            throw new BadRequestException(
+                                "Purchase does not belong to the supplier.");
+                        if (purchase.Status is not (PurchaseStatus.Posted or
+                            PurchaseStatus.PartiallyPaid))
+                            throw new BadRequestException(
+                                "Payments may only be applied to an unpaid posted purchase.");
+                        if (request.Amount > purchase.BalanceDue)
+                            throw new BadRequestException(
+                                "Payment exceeds purchase balance due.");
+                    }
                 }
 
                 var now = DateTime.UtcNow;
                 created = new Payment
                 {
                     ReceiptNumber = receiptNumber,
-                    CustomerId = customer.Id,
+                    CustomerId = customer?.Id,
                     Customer = customer,
                     SalesInvoiceId = invoice?.Id,
                     SalesInvoice = invoice,
+                    SupplierId = supplier?.Id,
+                    Supplier = supplier,
+                    PurchaseId = purchase?.Id,
+                    Purchase = purchase,
                     PaymentDate = request.PaymentDate,
                     Amount = request.Amount,
                     Method = request.Method,
@@ -71,8 +104,11 @@ namespace InventoryManagement.Application.Features.Payments.CreatePayment
                 };
                 await _payments.AddAsync(created, transactionToken);
 
-                customer.BalanceDue -= request.Amount;
-                customer.UpdatedAtUtc = now;
+                if (customer != null)
+                {
+                    customer.BalanceDue -= request.Amount;
+                    customer.UpdatedAtUtc = now;
+                }
                 if (invoice != null)
                 {
                     invoice.AmountPaid += request.Amount;
@@ -81,6 +117,14 @@ namespace InventoryManagement.Application.Features.Payments.CreatePayment
                         ? SalesInvoiceStatus.Paid
                         : SalesInvoiceStatus.PartiallyPaid;
                     invoice.UpdatedAtUtc = now;
+                }
+                if (purchase != null)
+                {
+                    purchase.AmountPaid += request.Amount;
+                    purchase.BalanceDue -= request.Amount;
+                    purchase.Status = purchase.BalanceDue == 0
+                        ? PurchaseStatus.Paid
+                        : PurchaseStatus.PartiallyPaid;
                 }
                 await _payments.SaveChangesAsync(transactionToken);
             }, cancellationToken);

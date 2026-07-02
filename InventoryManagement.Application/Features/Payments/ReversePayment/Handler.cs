@@ -44,6 +44,10 @@ namespace InventoryManagement.Application.Features.Payments.ReversePayment
                     Customer = original.Customer,
                     SalesInvoiceId = original.SalesInvoiceId,
                     SalesInvoice = original.SalesInvoice,
+                    SupplierId = original.SupplierId,
+                    Supplier = original.Supplier,
+                    PurchaseId = original.PurchaseId,
+                    Purchase = original.Purchase,
                     PaymentDate = request.PaymentDate,
                     Amount = -original.Amount,
                     Method = original.Method,
@@ -56,8 +60,11 @@ namespace InventoryManagement.Application.Features.Payments.ReversePayment
                 };
                 await _payments.AddAsync(reversal, transactionToken);
 
-                original.Customer.BalanceDue += original.Amount;
-                original.Customer.UpdatedAtUtc = now;
+                if (original.Customer != null)
+                {
+                    original.Customer.BalanceDue += original.Amount;
+                    original.Customer.UpdatedAtUtc = now;
+                }
                 if (original.SalesInvoice != null)
                 {
                     original.SalesInvoice.AmountPaid -= original.Amount;
@@ -67,6 +74,14 @@ namespace InventoryManagement.Application.Features.Payments.ReversePayment
                             ? SalesInvoiceStatus.Posted
                             : SalesInvoiceStatus.PartiallyPaid;
                     original.SalesInvoice.UpdatedAtUtc = now;
+                }
+                if (original.Purchase != null)
+                {
+                    original.Purchase.AmountPaid -= original.Amount;
+                    original.Purchase.BalanceDue += original.Amount;
+                    original.Purchase.Status = original.Purchase.AmountPaid == 0
+                        ? PurchaseStatus.Posted
+                        : PurchaseStatus.PartiallyPaid;
                 }
                 await _payments.SaveChangesAsync(transactionToken);
             }, cancellationToken);

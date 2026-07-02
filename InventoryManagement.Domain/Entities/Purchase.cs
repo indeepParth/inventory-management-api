@@ -16,6 +16,8 @@ namespace InventoryManagement.Domain.Entities
         public decimal TaxAmount { get; set; }
         public decimal OtherCharges { get; set; }
         public decimal GrandTotal { get; set; }
+        public decimal AmountPaid { get; set; }
+        public decimal BalanceDue { get; set; }
         public string? Notes { get; set; }
         public DateTime CreatedAtUtc { get; set; }
         public DateTime? PostedAtUtc { get; set; }

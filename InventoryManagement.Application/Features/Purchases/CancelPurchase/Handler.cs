@@ -41,6 +41,12 @@ namespace InventoryManagement.Application.Features.Purchases.CancelPurchase
                     return;
                 }
 
+                if (purchase.Status is PurchaseStatus.PartiallyPaid or PurchaseStatus.Paid)
+                {
+                    throw new BadRequestException(
+                        "Purchase payments must be reversed before cancellation.");
+                }
+
                 if (purchase.Status == PurchaseStatus.Posted)
                 {
                     await ReversePostedPurchaseAsync(purchase, transactionToken);

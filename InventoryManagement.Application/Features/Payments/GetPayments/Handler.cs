@@ -18,10 +18,12 @@ namespace InventoryManagement.Application.Features.Payments.GetPayments
         {
             var items = await _payments.GetAllAsync(
                 request.PageNumber, request.PageSize, request.CustomerId,
-                request.SalesInvoiceId, request.Method, request.DateFrom,
+                request.SalesInvoiceId, request.SupplierId, request.PurchaseId,
+                request.Method, request.DateFrom,
                 request.DateTo, request.ReceiptNumber, cancellationToken);
             var count = await _payments.GetCountAsync(
-                request.CustomerId, request.SalesInvoiceId, request.Method,
+                request.CustomerId, request.SalesInvoiceId, request.SupplierId,
+                request.PurchaseId, request.Method,
                 request.DateFrom, request.DateTo, request.ReceiptNumber,
                 cancellationToken);
             return new PagedResponse<PaymentResponse>

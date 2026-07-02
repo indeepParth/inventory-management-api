@@ -10,6 +10,8 @@ namespace InventoryManagement.Application.Features.Payments.GetPayments
         public int PageSize { get; set; } = 10;
         public int? CustomerId { get; set; }
         public int? SalesInvoiceId { get; set; }
+        public int? SupplierId { get; set; }
+        public int? PurchaseId { get; set; }
         public PaymentMethod? Method { get; set; }
         public DateTime? DateFrom { get; set; }
         public DateTime? DateTo { get; set; }

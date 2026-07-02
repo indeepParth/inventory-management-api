@@ -20,6 +20,8 @@ namespace InventoryManagement.Application.Features.Purchases
                 TaxAmount = purchase.TaxAmount,
                 OtherCharges = purchase.OtherCharges,
                 GrandTotal = purchase.GrandTotal,
+                AmountPaid = purchase.AmountPaid,
+                BalanceDue = purchase.BalanceDue,
                 Notes = purchase.Notes,
                 CreatedAtUtc = purchase.CreatedAtUtc,
                 PostedAtUtc = purchase.PostedAtUtc,

@@ -115,6 +115,8 @@ namespace InventoryManagement.Application.Features.Purchases.UpdatePurchase
             purchase.TaxAmount = taxAmountTotal;
             purchase.GrandTotal = RoundMoney(
                 subtotal - request.Discount + taxAmountTotal + request.OtherCharges);
+            purchase.AmountPaid = 0;
+            purchase.BalanceDue = purchase.GrandTotal;
             _purchaseRepository.RemoveItems(purchase.Items);
             purchase.Items.Clear();
 

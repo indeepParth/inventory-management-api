@@ -73,6 +73,8 @@ namespace InventoryManagement.Application.Features.Purchases.PostPurchase
                 }
 
                 purchase.Status = PurchaseStatus.Posted;
+                purchase.AmountPaid = 0;
+                purchase.BalanceDue = purchase.GrandTotal;
                 purchase.PostedAtUtc = postedAtUtc;
                 await _purchaseRepository.SaveChangesAsync(transactionToken);
                 postedPurchase = purchase;

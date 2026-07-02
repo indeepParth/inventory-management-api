@@ -6,10 +6,14 @@ namespace InventoryManagement.Domain.Entities
     {
         public int Id { get; set; }
         public string ReceiptNumber { get; set; } = string.Empty;
-        public int CustomerId { get; set; }
-        public Customer Customer { get; set; } = null!;
+        public int? CustomerId { get; set; }
+        public Customer? Customer { get; set; }
         public int? SalesInvoiceId { get; set; }
         public SalesInvoice? SalesInvoice { get; set; }
+        public int? SupplierId { get; set; }
+        public Supplier? Supplier { get; set; }
+        public int? PurchaseId { get; set; }
+        public Purchase? Purchase { get; set; }
         public DateTime PaymentDate { get; set; }
         public decimal Amount { get; set; }
         public PaymentMethod Method { get; set; }

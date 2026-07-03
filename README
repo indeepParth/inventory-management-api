@@ -24,13 +24,16 @@ The project focuses on maintainability, scalability, and modern backend developm
 * Refresh Token Rotation
 * Policy-based Authorization
 
-### Product Management
+### Inventory Workflows
 
-* Create Product
-* Update Product
-* Delete Product
-* Get Product by Id
-* Get All Products
+* Product, category, supplier, and customer management
+* Stock ledger with damage, adjustment, and reversal movements
+* Purchase draft, edit, post, and cancel lifecycle
+* Delivery challan draft, edit, post, and cancel lifecycle
+* Direct sales invoices and invoices created from posted challans
+* Customer payments and payment reversals
+* Customer and supplier returns
+* Current stock, ledger, register, and gross profit reports
 
 ### Logging & Error Handling
 
@@ -50,6 +53,105 @@ The project focuses on maintainability, scalability, and modern backend developm
 * Docker Compose
 * Persistent Database Volume
 * Persistent Log Volume
+
+---
+
+## Workflow Rules
+
+Documents are created as drafts where applicable. Drafts do not change stock or balances.
+
+* Posting a purchase increases stock and updates weighted-average cost.
+* Posting a delivery challan decreases stock without creating customer debt.
+* Posting a direct sales invoice decreases stock and updates customer debt.
+* Invoicing posted challans does not reduce stock a second time.
+* Posting returns applies the corresponding stock and balance effects.
+* Cancelling posted documents preserves history through reversal movements.
+* Gross profit uses historical costs stored with sales and returns, not the product's current average cost.
+
+---
+
+## API Overview
+
+All routes except authentication require a bearer access token. Swagger provides complete request and response schemas.
+
+### Authentication and Master Data
+
+| Area | Routes |
+| --- | --- |
+| Authentication | `POST /api/Auth/Register`, `/api/Auth/Login`, `/api/Auth/RefreshToken` |
+| Products | `/api/products` |
+| Categories | `/api/categories` |
+| Suppliers | `/api/suppliers` |
+| Customers | `/api/customers` |
+| Stock ledger | `GET /api/stock-movements` |
+| Manual corrections | `POST /api/stock-movements/damage`, `/adjustment`, `/{id}/reverse` |
+
+### Purchases
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/purchases` | List purchases with paging and filters |
+| `GET` | `/api/purchases/{id}` | Get a purchase |
+| `POST` | `/api/purchases` | Create a draft |
+| `PUT` | `/api/purchases/{id}` | Edit a draft |
+| `POST` | `/api/purchases/{id}/post` | Receive stock |
+| `POST` | `/api/purchases/{id}/cancel` | Cancel or reverse a purchase |
+
+### Delivery Challans
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/delivery-challans` | List challans with paging and filters |
+| `GET` | `/api/delivery-challans/{id}` | Get a challan |
+| `POST` | `/api/delivery-challans` | Create a draft |
+| `PUT` | `/api/delivery-challans/{id}` | Edit a draft |
+| `POST` | `/api/delivery-challans/{id}/post` | Issue stock |
+| `POST` | `/api/delivery-challans/{id}/cancel` | Cancel or reverse a challan |
+
+### Sales Invoices
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/sales-invoices` | List invoices with paging and filters |
+| `GET` | `/api/sales-invoices/{id}` | Get an invoice |
+| `POST` | `/api/sales-invoices` | Create a draft direct invoice |
+| `POST` | `/api/sales-invoices/from-challans` | Create an invoice from posted challan items |
+| `PUT` | `/api/sales-invoices/{id}` | Edit a draft direct invoice |
+| `POST` | `/api/sales-invoices/{id}/post` | Post a direct invoice |
+| `POST` | `/api/sales-invoices/{id}/cancel` | Cancel an invoice |
+
+### Payments
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/payments` | List customer payments |
+| `POST` | `/api/payments` | Record a payment |
+| `POST` | `/api/payments/{id}/reverse` | Reverse a payment |
+
+### Returns
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/customer-returns/{id}` | Get a customer return |
+| `POST` | `/api/customer-returns` | Create a draft customer return |
+| `POST` | `/api/customer-returns/{id}/post` | Post a customer return |
+| `POST` | `/api/customer-returns/{id}/cancel` | Cancel a customer return |
+| `GET` | `/api/supplier-returns/{id}` | Get a supplier return |
+| `POST` | `/api/supplier-returns` | Create a draft supplier return |
+| `POST` | `/api/supplier-returns/{id}/post` | Post a supplier return |
+| `POST` | `/api/supplier-returns/{id}/cancel` | Cancel a supplier return |
+
+### Reports
+
+| Route | Filters and result |
+| --- | --- |
+| `GET /api/inventory-reports/current-stock` | Paged stock by category, search text, and quantity filter |
+| `GET /api/inventory-reports/products/{productId}/ledger` | Paged stock history by date and movement type |
+| `GET /api/inventory-reports/purchase-register` | Purchases and summary by date, supplier, product, and status |
+| `GET /api/inventory-reports/sales-register` | Sales and summary by date, customer, product, source, and status |
+| `GET /api/inventory-reports/gross-profit` | Revenue, cost of goods sold, returns, and gross profit |
+
+Paged endpoints use `pageNumber` and `pageSize`.
 
 ---
 
@@ -105,22 +207,27 @@ InventoryManagement.API
 InventoryManagement.Application
     Features
         Auth
-            Register
-            Login
-            RefreshAccessToken
-
+        Categories
+        Customers
+        CustomerReturns
+        DeliveryChallans
+        InventoryReports
+        Payments
         Products
-            CreateProduct
-            UpdateProduct
-            DeleteProduct
-            GetProductById
-            GetProducts
+        Purchases
+        SalesInvoices
+        StockMovements
+        Suppliers
+        SupplierReturns
 
 InventoryManagement.Domain
+    Entities and Enums
 
 InventoryManagement.Infrastructure
+    Persistence, Repositories, Identity, and Services
 
 InventoryManagement.Tests
+    Unit and Integration Tests
 ```
 
 ---
@@ -198,6 +305,12 @@ New Access Token
 * ✅ Docker
 * ✅ Docker Compose
 * ✅ Automatic EF Core Migrations
+* ✅ Product, category, supplier, and customer management
+* ✅ Stock ledger and manual corrections
+* ✅ Purchase, challan, invoice, payment, and return workflows
+* ✅ Inventory and gross profit reports
+* ✅ Pagination, searching, and filtering
+* ✅ Integration tests
 
 ---
 
@@ -213,12 +326,15 @@ New Access Token
 * Serilog
 * Docker
 * Docker Compose
+* Inventory document workflows
+* Payments and returns
+* Inventory reporting
+* Pagination, searching, and filtering
+* Integration tests
 
 ### Planned
 
-* Integration Tests
 * GitHub Actions CI/CD
-* Pagination / Searching / Filtering
 * Response Caching
 * API Versioning
 * OpenTelemetry

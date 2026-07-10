@@ -3,11 +3,13 @@ import { AuthProvider } from '../features/auth/AuthContext'
 import { ProtectedRoute, PublicOnlyRoute, RoleProtectedRoute } from '../features/auth/AuthRoutes'
 import { AppLayout } from '../shared/components/AppLayout'
 import { PublicLayout } from '../shared/components/PublicLayout'
+import { CategoriesPage } from '../pages/CategoriesPage'
 import { DashboardPage } from '../pages/DashboardPage'
 import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { PlaceholderPage } from '../pages/PlaceholderPage'
+import { ProductsPage } from '../pages/ProductsPage'
 import './App.css'
 
 export function App() {
@@ -29,7 +31,8 @@ export function App() {
                 <Route path="dashboard" element={<DashboardPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="readProducts" />}>
-                <Route path="products" element={<PlaceholderPage title="Products" />} />
+                <Route path="products" element={<ProductsPage />} />
+                <Route path="categories" element={<CategoriesPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="readCustomers" />}>
                 <Route path="customers" element={<PlaceholderPage title="Customers" />} />

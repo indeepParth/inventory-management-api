@@ -14,6 +14,7 @@ const allRoles: Role[] = ['Admin', 'Manager', 'Sales', 'Inventory']
 const navItems: NavItem[] = [
   { label: 'Dashboard', to: '/app/dashboard', roles: allRoles },
   { label: 'Products', to: '/app/products', roles: ['Admin', 'Inventory'] },
+  { label: 'Categories', to: '/app/categories', roles: ['Admin', 'Inventory'] },
   { label: 'Customers', to: '/app/customers', roles: ['Admin', 'Sales'] },
   { label: 'Suppliers', to: '/app/suppliers', roles: ['Admin', 'Inventory'] },
   { label: 'Purchases', to: '/app/purchases', roles: ['Admin', 'Manager', 'Inventory'] },

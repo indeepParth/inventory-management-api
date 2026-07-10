@@ -25,6 +25,8 @@ export type ProblemDetails = {
   type?: string
   title?: string
   status?: number
+  statusCode?: number
+  message?: string
   detail?: string
   instance?: string
   errors?: Record<string, string[]>
@@ -88,7 +90,12 @@ function redirectToLogin(): void {
 
 function getErrorMessage(status: number, responseBody: unknown): string {
   if (isProblemDetails(responseBody)) {
-    return responseBody.title ?? responseBody.detail ?? `Request failed with status ${status}.`
+    return (
+      responseBody.title ??
+      responseBody.detail ??
+      responseBody.message ??
+      `Request failed with status ${status}.`
+    )
   }
 
   if (typeof responseBody === 'string' && responseBody.trim()) {
@@ -103,7 +110,14 @@ function isProblemDetails(value: unknown): value is ProblemDetails {
     return false
   }
 
-  return 'title' in value || 'detail' in value || 'errors' in value || 'status' in value
+  return (
+    'title' in value ||
+    'detail' in value ||
+    'message' in value ||
+    'errors' in value ||
+    'status' in value ||
+    'statusCode' in value
+  )
 }
 
 async function sendRequest<TBody>(

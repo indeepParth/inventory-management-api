@@ -11,6 +11,7 @@ import { DeliveryChallansPage } from '../pages/DeliveryChallansPage'
 import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
+import { PaymentsPage } from '../pages/PaymentsPage'
 import { PlaceholderPage } from '../pages/PlaceholderPage'
 import { ProductsPage } from '../pages/ProductsPage'
 import { PurchasesPage } from '../pages/PurchasesPage'
@@ -59,7 +60,7 @@ export function App() {
                 <Route path="sales-invoices" element={<SalesInvoicesPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="viewPayments" />}>
-                <Route path="payments" element={<PlaceholderPage title="Payments" />} />
+                <Route path="payments" element={<PaymentsPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="viewStockMovements" />}>
                 <Route path="stock-movements" element={<PlaceholderPage title="Stock movements" />} />

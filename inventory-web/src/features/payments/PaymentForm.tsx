@@ -4,6 +4,7 @@ import type { Customer, Supplier } from '../parties/partiesApi'
 import type { Purchase } from '../purchases/purchasesApi'
 import type { SalesInvoice } from '../salesInvoices/salesInvoicesApi'
 import type { PaymentFormValues, PaymentMethod } from './paymentsApi'
+import { formatCurrency, toDateInputValue } from '../../shared/utils/formatters'
 
 type PaymentMode = 'customer' | 'supplier'
 
@@ -19,7 +20,7 @@ type PaymentFormProps = {
 }
 
 function today(): string {
-  return new Date().toISOString().slice(0, 10)
+  return toDateInputValue()
 }
 
 export function PaymentForm({
@@ -127,8 +128,8 @@ export function PaymentForm({
             {(isCustomerMode ? customerInvoices : supplierPurchases).map((document) => (
               <option key={document.id} value={document.id}>
                 {'invoiceNumber' in document
-                  ? `${document.invoiceNumber} - due ${document.balanceDue.toFixed(2)}`
-                  : `${document.purchaseNumber} - due ${document.balanceDue.toFixed(2)}`}
+                  ? `${document.invoiceNumber} - due ${formatCurrency(document.balanceDue)}`
+                  : `${document.purchaseNumber} - due ${formatCurrency(document.balanceDue)}`}
               </option>
             ))}
           </select>
@@ -164,8 +165,8 @@ export function PaymentForm({
       </label>
 
       <div className="summary-strip">
-        <span>Balance before: {balanceBefore.toFixed(2)}</span>
-        <strong>Balance after: {balanceAfter.toFixed(2)}</strong>
+        <span>Balance before: {formatCurrency(balanceBefore)}</span>
+        <strong>Balance after: {formatCurrency(balanceAfter)}</strong>
       </div>
 
       <div className="form-actions">

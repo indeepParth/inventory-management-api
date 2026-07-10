@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getSupplier, type Supplier } from '../features/parties/partiesApi'
 import { getErrorMessage } from '../shared/api/apiErrorMessages'
+import { ErrorBanner, LoadingState } from '../shared/components/Feedback'
 
 export function SupplierDetailPage() {
   const { id } = useParams()
@@ -30,8 +31,8 @@ export function SupplierDetailPage() {
     <section className="content-panel" aria-labelledby="supplier-detail-title">
       <p className="page-kicker">Supplier</p>
       <h1 id="supplier-detail-title" className="page-title">{supplier?.name ?? 'Supplier detail'}</h1>
-      {isLoading ? <p className="state-message">Loading supplier...</p> : null}
-      {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
+      {isLoading ? <LoadingState>Loading supplier...</LoadingState> : null}
+      {errorMessage ? <ErrorBanner>{errorMessage}</ErrorBanner> : null}
       {supplier ? (
         <div className="detail-grid">
           <span>Status</span><strong>{supplier.isActive ? 'Active' : 'Inactive'}</strong>

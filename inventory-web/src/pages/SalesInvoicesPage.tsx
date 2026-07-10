@@ -24,6 +24,8 @@ import {
   getFieldErrors,
   type FieldErrors,
 } from '../shared/api/apiErrorMessages'
+import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
+import { formatCurrency } from '../shared/utils/formatters'
 
 const pageSize = 10
 
@@ -227,7 +229,7 @@ export function SalesInvoicesPage() {
         <p className="state-message">Posted delivery challans will appear as sources for challan-based invoices.</p>
       ) : null}
 
-      {actionError ? <p className="form-error" role="alert">{actionError}</p> : null}
+      {actionError ? <ErrorBanner>{actionError}</ErrorBanner> : null}
 
       {formMode === 'direct' ? (
         <DirectInvoiceForm
@@ -251,9 +253,9 @@ export function SalesInvoicesPage() {
         />
       ) : null}
 
-      {isLoading ? <p className="state-message">Loading sales invoices...</p> : null}
-      {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
-      {!isLoading && !errorMessage && invoices.length === 0 ? <p className="state-message">No sales invoices found.</p> : null}
+      {isLoading ? <LoadingState>Loading sales invoices...</LoadingState> : null}
+      {errorMessage ? <ErrorBanner>{errorMessage}</ErrorBanner> : null}
+      {!isLoading && !errorMessage && invoices.length === 0 ? <EmptyState>No sales invoices found.</EmptyState> : null}
 
       {!isLoading && !errorMessage && invoices.length > 0 ? (
         <>
@@ -280,9 +282,9 @@ export function SalesInvoicesPage() {
                     </td>
                     <td>{invoice.customerName}</td>
                     <td>{getSalesInvoiceStatusLabel(invoice.status)}</td>
-                    <td>{invoice.grandTotal.toFixed(2)}</td>
-                    <td>{invoice.amountPaid.toFixed(2)}</td>
-                    <td>{invoice.balanceDue.toFixed(2)}</td>
+                    <td>{formatCurrency(invoice.grandTotal)}</td>
+                    <td>{formatCurrency(invoice.amountPaid)}</td>
+                    <td>{formatCurrency(invoice.balanceDue)}</td>
                     <td>
                       <div className="table-actions">
                         {invoice.status === 0 ? (

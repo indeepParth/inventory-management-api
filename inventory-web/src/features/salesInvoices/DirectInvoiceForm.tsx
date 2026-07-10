@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { getFieldError, type FieldErrors } from '../../shared/api/apiErrorMessages'
+import { formatCurrency } from '../../shared/utils/formatters'
 import type { Customer } from '../parties/partiesApi'
 import type { Product } from '../products/productsApi'
 import type {
@@ -175,9 +176,9 @@ export function DirectInvoiceForm({
       </div>
 
       <div className="summary-strip">
-        <span>Subtotal: {subtotal.toFixed(2)}</span>
-        <span>Tax: {taxAmount.toFixed(2)}</span>
-        <strong>Total: {total.toFixed(2)}</strong>
+        <span>Subtotal: {formatCurrency(subtotal)}</span>
+        <span>Tax: {formatCurrency(taxAmount)}</span>
+        <strong>Total: {formatCurrency(total)}</strong>
       </div>
 
       <div className="form-actions">

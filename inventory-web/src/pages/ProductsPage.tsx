@@ -19,6 +19,8 @@ import {
   getFieldErrors,
   type FieldErrors,
 } from '../shared/api/apiErrorMessages'
+import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
+import { formatCurrency, formatQuantity } from '../shared/utils/formatters'
 
 const pageSize = 10
 
@@ -163,9 +165,7 @@ export function ProductsPage() {
       ) : null}
 
       {actionError ? (
-        <p className="form-error" role="alert">
-          {actionError}
-        </p>
+        <ErrorBanner>{actionError}</ErrorBanner>
       ) : null}
 
       {isFormOpen ? (
@@ -179,14 +179,12 @@ export function ProductsPage() {
         />
       ) : null}
 
-      {isLoading ? <p className="state-message">Loading products...</p> : null}
+      {isLoading ? <LoadingState>Loading products...</LoadingState> : null}
       {errorMessage ? (
-        <p className="form-error" role="alert">
-          {errorMessage}
-        </p>
+        <ErrorBanner>{errorMessage}</ErrorBanner>
       ) : null}
       {!isLoading && !errorMessage && products.length === 0 ? (
-        <p className="state-message">No products found.</p>
+        <EmptyState>No products found.</EmptyState>
       ) : null}
 
       {!isLoading && !errorMessage && products.length > 0 ? (
@@ -210,9 +208,9 @@ export function ProductsPage() {
                     <td>{product.sku}</td>
                     <td>{product.categoryName}</td>
                     <td>
-                      {product.quantity} {product.baseUnit}
+                      {formatQuantity(product.quantity)} {product.baseUnit}
                     </td>
-                    <td>{product.defaultSellingPrice.toFixed(2)}</td>
+                    <td>{formatCurrency(product.defaultSellingPrice)}</td>
                     {canManageProducts ? (
                       <td>
                         <div className="table-actions">

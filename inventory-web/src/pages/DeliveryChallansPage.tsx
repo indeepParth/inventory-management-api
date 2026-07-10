@@ -20,6 +20,8 @@ import {
   getFieldErrors,
   type FieldErrors,
 } from '../shared/api/apiErrorMessages'
+import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
+import { formatDate } from '../shared/utils/formatters'
 
 const pageSize = 10
 
@@ -168,7 +170,7 @@ export function DeliveryChallansPage() {
         <p className="state-message">Create at least one active customer and one product before adding challans.</p>
       ) : null}
 
-      {actionError ? <p className="form-error" role="alert">{actionError}</p> : null}
+      {actionError ? <ErrorBanner>{actionError}</ErrorBanner> : null}
 
       {isFormOpen ? (
         <DeliveryChallanForm
@@ -182,9 +184,9 @@ export function DeliveryChallansPage() {
         />
       ) : null}
 
-      {isLoading ? <p className="state-message">Loading delivery challans...</p> : null}
-      {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
-      {!isLoading && !errorMessage && challans.length === 0 ? <p className="state-message">No delivery challans found.</p> : null}
+      {isLoading ? <LoadingState>Loading delivery challans...</LoadingState> : null}
+      {errorMessage ? <ErrorBanner>{errorMessage}</ErrorBanner> : null}
+      {!isLoading && !errorMessage && challans.length === 0 ? <EmptyState>No delivery challans found.</EmptyState> : null}
 
       {!isLoading && !errorMessage && challans.length > 0 ? (
         <>
@@ -205,7 +207,7 @@ export function DeliveryChallansPage() {
                   <tr key={challan.id}>
                     <td>{challan.challanNumber}</td>
                     <td>{challan.customerName}</td>
-                    <td>{challan.challanDate.slice(0, 10)}</td>
+                    <td>{formatDate(challan.challanDate)}</td>
                     <td>{getDeliveryChallanStatusLabel(challan.status)}</td>
                     <td>{challan.items.length}</td>
                     <td>

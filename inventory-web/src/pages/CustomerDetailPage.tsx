@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getCustomer, type Customer } from '../features/parties/partiesApi'
 import { getErrorMessage } from '../shared/api/apiErrorMessages'
+import { ErrorBanner, LoadingState } from '../shared/components/Feedback'
+import { formatCurrency } from '../shared/utils/formatters'
 
 export function CustomerDetailPage() {
   const { id } = useParams()
@@ -30,13 +32,13 @@ export function CustomerDetailPage() {
     <section className="content-panel" aria-labelledby="customer-detail-title">
       <p className="page-kicker">Customer</p>
       <h1 id="customer-detail-title" className="page-title">{customer?.name ?? 'Customer detail'}</h1>
-      {isLoading ? <p className="state-message">Loading customer...</p> : null}
-      {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
+      {isLoading ? <LoadingState>Loading customer...</LoadingState> : null}
+      {errorMessage ? <ErrorBanner>{errorMessage}</ErrorBanner> : null}
       {customer ? (
         <div className="detail-grid">
           <span>Status</span><strong>{customer.isActive ? 'Active' : 'Inactive'}</strong>
-          <span>Balance due</span><strong>{customer.balanceDue.toFixed(2)}</strong>
-          <span>Credit limit</span><strong>{customer.creditLimit.toFixed(2)}</strong>
+          <span>Balance due</span><strong>{formatCurrency(customer.balanceDue)}</strong>
+          <span>Credit limit</span><strong>{formatCurrency(customer.creditLimit)}</strong>
           <span>Contact person</span><strong>{customer.contactPerson || '-'}</strong>
           <span>Phone</span><strong>{customer.phone || '-'}</strong>
           <span>Email</span><strong>{customer.email || '-'}</strong>

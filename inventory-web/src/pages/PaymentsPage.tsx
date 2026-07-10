@@ -20,6 +20,8 @@ import {
   getFieldErrors,
   type FieldErrors,
 } from '../shared/api/apiErrorMessages'
+import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
+import { formatCurrency, formatDate, toDateInputValue } from '../shared/utils/formatters'
 
 const pageSize = 10
 
@@ -141,12 +143,18 @@ export function PaymentsPage() {
       return
     }
 
+    const confirmed = window.confirm(`Reverse payment "${payment.receiptNumber}"?`)
+
+    if (!confirmed) {
+      return
+    }
+
     setActionError(null)
 
     try {
       await reversePayment(payment.id, {
         receiptNumber: receiptNumberForReversal,
-        paymentDate: new Date().toISOString().slice(0, 10),
+        paymentDate: toDateInputValue(),
         externalReference: '',
         note: `Reversal for ${payment.receiptNumber}`,
       })
@@ -175,7 +183,7 @@ export function PaymentsPage() {
         <p className="state-message">Customer payments need active customers; supplier payments need active suppliers.</p>
       ) : null}
 
-      {actionError ? <p className="form-error" role="alert">{actionError}</p> : null}
+      {actionError ? <ErrorBanner>{actionError}</ErrorBanner> : null}
 
       <PaymentForm
         customers={customers}
@@ -201,9 +209,9 @@ export function PaymentsPage() {
         <button className="secondary-button" type="submit">Search</button>
       </form>
 
-      {isLoading ? <p className="state-message">Loading payments...</p> : null}
-      {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
-      {!isLoading && !errorMessage && payments.length === 0 ? <p className="state-message">No payments found.</p> : null}
+      {isLoading ? <LoadingState>Loading payments...</LoadingState> : null}
+      {errorMessage ? <ErrorBanner>{errorMessage}</ErrorBanner> : null}
+      {!isLoading && !errorMessage && payments.length === 0 ? <EmptyState>No payments found.</EmptyState> : null}
 
       {!isLoading && !errorMessage && payments.length > 0 ? (
         <>
@@ -226,12 +234,12 @@ export function PaymentsPage() {
                     <td>
                       <strong>{payment.receiptNumber}</strong>
                       <br />
-                      <span>{payment.paymentDate.slice(0, 10)}</span>
+                      <span>{formatDate(payment.paymentDate)}</span>
                     </td>
                     <td>{getPartyName(payment)}</td>
                     <td>{getDocumentName(payment)}</td>
                     <td>{getPaymentMethodLabel(payment.method as PaymentMethod)}</td>
-                    <td>{payment.amount.toFixed(2)}</td>
+                    <td>{formatCurrency(payment.amount)}</td>
                     <td>{getPaymentState(payment)}</td>
                     <td>
                       <div className="table-actions">

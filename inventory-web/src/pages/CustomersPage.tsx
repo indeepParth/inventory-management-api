@@ -17,6 +17,8 @@ import {
   getFieldErrors,
   type FieldErrors,
 } from '../shared/api/apiErrorMessages'
+import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
+import { formatCurrency } from '../shared/utils/formatters'
 
 const pageSize = 10
 
@@ -140,15 +142,15 @@ export function CustomersPage() {
         <button className="secondary-button" type="submit">Search</button>
       </form>
 
-      {actionError ? <p className="form-error" role="alert">{actionError}</p> : null}
+      {actionError ? <ErrorBanner>{actionError}</ErrorBanner> : null}
 
       {isFormOpen ? (
         <CustomerForm errors={fieldErrors} initialValue={editingCustomer} isSubmitting={isSaving} onCancel={closeForm} onSubmit={handleSubmit} />
       ) : null}
 
-      {isLoading ? <p className="state-message">Loading customers...</p> : null}
-      {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
-      {!isLoading && !errorMessage && customers.length === 0 ? <p className="state-message">No customers found.</p> : null}
+      {isLoading ? <LoadingState>Loading customers...</LoadingState> : null}
+      {errorMessage ? <ErrorBanner>{errorMessage}</ErrorBanner> : null}
+      {!isLoading && !errorMessage && customers.length === 0 ? <EmptyState>No customers found.</EmptyState> : null}
 
       {!isLoading && !errorMessage && customers.length > 0 ? (
         <>
@@ -168,7 +170,7 @@ export function CustomersPage() {
                   <tr key={customer.id}>
                     <td><Link className="text-link" to={`/app/customers/${customer.id}`}>{customer.name}</Link></td>
                     <td>{customer.phone || customer.email || '-'}</td>
-                    <td>{customer.balanceDue.toFixed(2)}</td>
+                    <td>{formatCurrency(customer.balanceDue)}</td>
                     <td>{customer.isActive ? 'Active' : 'Inactive'}</td>
                     <td>
                       <div className="table-actions">

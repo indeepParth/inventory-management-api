@@ -5,6 +5,7 @@ import { AppLayout } from '../shared/components/AppLayout'
 import { PublicLayout } from '../shared/components/PublicLayout'
 import { CategoriesPage } from '../pages/CategoriesPage'
 import { CustomerDetailPage } from '../pages/CustomerDetailPage'
+import { CustomerReturnsPage } from '../pages/CustomerReturnsPage'
 import { CustomersPage } from '../pages/CustomersPage'
 import { DashboardPage } from '../pages/DashboardPage'
 import { DeliveryChallansPage } from '../pages/DeliveryChallansPage'
@@ -12,11 +13,13 @@ import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { PaymentsPage } from '../pages/PaymentsPage'
-import { PlaceholderPage } from '../pages/PlaceholderPage'
 import { ProductsPage } from '../pages/ProductsPage'
 import { PurchasesPage } from '../pages/PurchasesPage'
+import { ReportsPage } from '../pages/ReportsPage'
 import { SalesInvoicesPage } from '../pages/SalesInvoicesPage'
+import { StockMovementsPage } from '../pages/StockMovementsPage'
 import { SupplierDetailPage } from '../pages/SupplierDetailPage'
+import { SupplierReturnsPage } from '../pages/SupplierReturnsPage'
 import { SuppliersPage } from '../pages/SuppliersPage'
 import './App.css'
 
@@ -63,16 +66,16 @@ export function App() {
                 <Route path="payments" element={<PaymentsPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="viewStockMovements" />}>
-                <Route path="stock-movements" element={<PlaceholderPage title="Stock movements" />} />
+                <Route path="stock-movements" element={<StockMovementsPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="manageCustomerReturns" />}>
-                <Route path="customer-returns" element={<PlaceholderPage title="Customer returns" />} />
+                <Route path="customer-returns" element={<CustomerReturnsPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="manageSupplierReturns" />}>
-                <Route path="supplier-returns" element={<PlaceholderPage title="Supplier returns" />} />
+                <Route path="supplier-returns" element={<SupplierReturnsPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="viewReports" />}>
-                <Route path="reports" element={<PlaceholderPage title="Reports" />} />
+                <Route path="reports" element={<ReportsPage />} />
               </Route>
             </Route>
           </Route>

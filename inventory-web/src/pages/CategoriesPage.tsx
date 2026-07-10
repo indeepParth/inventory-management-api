@@ -15,6 +15,7 @@ import {
   getFieldErrors,
   type FieldErrors,
 } from '../shared/api/apiErrorMessages'
+import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
 
 export function CategoriesPage() {
   const { currentUser } = useAuth()
@@ -120,9 +121,7 @@ export function CategoriesPage() {
       </div>
 
       {actionError ? (
-        <p className="form-error" role="alert">
-          {actionError}
-        </p>
+        <ErrorBanner>{actionError}</ErrorBanner>
       ) : null}
 
       {isFormOpen ? (
@@ -135,14 +134,12 @@ export function CategoriesPage() {
         />
       ) : null}
 
-      {isLoading ? <p className="state-message">Loading categories...</p> : null}
+      {isLoading ? <LoadingState>Loading categories...</LoadingState> : null}
       {errorMessage ? (
-        <p className="form-error" role="alert">
-          {errorMessage}
-        </p>
+        <ErrorBanner>{errorMessage}</ErrorBanner>
       ) : null}
       {!isLoading && !errorMessage && categories.length === 0 ? (
-        <p className="state-message">No categories found.</p>
+        <EmptyState>No categories found.</EmptyState>
       ) : null}
 
       {!isLoading && !errorMessage && categories.length > 0 ? (

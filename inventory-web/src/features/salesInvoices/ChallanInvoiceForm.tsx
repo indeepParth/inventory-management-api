@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { getFieldError, type FieldErrors } from '../../shared/api/apiErrorMessages'
+import { formatCurrency, toDateInputValue } from '../../shared/utils/formatters'
 import type { DeliveryChallan } from '../challans/challansApi'
 import type { ChallanInvoiceFormValues, ChallanInvoiceItemFormValues } from './salesInvoicesApi'
 
@@ -40,7 +41,7 @@ export function ChallanInvoiceForm({
   )
   const firstItemId = availableItems[0]?.id ?? 0
   const [invoiceNumber, setInvoiceNumber] = useState('')
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10))
+  const [invoiceDate, setInvoiceDate] = useState(toDateInputValue())
   const [discount, setDiscount] = useState('0')
   const [otherCharges, setOtherCharges] = useState('0')
   const [notes, setNotes] = useState('')
@@ -150,9 +151,9 @@ export function ChallanInvoiceForm({
       </div>
 
       <div className="summary-strip">
-        <span>Line prices: {subtotal.toFixed(2)}</span>
-        <span>Tax: {taxAmount.toFixed(2)}</span>
-        <strong>Total: {total.toFixed(2)}</strong>
+        <span>Line prices: {formatCurrency(subtotal)}</span>
+        <span>Tax: {formatCurrency(taxAmount)}</span>
+        <strong>Total: {formatCurrency(total)}</strong>
       </div>
 
       <div className="form-actions">

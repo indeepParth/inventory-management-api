@@ -20,6 +20,8 @@ import {
   getFieldErrors,
   type FieldErrors,
 } from '../shared/api/apiErrorMessages'
+import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
+import { formatCurrency } from '../shared/utils/formatters'
 
 const pageSize = 10
 
@@ -174,7 +176,7 @@ export function PurchasesPage() {
         <p className="state-message">Create at least one product and one active supplier before adding purchases.</p>
       ) : null}
 
-      {actionError ? <p className="form-error" role="alert">{actionError}</p> : null}
+      {actionError ? <ErrorBanner>{actionError}</ErrorBanner> : null}
 
       {isFormOpen ? (
         <PurchaseForm
@@ -188,9 +190,9 @@ export function PurchasesPage() {
         />
       ) : null}
 
-      {isLoading ? <p className="state-message">Loading purchases...</p> : null}
-      {errorMessage ? <p className="form-error" role="alert">{errorMessage}</p> : null}
-      {!isLoading && !errorMessage && purchases.length === 0 ? <p className="state-message">No purchases found.</p> : null}
+      {isLoading ? <LoadingState>Loading purchases...</LoadingState> : null}
+      {errorMessage ? <ErrorBanner>{errorMessage}</ErrorBanner> : null}
+      {!isLoading && !errorMessage && purchases.length === 0 ? <EmptyState>No purchases found.</EmptyState> : null}
 
       {!isLoading && !errorMessage && purchases.length > 0 ? (
         <>
@@ -217,9 +219,9 @@ export function PurchasesPage() {
                     </td>
                     <td>{purchase.supplierName}</td>
                     <td>{getPurchaseStatusLabel(purchase.status)}</td>
-                    <td>{purchase.grandTotal.toFixed(2)}</td>
-                    <td>{purchase.amountPaid.toFixed(2)}</td>
-                    <td>{purchase.balanceDue.toFixed(2)}</td>
+                    <td>{formatCurrency(purchase.grandTotal)}</td>
+                    <td>{formatCurrency(purchase.amountPaid)}</td>
+                    <td>{formatCurrency(purchase.balanceDue)}</td>
                     <td>
                       <div className="table-actions">
                         {purchase.status === 0 ? (

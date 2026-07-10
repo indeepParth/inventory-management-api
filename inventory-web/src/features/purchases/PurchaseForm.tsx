@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { getFieldError, type FieldErrors } from '../../shared/api/apiErrorMessages'
+import { formatCurrency } from '../../shared/utils/formatters'
 import type { Product } from '../products/productsApi'
 import type { Supplier } from '../parties/partiesApi'
 import type { Purchase, PurchaseFormValues, PurchaseItemFormValues } from './purchasesApi'
@@ -15,11 +16,7 @@ type PurchaseFormProps = {
 }
 
 function toDateInputValue(value?: string): string {
-  if (!value) {
-    return new Date().toISOString().slice(0, 10)
-  }
-
-  return value.slice(0, 10)
+  return value ? value.slice(0, 10) : new Date().toISOString().slice(0, 10)
 }
 
 function createBlankItem(productId: number): PurchaseItemFormValues {
@@ -180,9 +177,9 @@ export function PurchaseForm({
       </div>
 
       <div className="summary-strip">
-        <span>Subtotal: {subtotal.toFixed(2)}</span>
-        <span>Tax: {taxAmount.toFixed(2)}</span>
-        <strong>Total: {total.toFixed(2)}</strong>
+        <span>Subtotal: {formatCurrency(subtotal)}</span>
+        <span>Tax: {formatCurrency(taxAmount)}</span>
+        <strong>Total: {formatCurrency(total)}</strong>
       </div>
 
       <div className="form-actions">

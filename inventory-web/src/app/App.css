@@ -1,11 +1,12 @@
-.app-page {
+.public-layout {
   display: grid;
   min-height: 100vh;
   place-items: center;
   padding: 32px 20px;
 }
 
-.home-panel {
+.public-panel,
+.not-found-panel {
   width: min(100%, 720px);
   border: 1px solid #dbe3ef;
   border-radius: 8px;
@@ -14,7 +15,7 @@
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
 }
 
-.home-kicker {
+.page-kicker {
   margin: 0 0 12px;
   color: #2563eb;
   font-size: 0.875rem;
@@ -23,15 +24,89 @@
   text-transform: uppercase;
 }
 
-.home-title {
+.page-title {
   margin: 0;
   color: #0f172a;
   font-size: clamp(2rem, 6vw, 3.5rem);
   line-height: 1;
 }
 
-.home-copy {
+.page-copy {
   margin: 20px 0 0;
   color: #475569;
   font-size: 1.1rem;
+}
+
+.text-link {
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.text-link:hover {
+  text-decoration: underline;
+}
+
+.app-layout {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 240px 1fr;
+}
+
+.app-sidebar {
+  border-right: 1px solid #dbe3ef;
+  background: #ffffff;
+  padding: 24px;
+}
+
+.app-brand {
+  margin: 0 0 28px;
+  color: #0f172a;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.app-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.app-nav-link {
+  border-radius: 8px;
+  color: #475569;
+  padding: 10px 12px;
+  text-decoration: none;
+}
+
+.app-nav-link:hover,
+.app-nav-link.active {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.app-main {
+  padding: 32px;
+}
+
+.content-panel {
+  max-width: 960px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 28px;
+}
+
+@media (max-width: 720px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .app-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid #dbe3ef;
+  }
+
+  .app-main {
+    padding: 20px;
+  }
 }

@@ -25,6 +25,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans
 
     public class DeliveryChallanItemResponse
     {
+        public int Id { get; set; }
         public int ProductId { get; set; }
         public string ProductName { get; set; } = string.Empty;
         public string ProductSku { get; set; } = string.Empty;

@@ -2,10 +2,13 @@ export type AppRole = 'Admin' | 'Manager' | 'Sales' | 'Inventory'
 
 export type RoutePolicy =
   | 'allAuthenticated'
+  | 'adminOrManager'
   | 'readProducts'
   | 'manageProducts'
   | 'readCustomers'
+  | 'manageCustomers'
   | 'readSuppliers'
+  | 'manageSuppliers'
   | 'managePurchases'
   | 'manageDeliveryChallans'
   | 'manageSalesInvoices'
@@ -19,10 +22,13 @@ const allRoles: AppRole[] = ['Admin', 'Manager', 'Sales', 'Inventory']
 
 const policyRoles: Record<RoutePolicy, AppRole[]> = {
   allAuthenticated: allRoles,
+  adminOrManager: ['Admin', 'Manager'],
   readProducts: ['Admin', 'Manager', 'Sales', 'Inventory'],
   manageProducts: ['Admin', 'Manager'],
   readCustomers: ['Admin', 'Manager', 'Sales'],
+  manageCustomers: ['Admin', 'Manager'],
   readSuppliers: ['Admin', 'Manager', 'Inventory'],
+  manageSuppliers: ['Admin', 'Manager'],
   managePurchases: ['Admin', 'Manager', 'Inventory'],
   manageDeliveryChallans: ['Admin', 'Manager', 'Sales'],
   manageSalesInvoices: ['Admin', 'Manager', 'Sales'],

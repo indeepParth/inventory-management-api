@@ -4,12 +4,19 @@ import { ProtectedRoute, PublicOnlyRoute, RoleProtectedRoute } from '../features
 import { AppLayout } from '../shared/components/AppLayout'
 import { PublicLayout } from '../shared/components/PublicLayout'
 import { CategoriesPage } from '../pages/CategoriesPage'
+import { CustomerDetailPage } from '../pages/CustomerDetailPage'
+import { CustomersPage } from '../pages/CustomersPage'
 import { DashboardPage } from '../pages/DashboardPage'
+import { DeliveryChallansPage } from '../pages/DeliveryChallansPage'
 import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { PlaceholderPage } from '../pages/PlaceholderPage'
 import { ProductsPage } from '../pages/ProductsPage'
+import { PurchasesPage } from '../pages/PurchasesPage'
+import { SalesInvoicesPage } from '../pages/SalesInvoicesPage'
+import { SupplierDetailPage } from '../pages/SupplierDetailPage'
+import { SuppliersPage } from '../pages/SuppliersPage'
 import './App.css'
 
 export function App() {
@@ -35,19 +42,21 @@ export function App() {
                 <Route path="categories" element={<CategoriesPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="readCustomers" />}>
-                <Route path="customers" element={<PlaceholderPage title="Customers" />} />
+                <Route path="customers" element={<CustomersPage />} />
+                <Route path="customers/:id" element={<CustomerDetailPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="readSuppliers" />}>
-                <Route path="suppliers" element={<PlaceholderPage title="Suppliers" />} />
+                <Route path="suppliers" element={<SuppliersPage />} />
+                <Route path="suppliers/:id" element={<SupplierDetailPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="managePurchases" />}>
-                <Route path="purchases" element={<PlaceholderPage title="Purchases" />} />
+                <Route path="purchases" element={<PurchasesPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="manageDeliveryChallans" />}>
-                <Route path="challans" element={<PlaceholderPage title="Challans" />} />
+                <Route path="challans" element={<DeliveryChallansPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="manageSalesInvoices" />}>
-                <Route path="sales-invoices" element={<PlaceholderPage title="Sales invoices" />} />
+                <Route path="sales-invoices" element={<SalesInvoicesPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="viewPayments" />}>
                 <Route path="payments" element={<PlaceholderPage title="Payments" />} />

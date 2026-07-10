@@ -25,6 +25,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans
                 CreatedBy = challan.CreatedBy,
                 Items = challan.Items.Select(x => new DeliveryChallanItemResponse
                 {
+                    Id = x.Id,
                     ProductId = x.ProductId,
                     ProductName = x.Product.Name,
                     ProductSku = x.Product.SKU,

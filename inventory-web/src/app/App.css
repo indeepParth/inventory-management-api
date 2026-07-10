@@ -1,0 +1,37 @@
+.app-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px 20px;
+}
+
+.home-panel {
+  width: min(100%, 720px);
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 32px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.home-kicker {
+  margin: 0 0 12px;
+  color: #2563eb;
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  line-height: 1;
+}
+
+.home-copy {
+  margin: 20px 0 0;
+  color: #475569;
+  font-size: 1.1rem;
+}

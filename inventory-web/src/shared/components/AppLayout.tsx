@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../features/auth/AuthContext'
 
 const navItems = [
   { label: 'Dashboard', to: '/app/dashboard' },
@@ -9,6 +10,14 @@ const navItems = [
 ]
 
 export function AppLayout() {
+  const navigate = useNavigate()
+  const { logout } = useAuth()
+
+  function handleLogout(): void {
+    logout()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <div className="app-layout">
       <aside className="app-sidebar" aria-label="Application navigation">
@@ -26,6 +35,9 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
+        <button className="logout-button" onClick={handleLogout} type="button">
+          Logout
+        </button>
       </aside>
       <main className="app-main">
         <Outlet />

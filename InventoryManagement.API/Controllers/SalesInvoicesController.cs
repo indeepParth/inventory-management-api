@@ -1,4 +1,5 @@
 using MediatR;
+using InventoryManagement.Application.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +18,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = AuthorizationPolicies.ManageSalesInvoices)]
         public async Task<IActionResult> GetSalesInvoices(
             [FromQuery] Application.Features.SalesInvoices.GetSalesInvoices.Query query)
         {
@@ -24,6 +26,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManageSalesInvoices)]
         public async Task<IActionResult> GetById(int id)
         {
             return Ok(await _sender.Send(
@@ -34,6 +37,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.ManageSalesInvoices)]
         public async Task<IActionResult> CreateDraft(
             [FromBody] Application.Features.SalesInvoices.CreateSalesInvoice.Command command)
         {
@@ -42,6 +46,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost("from-challans")]
+        [Authorize(Policy = AuthorizationPolicies.ManageSalesInvoices)]
         public async Task<IActionResult> CreateFromChallans(
             [FromBody] Application.Features.SalesInvoices.CreateFromChallans.Command command)
         {
@@ -50,6 +55,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManageSalesInvoices)]
         public async Task<IActionResult> UpdateDraft(
             int id,
             [FromBody] Application.Features.SalesInvoices.UpdateSalesInvoice.Command command)
@@ -58,6 +64,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost("{id}/post")]
+        [Authorize(Policy = AuthorizationPolicies.ManageSalesInvoices)]
         public async Task<IActionResult> PostDirectInvoice(int id)
         {
             return Ok(await _sender.Send(
@@ -68,6 +75,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost("{id}/cancel")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOrManager)]
         public async Task<IActionResult> CancelInvoice(int id)
         {
             return Ok(await _sender.Send(

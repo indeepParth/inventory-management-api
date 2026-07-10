@@ -1,4 +1,5 @@
 using MediatR;
+using InventoryManagement.Application.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +18,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = AuthorizationPolicies.ReadSuppliers)]
         public async Task<IActionResult> GetSuppliers(
             [FromQuery] Application.Features.Suppliers.GetSuppliers.Query query)
         {
@@ -24,6 +26,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ReadSuppliers)]
         public async Task<IActionResult> GetSupplierById(int id)
         {
             return Ok(await _sender.Send(
@@ -31,6 +34,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet("{id}/statement")]
+        [Authorize(Policy = AuthorizationPolicies.ViewSupplierStatements)]
         public async Task<IActionResult> GetStatement(
             int id,
             [FromQuery] Application.Features.Statements.SupplierStatement.Query query)
@@ -40,6 +44,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.ManageSuppliers)]
         public async Task<IActionResult> CreateSupplier(
             [FromBody] Application.Features.Suppliers.CreateSupplier.Command command)
         {
@@ -48,6 +53,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManageSuppliers)]
         public async Task<IActionResult> UpdateSupplier(
             int id,
             [FromBody] Application.Features.Suppliers.UpdateSupplier.Command command)
@@ -57,6 +63,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManageSuppliers)]
         public async Task<IActionResult> DeleteSupplier(int id)
         {
             return Ok(await _sender.Send(

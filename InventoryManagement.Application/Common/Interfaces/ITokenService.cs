@@ -10,5 +10,6 @@ namespace InventoryManagement.Application.Common.Interfaces
             IEnumerable<string> roles);
 
         string GenerateRefreshToken();
+        DateTime GetAccessTokenExpiration();
     }
 }

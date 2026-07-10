@@ -1,4 +1,5 @@
 using MediatR;
+using InventoryManagement.Application.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +18,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = AuthorizationPolicies.ManagePurchases)]
         public async Task<IActionResult> GetPurchases(
             [FromQuery] Application.Features.Purchases.GetPurchases.Query query)
         {
@@ -24,6 +26,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManagePurchases)]
         public async Task<IActionResult> GetPurchaseById(int id)
         {
             return Ok(await _sender.Send(
@@ -31,6 +34,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.ManagePurchases)]
         public async Task<IActionResult> CreatePurchase(
             [FromBody] Application.Features.Purchases.CreatePurchase.Command command)
         {
@@ -39,6 +43,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManagePurchases)]
         public async Task<IActionResult> UpdatePurchase(
             int id,
             [FromBody] Application.Features.Purchases.UpdatePurchase.Command command)
@@ -47,6 +52,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost("{id}/post")]
+        [Authorize(Policy = AuthorizationPolicies.ManagePurchases)]
         public async Task<IActionResult> PostPurchase(int id)
         {
             return Ok(await _sender.Send(
@@ -54,6 +60,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost("{id}/cancel")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOrManager)]
         public async Task<IActionResult> CancelPurchase(int id)
         {
             return Ok(await _sender.Send(

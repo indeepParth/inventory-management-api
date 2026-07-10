@@ -243,9 +243,104 @@ cd InventoryManagement
 
 ### Run with Docker
 
+Set the JWT signing key outside source control before starting the container.
+The application reads it from `Jwt__Key`. Keep `Jwt__Issuer`,
+`Jwt__Audience`, and `Jwt__AccessTokenLifetimeMinutes` in configuration unless
+you need to override them per environment.
+
+Production startup requires these configuration environment variables:
+
+```
+ConnectionStrings__DefaultConnection
+Database__ApplyMigrationsOnStartup
+Jwt__Issuer
+Jwt__Audience
+Jwt__Key
+Cors__AllowedOrigins__0
+Cors__AllowedOrigins__1
+ReverseProxy__KnownProxies__0 or ReverseProxy__KnownNetworks__0
+Swagger__Enabled
+RateLimiting__Global__PermitLimit
+RateLimiting__Global__WindowSeconds
+RateLimiting__Global__QueueLimit
+RateLimiting__Login__PermitLimit
+RateLimiting__Login__WindowSeconds
+RateLimiting__Login__QueueLimit
+RateLimiting__Register__PermitLimit
+RateLimiting__Register__WindowSeconds
+RateLimiting__Register__QueueLimit
+RateLimiting__RefreshToken__PermitLimit
+RateLimiting__RefreshToken__WindowSeconds
+RateLimiting__RefreshToken__QueueLimit
+Authentication__AllowPublicRegistration
+Bootstrap__Admin__Enabled
+Bootstrap__Admin__UserName
+Bootstrap__Admin__Email
+Bootstrap__Admin__Password
+```
+
+Set `Authentication__AllowPublicRegistration=false` in Production unless
+you intentionally want unauthenticated users to create accounts.
+Set `Database__ApplyMigrationsOnStartup=false` in Production. Automatic
+migrations are disabled by default in Production; when pending migrations exist,
+startup logs the pending migration names and leaves the database unchanged.
+Set `Bootstrap__Admin__Enabled=true` only when creating the first production
+administrator. Remove or disable it after startup succeeds.
+Set frontend CORS origins with indexed environment variables such as
+`Cors__AllowedOrigins__0`, `Cors__AllowedOrigins__1`, and so on. Production
+origins must be explicit HTTPS origins without paths, queries, fragments, or
+wildcards. Local HTTP origins belong only in Development or Testing
+configuration. JWT bearer authentication uses the `Authorization` header, so
+CORS credentials are not enabled.
+For reverse-proxy deployments, configure trusted forwarded-header sources with
+`ReverseProxy__KnownProxies__0`, `ReverseProxy__KnownNetworks__0`, and
+additional indexed entries as needed. Do not configure wildcard proxy trust.
+Production Swagger is disabled by default; set `Swagger__Enabled=true` only
+when you intentionally want to expose Swagger in that environment.
+Rate limits use fixed windows and can be overridden with the
+`RateLimiting__...` environment variables listed above. Set only numeric
+limits and window durations; do not use secrets in rate-limit configuration.
+Production logging is configured separately in
+`InventoryManagement.API/appsettings.Production.json`. Logs keep traceId
+correlation, avoid request and response bodies, drop events that carry common
+secret-bearing property names, and retain 30 daily rolling files by default.
+
+Run database migrations as a controlled pre-deployment step:
+
+```
+dotnet ef database update --project InventoryManagement.Infrastructure --startup-project InventoryManagement.API
+```
+
+Back up the SQLite database with SQLite's backup mechanism before production
+deployments or maintenance. Do not copy the live database file while writes may
+be active. See `docs/sqlite-backup-restore.md` for the verified local and Docker
+database paths, timestamped backup commands, integrity checks, retention
+guidance, and restore procedure.
+
 ```
 docker compose up --build
 ```
+
+For Production, use the production compose file instead of the local
+Development compose file:
+
+```
+docker compose -f docker-compose.production.yml up -d --build
+```
+
+The production compose file sets `ASPNETCORE_ENVIRONMENT=Production`, keeps
+the database and logs in persistent Docker volumes, runs the container as the
+non-root .NET runtime user, and checks `/health/ready`. It does not publish a
+host port; place it behind a reverse proxy on the Docker network and publish
+only the reverse proxy. If bind mounts are used instead of named volumes, make
+sure the mounted database and log directories are writable by the container
+user.
+
+Production TLS is expected to terminate at a reverse proxy. Configure the
+proxy to send `X-Forwarded-For` and `X-Forwarded-Proto`, and set
+`ReverseProxy__KnownProxies__0` or `ReverseProxy__KnownNetworks__0` to trust
+only that proxy or network. The app listens on HTTP port `8080` inside the
+container and relies on forwarded headers for correct HTTPS behavior.
 
 Swagger UI:
 
@@ -253,12 +348,22 @@ Swagger UI:
 http://localhost:8080/swagger
 ```
 
+Health checks:
+
+```
+http://localhost:8080/health/live
+http://localhost:8080/health/ready
+```
+
+Use `/health/live` for process liveness and `/health/ready` for readiness
+checks that require database connectivity. Health responses are intentionally
+minimal and do not include connection strings or exception details.
+
 The application automatically:
 
-* Creates the database (if it does not exist)
-* Applies pending EF Core migrations
 * Starts the API
 * Persists database and log files using Docker volumes
+* Applies pending EF Core migrations automatically only when configured, such as in Development
 
 ---
 

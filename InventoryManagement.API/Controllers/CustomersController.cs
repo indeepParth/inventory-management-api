@@ -1,4 +1,5 @@
 using MediatR;
+using InventoryManagement.Application.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +18,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = AuthorizationPolicies.ReadCustomers)]
         public async Task<IActionResult> GetCustomers(
             [FromQuery] Application.Features.Customers.GetCustomers.Query query)
         {
@@ -24,6 +26,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ReadCustomers)]
         public async Task<IActionResult> GetCustomerById(int id)
         {
             return Ok(await _sender.Send(
@@ -31,6 +34,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet("{id}/statement")]
+        [Authorize(Policy = AuthorizationPolicies.ViewCustomerStatements)]
         public async Task<IActionResult> GetStatement(
             int id,
             [FromQuery] Application.Features.Statements.CustomerStatement.Query query)
@@ -40,6 +44,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.ManageCustomers)]
         public async Task<IActionResult> CreateCustomer(
             [FromBody] Application.Features.Customers.CreateCustomer.Command command)
         {
@@ -48,6 +53,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManageCustomers)]
         public async Task<IActionResult> UpdateCustomer(
             int id,
             [FromBody] Application.Features.Customers.UpdateCustomer.Command command)
@@ -56,6 +62,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPatch("{id}/deactivate")]
+        [Authorize(Policy = AuthorizationPolicies.ManageCustomers)]
         public async Task<IActionResult> DeactivateCustomer(int id)
         {
             return Ok(await _sender.Send(

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using InventoryManagement.Application.Common.Identity;
+using InventoryManagement.Application.Common.Options;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Infrastructure.Identity;
 using InventoryManagement.Infrastructure.Persistence;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace InventoryManagement.Infrastructure
 {
@@ -40,24 +42,36 @@ namespace InventoryManagement.Infrastructure
             services.AddScoped<IPartyStatementRepository, PartyStatementRepository>();
             services.AddScoped<IGrossProfitReportRepository, GrossProfitReportRepository>();
             services.AddScoped<IIdentityService, IdentityService>();
+            services.AddScoped<IdentityBootstrapService>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-            .AddJwtBearer(options =>
-            {
-                options.TokenValidationParameters = new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
+            services.AddOptions<AdminBootstrapOptions>()
+                .Bind(configuration.GetSection(AdminBootstrapOptions.SectionName));
 
-                    ValidIssuer = configuration["Jwt:Issuer"],
-                    ValidAudience = configuration["Jwt:Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(
-                        System.Text.Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!))
-                };
-            });
+            services.AddOptions<JwtOptions>()
+                .Bind(configuration.GetSection(JwtOptions.SectionName));
+
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer();
+
+            services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+                .Configure<IOptions<JwtOptions>>((options, jwtOptionsAccessor) =>
+                {
+                    var jwtOptions = jwtOptionsAccessor.Value;
+
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+
+                        ValidIssuer = jwtOptions.Issuer,
+                        ValidAudience = jwtOptions.Audience,
+                        IssuerSigningKey = new SymmetricSecurityKey(
+                            Encoding.UTF8.GetBytes(jwtOptions.Key))
+                    };
+                });
 
             services.AddIdentityCore<ApplicationUser>(option =>
                 {

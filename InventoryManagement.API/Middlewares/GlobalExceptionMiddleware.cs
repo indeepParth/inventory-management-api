@@ -34,6 +34,7 @@ namespace InventoryManagement.API.Middlewares
                     ValidationException => StatusCodes.Status400BadRequest,
                     BadRequestException => StatusCodes.Status400BadRequest,
                     NotFoundException => StatusCodes.Status404NotFound,
+                    ForbiddenException => StatusCodes.Status403Forbidden,
                     UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
                     _ => StatusCodes.Status500InternalServerError
                 };
@@ -43,18 +44,27 @@ namespace InventoryManagement.API.Middlewares
                 {
                     _logger.LogError(
                         ex,
-                        "Unhandled exception occurred while processing {Method} {Path}",
+                        "Unhandled exception occurred while processing {Method} {Path} with traceId {TraceId}",
                         context.Request.Method,
-                        context.Request.Path);
+                        context.Request.Path,
+                        context.TraceIdentifier);
+                }
+                else if (ex is ValidationException)
+                {
+                    _logger.LogInformation(
+                        "Validation failure while processing {Method} {Path} with traceId {TraceId}",
+                        context.Request.Method,
+                        context.Request.Path,
+                        context.TraceIdentifier);
                 }
                 else
                 {
                     _logger.LogWarning(
-                        ex,
-                        "Request failed with {StatusCode} while processing {Method} {Path}",
+                        "Request failed with {StatusCode} while processing {Method} {Path} with traceId {TraceId}",
                         statusCode,
                         context.Request.Method,
-                        context.Request.Path);
+                        context.Request.Path,
+                        context.TraceIdentifier);
                 }
 
                 object response = ex is ValidationException validationException

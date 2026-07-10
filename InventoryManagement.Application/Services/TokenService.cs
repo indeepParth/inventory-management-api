@@ -1,27 +1,28 @@
-using Microsoft.Extensions.Configuration;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using InventoryManagement.Application.Common.Interfaces;
+using InventoryManagement.Application.Common.Options;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Options;
 
 namespace InventoryManagement.Application.Services
 {
     public class TokenService : ITokenService
     {
-        private readonly IConfiguration _configuration;
+        private readonly JwtOptions _jwtOptions;
 
-        public TokenService(IConfiguration configuration)
+        public TokenService(IOptions<JwtOptions> jwtOptions)
         {
-            _configuration = configuration;
+            _jwtOptions = jwtOptions.Value;
         }
 
         public string GenerateToken(string userId, string userName, IEnumerable<string> roles)
         {
             var key = new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(
-                    _configuration["Jwt:Key"]!));
+                    _jwtOptions.Key));
 
             var credentials = new SigningCredentials(
                 key,
@@ -39,11 +40,11 @@ namespace InventoryManagement.Application.Services
                 claims.Add(new Claim(ClaimTypes.Role, role));
             }
 
-            var expiresAt = DateTime.UtcNow.AddHours(1);
+            var expiresAt = GetAccessTokenExpiration();
 
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
+                issuer: _jwtOptions.Issuer,
+                audience: _jwtOptions.Audience,
                 claims: claims,
                 expires: expiresAt,
                 signingCredentials: credentials
@@ -56,6 +57,12 @@ namespace InventoryManagement.Application.Services
         {
             return Convert.ToBase64String(
                 RandomNumberGenerator.GetBytes(64));
+        }
+
+        public DateTime GetAccessTokenExpiration()
+        {
+            return DateTime.UtcNow.AddMinutes(
+                _jwtOptions.AccessTokenLifetimeMinutes);
         }
     }
 }

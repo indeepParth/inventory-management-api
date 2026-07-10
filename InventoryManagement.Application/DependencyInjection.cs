@@ -26,6 +26,9 @@ namespace InventoryManagement.Application
             services.AddTransient(
                 typeof(IPipelineBehavior<,>),
                 typeof(ValidationBehavior<,>));
+            services.AddTransient(
+                typeof(IPipelineBehavior<,>),
+                typeof(BusinessTransitionLoggingBehavior<,>));
 
 
             return services;

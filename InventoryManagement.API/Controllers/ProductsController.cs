@@ -1,4 +1,5 @@
 using MediatR;
+using InventoryManagement.Application.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +18,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = AuthorizationPolicies.ReadProducts)]
         public async Task<IActionResult> GetAllProducts([FromQuery] Application.Features.Products.GetProducts.Query query)
         {
             var response = await _sender.Send(new Application.Features.Products.GetProducts.Query
@@ -30,6 +32,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ReadProducts)]
         public async Task<IActionResult> GetProductById(int id)
         {
             var response = await _sender.Send
@@ -44,6 +47,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.ManageProducts)]
         public async Task<IActionResult> AddProduct([FromBody] Application.Features.Products.CreateProduct.Command command)
         {
             var response = await _sender.Send(command);
@@ -56,6 +60,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManageProducts)]
         public async Task<IActionResult> UpdateProduct(int id, [FromBody] Application.Features.Products.UpdateProduct.Command command)
         {
             var request = new Application.Features.Products.UpdateProduct.Command
@@ -71,7 +76,7 @@ namespace InventoryManagement.API.Controllers
             return Ok(response);
         }
 
-        [Authorize(Policy = "CanDeleteProducts")]
+        [Authorize(Policy = AuthorizationPolicies.ManageProducts)]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {

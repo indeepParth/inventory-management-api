@@ -1,4 +1,5 @@
 using CurrentStock = InventoryManagement.Application.Features.InventoryReports.GetCurrentStock;
+using InventoryManagement.Application.Authorization;
 using ProductStockLedger = InventoryManagement.Application.Features.InventoryReports.GetProductStockLedger;
 using PurchaseRegister = InventoryManagement.Application.Features.InventoryReports.GetPurchaseRegister;
 using SalesRegister = InventoryManagement.Application.Features.InventoryReports.GetSalesRegister;
@@ -22,12 +23,14 @@ public class InventoryReportsController : ControllerBase
     }
 
     [HttpGet("current-stock")]
+    [Authorize(Policy = AuthorizationPolicies.ViewCostReports)]
     public async Task<IActionResult> GetCurrentStock([FromQuery] CurrentStock.Query query)
     {
         return Ok(await _sender.Send(query));
     }
 
     [HttpGet("products/{productId}/ledger")]
+    [Authorize(Policy = AuthorizationPolicies.ViewProductStockLedger)]
     public async Task<IActionResult> GetProductStockLedger(
         int productId,
         [FromQuery] ProductStockLedger.Query query)
@@ -37,6 +40,7 @@ public class InventoryReportsController : ControllerBase
     }
 
     [HttpGet("purchase-register")]
+    [Authorize(Policy = AuthorizationPolicies.ViewCostReports)]
     public async Task<IActionResult> GetPurchaseRegister(
         [FromQuery] PurchaseRegister.Query query)
     {
@@ -44,6 +48,7 @@ public class InventoryReportsController : ControllerBase
     }
 
     [HttpGet("sales-register")]
+    [Authorize(Policy = AuthorizationPolicies.ViewSalesReports)]
     public async Task<IActionResult> GetSalesRegister(
         [FromQuery] SalesRegister.Query query)
     {
@@ -51,6 +56,7 @@ public class InventoryReportsController : ControllerBase
     }
 
     [HttpGet("gross-profit")]
+    [Authorize(Policy = AuthorizationPolicies.ViewCostReports)]
     public async Task<IActionResult> GetGrossProfit(
         [FromQuery] GrossProfit.Query query)
     {

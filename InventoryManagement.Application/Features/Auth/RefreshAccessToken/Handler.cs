@@ -81,7 +81,7 @@ namespace InventoryManagement.Application.Features.Auth.RefreshAccessToken
             {
                 AccessToken = accessToken,
                 RefreshToken = newRefreshToken,
-                ExpiresAt = DateTime.UtcNow.AddHours(1)
+                ExpiresAt = _tokenService.GetAccessTokenExpiration()
             };
         }
     }

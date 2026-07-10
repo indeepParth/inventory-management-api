@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  inventory-api:
+    container_name: inventory-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Data Source=/app/Data/inventory.db
+      Database__ApplyMigrationsOnStartup: "false"
+      Jwt__Issuer: ${Jwt__Issuer:?Set Jwt__Issuer}
+      Jwt__Audience: ${Jwt__Audience:?Set Jwt__Audience}
+      Jwt__Key: ${Jwt__Key:?Set Jwt__Key}
+      Cors__AllowedOrigins__0: ${Cors__AllowedOrigins__0:?Set Cors__AllowedOrigins__0}
+      ReverseProxy__KnownNetworks__0: ${ReverseProxy__KnownNetworks__0:?Set ReverseProxy__KnownNetworks__0}
+      Authentication__AllowPublicRegistration: "false"
+      Swagger__Enabled: "false"
+      Bootstrap__Admin__Enabled: ${Bootstrap__Admin__Enabled:-false}
+      Bootstrap__Admin__UserName: ${Bootstrap__Admin__UserName:-}
+      Bootstrap__Admin__Email: ${Bootstrap__Admin__Email:-}
+      Bootstrap__Admin__Password: ${Bootstrap__Admin__Password:-}
+    volumes:
+      - inventory_data:/app/Data
+      - inventory_logs:/app/Logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent --show-error http://localhost:8080/health/ready > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  inventory_data:
+  inventory_logs:

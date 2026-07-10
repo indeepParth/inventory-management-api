@@ -1,4 +1,5 @@
 using MediatR;
+using InventoryManagement.Application.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +18,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManageCustomerReturns)]
         public async Task<IActionResult> GetById(int id)
         {
             return Ok(await _sender.Send(
@@ -25,6 +27,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.ManageCustomerReturns)]
         public async Task<IActionResult> Create(
             [FromBody] Application.Features.CustomerReturns
                 .CreateCustomerReturn.Command command)
@@ -37,6 +40,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost("{id}/post")]
+        [Authorize(Policy = AuthorizationPolicies.ManageCustomerReturns)]
         public async Task<IActionResult> Post(int id)
         {
             return Ok(await _sender.Send(
@@ -45,6 +49,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost("{id}/cancel")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOrManager)]
         public async Task<IActionResult> Cancel(int id)
         {
             return Ok(await _sender.Send(

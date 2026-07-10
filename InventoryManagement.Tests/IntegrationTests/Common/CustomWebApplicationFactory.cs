@@ -1,7 +1,9 @@
+using InventoryManagement.Application.Common.Options;
 using InventoryManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -22,6 +24,15 @@ namespace InventoryManagement.Tests.IntegrationTests.Common
         IWebHostBuilder builder)
         {
             builder.UseEnvironment("Testing");
+
+            builder.ConfigureAppConfiguration((context, configuration) =>
+            {
+                configuration.AddInMemoryCollection(
+                    new Dictionary<string, string?>
+                    {
+                        ["Jwt:Key"] = new string('T', JwtOptions.MinimumSigningKeyBytes)
+                    });
+            });
 
             builder.ConfigureServices(services =>
             {

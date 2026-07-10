@@ -3,14 +3,18 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Application.Features.Auth.Register;
 using InventoryManagement.Tests.IntegrationTests.Common;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 
 namespace InventoryManagement.Tests.IntegrationTests.Auth
 {
     public class RegisterTests : TestBase
     {
+        private readonly CustomWebApplicationFactory _factory;
+
         public RegisterTests(CustomWebApplicationFactory factory) : base (factory)
         {
-            
+            _factory = factory;
         }
 
         [Fact]
@@ -45,6 +49,44 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             result.Should().NotBeNull();
             result.UserName.Should().Be(request.UserName);
             result.Email.Should().Be(request.Email);
+        }
+
+        [Fact]
+        public async Task Register_Should_Return_Forbidden_When_Public_Registration_Is_Disabled()
+        {
+            using var client = _factory.WithWebHostBuilder(builder =>
+            {
+                builder.ConfigureAppConfiguration((context, configuration) =>
+                {
+                    configuration.AddInMemoryCollection(
+                        new Dictionary<string, string?>
+                        {
+                            ["Authentication:AllowPublicRegistration"] = "false"
+                        });
+                });
+            }).CreateClient();
+
+            var unique = Guid.NewGuid().ToString("N");
+            var request = new Command
+            {
+                UserName = $"blocked_{unique}",
+                Email = $"blocked_{unique}@user.com",
+                Password = "123456789"
+            };
+
+            var response = await client.PostAsJsonAsync(
+                "/api/auth/register",
+                request);
+
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            var body = await response.Content.ReadAsStringAsync();
+            body.Should().Contain("statusCode");
+            body.Should().Contain("traceId");
+            body.Should().Contain("Public registration is disabled.");
+            body.Should().NotContain(request.UserName);
+            body.Should().NotContain(request.Email);
+            body.Should().NotContain("already");
         }
 
         [Fact]

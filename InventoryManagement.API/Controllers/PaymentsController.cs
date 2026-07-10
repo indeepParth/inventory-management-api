@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Features.Payments.CreatePayment;
+using InventoryManagement.Application.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,11 +15,13 @@ namespace InventoryManagement.API.Controllers
         public PaymentsController(ISender sender) => _sender = sender;
 
         [HttpGet]
+        [Authorize(Policy = AuthorizationPolicies.ViewPayments)]
         public async Task<IActionResult> Get(
             [FromQuery] Application.Features.Payments.GetPayments.Query query) =>
             Ok(await _sender.Send(query));
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.CreateCustomerReceipts)]
         public async Task<IActionResult> Create([FromBody] Command command)
         {
             var response = await _sender.Send(command);
@@ -26,6 +29,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost("{id}/reverse")]
+        [Authorize(Policy = AuthorizationPolicies.AdminOrManager)]
         public async Task<IActionResult> Reverse(
             int id,
             [FromBody] Application.Features.Payments.ReversePayment.Command command) =>

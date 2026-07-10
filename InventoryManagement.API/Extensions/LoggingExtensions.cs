@@ -1,4 +1,5 @@
 
+using InventoryManagement.API.Logging;
 using Serilog;
 
 namespace InventoryManagement.API.Extensions
@@ -11,6 +12,7 @@ namespace InventoryManagement.API.Extensions
             Log.Logger = new LoggerConfiguration()
             .ReadFrom.Configuration(builder.Configuration)
             .Enrich.FromLogContext()
+            .Filter.With(new SensitiveDataLogFilter())
             .CreateLogger();
 
             builder.Host.UseSerilog();

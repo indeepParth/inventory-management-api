@@ -1,4 +1,5 @@
 using MediatR;
+using InventoryManagement.Application.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +18,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet]
+        [Authorize(Policy = AuthorizationPolicies.ReadProducts)]
         public async Task<IActionResult> GetCategories()
         {
             var response = await _sender.Send(new Application.Features.Categories.GetCategories.Query());
@@ -25,6 +27,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ReadProducts)]
         public async Task<IActionResult> GetCategoryById(int id)
         {
             var response = await _sender.Send(
@@ -37,6 +40,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.ManageProducts)]
         public async Task<IActionResult> CreateCategory([FromBody] Application.Features.Categories.CreateCategory.Command command)
         {
             var response = await _sender.Send(command);
@@ -48,6 +52,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManageProducts)]
         public async Task<IActionResult> UpdateCategory(int id, [FromBody] Application.Features.Categories.UpdateCategory.Command command)
         {
             var request = new Application.Features.Categories.UpdateCategory.Command(
@@ -62,6 +67,7 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManageProducts)]
         public async Task<IActionResult> DeleteCategory(int id)
         {
             var response = await _sender.Send(

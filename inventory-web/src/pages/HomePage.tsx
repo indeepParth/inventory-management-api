@@ -1,18 +1,38 @@
 import { Link } from 'react-router-dom'
 
+const benefits = [
+  'Stock',
+  'Purchases',
+  'Sales',
+  'Challans',
+  'Invoices',
+  'Payments',
+  'Reports',
+]
+
 export function HomePage() {
   return (
-    <section className="public-panel" aria-labelledby="home-title">
+    <section className="public-panel landing-panel" aria-labelledby="home-title">
       <p className="page-kicker">Inventory Management</p>
       <h1 id="home-title" className="page-title">
-          Frontend setup is ready.
+        Inventory Web
       </h1>
       <p className="page-copy">
-        This placeholder will become the inventory management web app in future slices.
+        A focused workspace for managing inventory operations from stock movement to
+        financial reporting.
       </p>
-      <p className="page-copy">
-        <Link className="text-link" to="/app/dashboard">
-          Open dashboard
+
+      <ul className="benefit-list" aria-label="Inventory Web benefits">
+        {benefits.map((benefit) => (
+          <li className="benefit-item" key={benefit}>
+            {benefit}
+          </li>
+        ))}
+      </ul>
+
+      <p className="page-action">
+        <Link className="primary-link" to="/login">
+          Login
         </Link>
       </p>
     </section>

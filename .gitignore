@@ -39,6 +39,7 @@ Thumbs.db
 # Environment
 .env
 .env.*
+!inventory-web/.env.example
 
 # Publish
 publish/

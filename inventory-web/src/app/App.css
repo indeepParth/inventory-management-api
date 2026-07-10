@@ -15,6 +15,10 @@
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
 }
 
+.landing-panel {
+  width: min(100%, 840px);
+}
+
 .page-kicker {
   margin: 0 0 12px;
   color: #2563eb;
@@ -35,6 +39,46 @@
   margin: 20px 0 0;
   color: #475569;
   font-size: 1.1rem;
+}
+
+.benefit-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.benefit-item {
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 8px 12px;
+}
+
+.page-action {
+  margin: 32px 0 0;
+}
+
+.primary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 800;
+  padding: 0 18px;
+  text-decoration: none;
+}
+
+.primary-link:hover {
+  background: #1d4ed8;
 }
 
 .text-link {

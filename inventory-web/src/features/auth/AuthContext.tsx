@@ -2,18 +2,28 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
 import { clearAuthTokens, getStoredAuthTokens, setAuthTokens } from '../../shared/api/tokenStorage'
-import { login as loginRequest, type LoginRequest, type LoginResponse } from './authApi'
+import {
+  getCurrentUser,
+  login as loginRequest,
+  type CurrentUser,
+  type LoginRequest,
+  type LoginResponse,
+} from './authApi'
 
 type AuthState = {
   accessToken: string | null
   refreshToken: string | null
   expiresAt: string | null
+  currentUser: CurrentUser | null
   isAuthenticated: boolean
+  isAuthResolved: boolean
+  isCurrentUserLoading: boolean
 }
 
 type AuthContextValue = AuthState & {
@@ -30,16 +40,22 @@ function getInitialAuthState(): AuthState {
     accessToken: storedTokens?.accessToken ?? null,
     refreshToken: storedTokens?.refreshToken ?? null,
     expiresAt: storedTokens?.expiresAt ?? null,
+    currentUser: null,
     isAuthenticated: Boolean(storedTokens?.accessToken),
+    isAuthResolved: !storedTokens?.accessToken,
+    isCurrentUserLoading: Boolean(storedTokens?.accessToken),
   }
 }
 
-function mapLoginResponse(response: LoginResponse): AuthState {
+function mapLoginResponse(response: LoginResponse, currentUser: CurrentUser): AuthState {
   return {
     accessToken: response.accessToken,
     refreshToken: response.refreshToken,
     expiresAt: response.expiresAt,
+    currentUser,
     isAuthenticated: true,
+    isAuthResolved: true,
+    isCurrentUserLoading: false,
   }
 }
 
@@ -50,21 +66,49 @@ type AuthProviderProps = {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [authState, setAuthState] = useState<AuthState>(getInitialAuthState)
 
-  const login = useCallback(async (request: LoginRequest): Promise<void> => {
-    const response = await loginRequest(request)
-    setAuthTokens(response)
-    setAuthState(mapLoginResponse(response))
-  }, [])
-
   const logout = useCallback((): void => {
     clearAuthTokens()
     setAuthState({
       accessToken: null,
       refreshToken: null,
       expiresAt: null,
+      currentUser: null,
       isAuthenticated: false,
+      isAuthResolved: true,
+      isCurrentUserLoading: false,
     })
   }, [])
+
+  const login = useCallback(async (request: LoginRequest): Promise<void> => {
+    const response = await loginRequest(request)
+    setAuthTokens(response)
+    const currentUser = await getCurrentUser()
+    setAuthState(mapLoginResponse(response, currentUser))
+  }, [])
+
+  useEffect(() => {
+    if (!authState.accessToken || authState.currentUser || authState.isAuthResolved) {
+      return
+    }
+
+    async function loadCurrentUser(): Promise<void> {
+      try {
+        const currentUser = await getCurrentUser()
+
+        setAuthState((currentState) => ({
+          ...currentState,
+          currentUser,
+          isAuthenticated: true,
+          isAuthResolved: true,
+          isCurrentUserLoading: false,
+        }))
+      } catch {
+        logout()
+      }
+    }
+
+    void loadCurrentUser()
+  }, [authState.accessToken, authState.currentUser, authState.isAuthResolved, logout])
 
   const value = useMemo<AuthContextValue>(
     () => ({

@@ -11,10 +11,20 @@ export type LoginResponse = {
   expiresAt: string
 }
 
+export type CurrentUser = {
+  username: string
+  email?: string
+  roles: string[]
+}
+
 export function login(request: LoginRequest): Promise<LoginResponse> {
   return apiRequest<LoginResponse, LoginRequest>('/api/Auth/Login', {
     method: 'POST',
     body: request,
     skipAuthRefresh: true,
   })
+}
+
+export function getCurrentUser(): Promise<CurrentUser> {
+  return apiRequest<CurrentUser>('/api/Users/me')
 }

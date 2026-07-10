@@ -112,6 +112,14 @@
   text-decoration: underline;
 }
 
+.auth-loading {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  color: #475569;
+  font-weight: 700;
+}
+
 .app-layout {
   display: grid;
   min-height: 100vh;
@@ -131,6 +139,27 @@
   color: #0f172a;
   font-size: 1.1rem;
   font-weight: 800;
+}
+
+.app-user {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 24px;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.app-user-name {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.app-user-email {
+  color: #64748b;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
 }
 
 .app-nav {

@@ -1,6 +1,20 @@
 version: "3.9"
 
 services:
+  inventory-web:
+    container_name: inventory-web
+    build:
+      context: ./inventory-web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?Set VITE_API_BASE_URL}
+    ports:
+      - "${FRONTEND_HTTP_PORT:-8080}:80"
+    depends_on:
+      inventory-api:
+        condition: service_healthy
+    restart: unless-stopped
+
   inventory-api:
     container_name: inventory-api
     build:

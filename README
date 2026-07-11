@@ -328,13 +328,32 @@ Development compose file:
 docker compose -f docker-compose.production.yml up -d --build
 ```
 
-The production compose file sets `ASPNETCORE_ENVIRONMENT=Production`, keeps
-the database and logs in persistent Docker volumes, runs the container as the
-non-root .NET runtime user, and checks `/health/ready`. It does not publish a
-host port; place it behind a reverse proxy on the Docker network and publish
-only the reverse proxy. If bind mounts are used instead of named volumes, make
-sure the mounted database and log directories are writable by the container
-user.
+The production compose file runs the API and frontend as separate containers.
+The API container keeps `ASPNETCORE_ENVIRONMENT=Production`, stores the
+database and logs in persistent Docker volumes, runs as the non-root .NET
+runtime user, and checks `/health/ready`. The frontend container builds the
+React/Vite app and serves static files with nginx. The frontend is not merged
+into the backend container.
+
+Create a private `.env` beside `docker-compose.production.yml` before running
+production compose:
+
+```
+cp production.env.example .env
+```
+
+Set `VITE_API_BASE_URL` to the public URL that browsers should use for the API.
+Set `Cors__AllowedOrigins__0` to the public frontend origin. Do not commit real
+secrets; the checked-in `production.env.example` contains placeholders only.
+
+For multiple clients, use the same codebase with separate deployments:
+
+* one private `.env` per client
+* one separate database volume or database file per client
+* the same API and frontend images built from this repository
+
+If bind mounts are used instead of named volumes, make sure the mounted
+database and log directories are writable by the container user.
 
 Production TLS is expected to terminate at a reverse proxy. Configure the
 proxy to send `X-Forwarded-For` and `X-Forwarded-Proto`, and set

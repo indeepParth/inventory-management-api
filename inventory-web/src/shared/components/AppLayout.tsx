@@ -1,45 +1,34 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../features/auth/AuthContext'
-
-type Role = 'Admin' | 'Manager' | 'Sales' | 'Inventory'
+import { hasRouteAccess, type RoutePolicy } from '../../features/auth/roleAccess'
 
 type NavItem = {
   label: string
   to: string
-  roles: Role[]
+  policy: RoutePolicy
 }
-
-const allRoles: Role[] = ['Admin', 'Manager', 'Sales', 'Inventory']
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', to: '/app/dashboard', roles: allRoles },
-  { label: 'Products', to: '/app/products', roles: ['Admin', 'Inventory'] },
-  { label: 'Categories', to: '/app/categories', roles: ['Admin', 'Inventory'] },
-  { label: 'Customers', to: '/app/customers', roles: ['Admin', 'Sales'] },
-  { label: 'Suppliers', to: '/app/suppliers', roles: ['Admin', 'Inventory'] },
-  { label: 'Purchases', to: '/app/purchases', roles: ['Admin', 'Manager', 'Inventory'] },
-  { label: 'Challans', to: '/app/challans', roles: ['Admin', 'Manager', 'Sales'] },
-  { label: 'Invoices', to: '/app/sales-invoices', roles: ['Admin', 'Manager', 'Sales'] },
-  { label: 'Payments', to: '/app/payments', roles: ['Admin', 'Manager', 'Sales'] },
-  { label: 'Stock movements', to: '/app/stock-movements', roles: ['Admin', 'Inventory'] },
-  { label: 'Customer returns', to: '/app/customer-returns', roles: ['Admin', 'Sales'] },
-  { label: 'Supplier returns', to: '/app/supplier-returns', roles: ['Admin', 'Inventory'] },
-  { label: 'Reports', to: '/app/reports', roles: ['Admin', 'Manager'] },
+  { label: 'Dashboard', to: '/app/dashboard', policy: 'allAuthenticated' },
+  { label: 'Products', to: '/app/products', policy: 'readProducts' },
+  { label: 'Categories', to: '/app/categories', policy: 'readProducts' },
+  { label: 'Customers', to: '/app/customers', policy: 'readCustomers' },
+  { label: 'Suppliers', to: '/app/suppliers', policy: 'readSuppliers' },
+  { label: 'Purchases', to: '/app/purchases', policy: 'managePurchases' },
+  { label: 'Challans', to: '/app/challans', policy: 'manageDeliveryChallans' },
+  { label: 'Invoices', to: '/app/sales-invoices', policy: 'manageSalesInvoices' },
+  { label: 'Payments', to: '/app/payments', policy: 'viewPayments' },
+  { label: 'Stock movements', to: '/app/stock-movements', policy: 'viewStockMovements' },
+  { label: 'Customer returns', to: '/app/customer-returns', policy: 'manageCustomerReturns' },
+  { label: 'Supplier returns', to: '/app/supplier-returns', policy: 'manageSupplierReturns' },
+  { label: 'Reports', to: '/app/reports', policy: 'viewReports' },
 ]
-
-function canShowNavItem(userRoles: string[], item: NavItem): boolean {
-  if (userRoles.includes('Admin')) {
-    return true
-  }
-
-  return item.roles.some((role) => userRoles.includes(role))
-}
 
 export function AppLayout() {
   const navigate = useNavigate()
   const { currentUser, isCurrentUserLoading, logout } = useAuth()
   const visibleNavItems = navItems.filter((item) =>
-    canShowNavItem(currentUser?.roles ?? [], item),
+    hasRouteAccess(currentUser?.roles ?? [], item.policy),
   )
 
   function handleLogout(): void {

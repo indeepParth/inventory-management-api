@@ -87,6 +87,8 @@ export type SalesInvoiceFilters = {
   customerId: string
   status: string
   invoiceNumber: string
+  dateFrom?: string
+  dateTo?: string
 }
 
 function buildInvoiceQuery(filters: SalesInvoiceFilters): string {
@@ -105,6 +107,14 @@ function buildInvoiceQuery(filters: SalesInvoiceFilters): string {
 
   if (filters.invoiceNumber) {
     query.set('InvoiceNumber', filters.invoiceNumber)
+  }
+
+  if (filters.dateFrom) {
+    query.set('DateFrom', filters.dateFrom)
+  }
+
+  if (filters.dateTo) {
+    query.set('DateTo', filters.dateTo)
   }
 
   return query.toString()

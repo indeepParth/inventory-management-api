@@ -62,6 +62,8 @@ export type DeliveryChallanFilters = {
   customerId: string
   status: string
   challanNumber: string
+  dateFrom?: string
+  dateTo?: string
 }
 
 function buildChallanQuery(filters: DeliveryChallanFilters): string {
@@ -80,6 +82,14 @@ function buildChallanQuery(filters: DeliveryChallanFilters): string {
 
   if (filters.challanNumber) {
     query.set('ChallanNumber', filters.challanNumber)
+  }
+
+  if (filters.dateFrom) {
+    query.set('DateFrom', filters.dateFrom)
+  }
+
+  if (filters.dateTo) {
+    query.set('DateTo', filters.dateTo)
   }
 
   return query.toString()

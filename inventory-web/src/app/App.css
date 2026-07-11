@@ -248,6 +248,10 @@
   padding: 0 12px;
 }
 
+.customer-account-filters {
+  margin-top: 28px;
+}
+
 .login-form {
   display: grid;
   gap: 18px;

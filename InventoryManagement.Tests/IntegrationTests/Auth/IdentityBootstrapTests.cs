@@ -55,6 +55,40 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         [Fact]
+        public async Task BootstrapAsync_Should_Not_Create_Admin_Outside_Production_By_Default()
+        {
+            await using var context = await CreateBootstrapContextAsync(
+                ValidAdminOptions(),
+                Environments.Development);
+
+            await context.BootstrapService.BootstrapAsync();
+
+            var admin = await context.UserManager.FindByNameAsync("admin");
+            admin.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task BootstrapAsync_Should_Create_Admin_Outside_Production_When_Explicitly_Allowed()
+        {
+            var options = ValidAdminOptions();
+            options.AllowOutsideProduction = true;
+
+            await using var context = await CreateBootstrapContextAsync(
+                options,
+                Environments.Development);
+
+            await context.BootstrapService.BootstrapAsync();
+
+            var admin = await context.UserManager.FindByNameAsync("admin");
+            admin.Should().NotBeNull();
+
+            var isAdmin = await context.UserManager.IsInRoleAsync(
+                admin!,
+                ApplicationRoles.Admin);
+            isAdmin.Should().BeTrue();
+        }
+
+        [Fact]
         public async Task BootstrapAsync_Should_Fail_When_Enabled_Admin_Config_Is_Missing()
         {
             var options = ValidAdminOptions();
@@ -98,7 +132,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         private static async Task<BootstrapTestContext> CreateBootstrapContextAsync(
-            AdminBootstrapOptions adminOptions)
+            AdminBootstrapOptions adminOptions,
+            string environmentName = "Production")
         {
             var connection = new SqliteConnection("Data Source=:memory:");
             await connection.OpenAsync();
@@ -113,7 +148,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             });
 
             services.AddSingleton<IHostEnvironment>(
-                new TestHostEnvironment(Environments.Production));
+                new TestHostEnvironment(environmentName));
 
             services.AddSingleton(
                 Options.Create(adminOptions));

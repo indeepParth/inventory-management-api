@@ -281,9 +281,10 @@ Bootstrap__Admin__Password
 
 Set `Authentication__AllowPublicRegistration=false` in Production unless
 you intentionally want unauthenticated users to create accounts.
-Set `Database__ApplyMigrationsOnStartup=false` in Production. Automatic
-migrations are disabled by default in Production; when pending migrations exist,
-startup logs the pending migration names and leaves the database unchanged.
+Set `Database__ApplyMigrationsOnStartup=false` in Production after the database
+is initialized. Automatic migrations are disabled by default in Production; when
+pending migrations exist and startup migrations are disabled, startup logs the
+pending migration names and stops before identity bootstrapping.
 Set `Bootstrap__Admin__Enabled=true` only when creating the first production
 administrator. Remove or disable it after startup succeeds.
 Set frontend CORS origins with indexed environment variables such as
@@ -310,6 +311,10 @@ Run database migrations as a controlled pre-deployment step:
 ```
 dotnet ef database update --project InventoryManagement.Infrastructure --startup-project InventoryManagement.API
 ```
+
+For a first Docker production deployment with a new named volume, you can set
+`Database__ApplyMigrationsOnStartup=true` in the root `.env` for the first
+successful start, then set it back to `false` and restart the stack.
 
 Back up the SQLite database with SQLite's backup mechanism before production
 deployments or maintenance. Do not copy the live database file while writes may

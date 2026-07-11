@@ -101,7 +101,10 @@ namespace InventoryManagement.API.Extensions
                 DeploymentMigrationCommand,
                 string.Join(", ", pendingMigrations));
 
-            return app;
+            throw new InvalidOperationException(
+                "Database has pending EF Core migrations, but automatic startup " +
+                "migrations are disabled. Apply migrations before deployment with: " +
+                DeploymentMigrationCommand);
         }
     }
 }

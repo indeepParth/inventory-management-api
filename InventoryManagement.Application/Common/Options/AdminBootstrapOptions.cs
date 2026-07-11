@@ -5,6 +5,7 @@ namespace InventoryManagement.Application.Common.Options
         public const string SectionName = "Bootstrap:Admin";
 
         public bool Enabled { get; set; }
+        public bool AllowOutsideProduction { get; set; }
         public string UserName { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;

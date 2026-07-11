@@ -26,7 +26,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__DefaultConnection: Data Source=/app/Data/inventory.db
-      Database__ApplyMigrationsOnStartup: "false"
+      Database__ApplyMigrationsOnStartup: ${Database__ApplyMigrationsOnStartup:-false}
       Jwt__Issuer: ${Jwt__Issuer:?Set Jwt__Issuer}
       Jwt__Audience: ${Jwt__Audience:?Set Jwt__Audience}
       Jwt__Key: ${Jwt__Key:?Set Jwt__Key}

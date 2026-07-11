@@ -29,7 +29,9 @@ namespace InventoryManagement.Infrastructure.Identity
         {
             await SeedRolesAsync();
 
-            if (!_adminOptions.Enabled || !_environment.IsProduction())
+            if (!_adminOptions.Enabled ||
+                (!_environment.IsProduction() &&
+                 !_adminOptions.AllowOutsideProduction))
             {
                 return;
             }

@@ -15,13 +15,20 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             compose.Should().Contain("ASPNETCORE_ENVIRONMENT: Production");
             compose.Should().NotContain("ASPNETCORE_ENVIRONMENT: Development");
             compose.Should().Contain("Authentication__AllowPublicRegistration: \"false\"");
-            compose.Should().Contain("Database__ApplyMigrationsOnStartup: \"false\"");
+            compose.Should().Contain("Database__ApplyMigrationsOnStartup: ${Database__ApplyMigrationsOnStartup:-false}");
             compose.Should().Contain("Swagger__Enabled: \"false\"");
             compose.Should().Contain("/health/ready");
             compose.Should().Contain("restart: unless-stopped");
             compose.Should().Contain("inventory_data:/app/Data");
             compose.Should().Contain("inventory_logs:/app/Logs");
-            compose.Should().NotContain("ports:");
+
+            var apiService = GetComposeServiceBlock(
+                compose,
+                "inventory-api");
+
+            apiService.Should().Contain("expose:");
+            apiService.Should().Contain("\"8080\"");
+            apiService.Should().NotContain("ports:");
         }
 
         [Fact]
@@ -72,6 +79,34 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             return directory?.FullName ??
                    throw new DirectoryNotFoundException(
                        "Could not locate repository root.");
+        }
+
+        private static string GetComposeServiceBlock(
+            string compose,
+            string serviceName)
+        {
+            var serviceHeader = $"  {serviceName}:";
+            var startIndex = compose.IndexOf(
+                serviceHeader,
+                StringComparison.Ordinal);
+
+            if (startIndex < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Could not locate compose service '{serviceName}'.");
+            }
+
+            var nextTopLevelSectionIndex = compose.IndexOf(
+                "\nvolumes:",
+                startIndex,
+                StringComparison.Ordinal);
+
+            if (nextTopLevelSectionIndex < 0)
+            {
+                return compose[startIndex..];
+            }
+
+            return compose[startIndex..nextTopLevelSectionIndex];
         }
     }
 }

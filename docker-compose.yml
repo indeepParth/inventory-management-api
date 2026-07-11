@@ -1,6 +1,19 @@
 version: "3.9"
 
 services:
+  inventory-web:
+    container_name: inventory-web
+    build:
+      context: ./inventory-web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:8080
+    ports:
+      - "8081:80"
+    depends_on:
+      inventory-api:
+        condition: service_healthy
+    restart: unless-stopped
 
   inventory-api:
 
@@ -17,9 +30,19 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: Data Source=Data/inventory.db
       Jwt__Key: ${Jwt__Key:?Set Jwt__Key before starting the container}
+      Cors__AllowedOrigins__0: http://localhost:8081
+      Bootstrap__Admin__Enabled: ${Bootstrap__Admin__Enabled:-true}
+      Bootstrap__Admin__AllowOutsideProduction: "true"
+      Bootstrap__Admin__UserName: ${Bootstrap__Admin__UserName:-admin}
+      Bootstrap__Admin__Email: ${Bootstrap__Admin__Email:-admin@example.com}
+      Bootstrap__Admin__Password: ${Bootstrap__Admin__Password:-AdminPassword123}
 
     volumes:
-      - ./Data:/app/Data
-      - ./Logs:/app/Logs
+      - inventory_local_data:/app/Data
+      - inventory_local_logs:/app/Logs
 
     restart: unless-stopped
+
+volumes:
+  inventory_local_data:
+  inventory_local_logs:

@@ -13,6 +13,8 @@ import {
 } from '../features/challans/challansApi'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getCustomer, type Customer } from '../features/parties/partiesApi'
+import { PaymentForm } from '../features/payments/PaymentForm'
+import { createPayment, type PaymentFormValues } from '../features/payments/paymentsApi'
 import { getProducts, type Product } from '../features/products/productsApi'
 import { DirectInvoiceForm } from '../features/salesInvoices/DirectInvoiceForm'
 import {
@@ -74,22 +76,29 @@ function canCreateInvoiceFromChallan(challan: DeliveryChallan): boolean {
   return challan.isAvailableForInvoicing
 }
 
+function canReceivePaymentForInvoice(invoice: SalesInvoice): boolean {
+  return (invoice.status === 1 || invoice.status === 2) && invoice.balanceDue > 0
+}
+
 export function CustomerDetailPage() {
   const { id } = useParams()
   const { currentUser } = useAuth()
   const navigate = useNavigate()
   const canManageChallans = hasRouteAccess(currentUser?.roles ?? [], 'manageDeliveryChallans')
   const canCreateInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
+  const canReceivePayments = hasRouteAccess(currentUser?.roles ?? [], 'viewPayments')
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [invoices, setInvoices] = useState<SalesInvoice[]>([])
   const [customerChallans, setCustomerChallans] = useState<DeliveryChallan[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [editingChallan, setEditingChallan] = useState<DeliveryChallan | undefined>()
+  const [paymentInvoice, setPaymentInvoice] = useState<SalesInvoice | undefined>()
   const [isChallanFormOpen, setIsChallanFormOpen] = useState(false)
   const [isDirectInvoiceFormOpen, setIsDirectInvoiceFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSavingChallan, setIsSavingChallan] = useState(false)
   const [isSavingDirectInvoice, setIsSavingDirectInvoice] = useState(false)
+  const [isSavingPayment, setIsSavingPayment] = useState(false)
   const [fromDateInput, setFromDateInput] = useState('')
   const [toDateInput, setToDateInput] = useState('')
   const [fromDate, setFromDate] = useState('')
@@ -166,6 +175,7 @@ export function CustomerDetailPage() {
     setEditingChallan(undefined)
     setFieldErrors({})
     setActionError(null)
+    setPaymentInvoice(undefined)
     setIsDirectInvoiceFormOpen(false)
     setIsChallanFormOpen(true)
   }
@@ -174,6 +184,8 @@ export function CustomerDetailPage() {
     setEditingChallan(challan)
     setFieldErrors({})
     setActionError(null)
+    setPaymentInvoice(undefined)
+    setIsDirectInvoiceFormOpen(false)
     setIsChallanFormOpen(true)
   }
 
@@ -188,6 +200,7 @@ export function CustomerDetailPage() {
     setFieldErrors({})
     setActionError(null)
     setEditingChallan(undefined)
+    setPaymentInvoice(undefined)
     setIsChallanFormOpen(false)
     setIsDirectInvoiceFormOpen(true)
   }
@@ -196,6 +209,21 @@ export function CustomerDetailPage() {
     setFieldErrors({})
     setActionError(null)
     setIsDirectInvoiceFormOpen(false)
+  }
+
+  function openPaymentForm(invoice: SalesInvoice): void {
+    setFieldErrors({})
+    setActionError(null)
+    setEditingChallan(undefined)
+    setIsChallanFormOpen(false)
+    setIsDirectInvoiceFormOpen(false)
+    setPaymentInvoice(invoice)
+  }
+
+  function closePaymentForm(): void {
+    setFieldErrors({})
+    setActionError(null)
+    setPaymentInvoice(undefined)
   }
 
   async function handleChallanSubmit(values: DeliveryChallanFormValues): Promise<void> {
@@ -234,6 +262,23 @@ export function CustomerDetailPage() {
       setActionError(getErrorMessage(error))
     } finally {
       setIsSavingDirectInvoice(false)
+    }
+  }
+
+  async function handlePaymentSubmit(values: PaymentFormValues): Promise<void> {
+    setIsSavingPayment(true)
+    setFieldErrors({})
+    setActionError(null)
+
+    try {
+      await createPayment(values)
+      closePaymentForm()
+      await loadCustomerDetail()
+    } catch (error) {
+      setFieldErrors(getFieldErrors(error))
+      setActionError(getErrorMessage(error))
+    } finally {
+      setIsSavingPayment(false)
     }
   }
 
@@ -355,6 +400,25 @@ export function CustomerDetailPage() {
             />
           ) : null}
 
+          {paymentInvoice ? (
+            <PaymentForm
+              customers={[customer]}
+              errors={fieldErrors}
+              initialAmount={paymentInvoice.balanceDue}
+              initialCustomerId={customer.id}
+              initialSalesInvoiceId={paymentInvoice.id}
+              invoices={invoices}
+              isSubmitting={isSavingPayment}
+              lockCustomer
+              lockDocument
+              mode="customer"
+              onCancel={closePaymentForm}
+              onSubmit={handlePaymentSubmit}
+              purchases={[]}
+              suppliers={[]}
+            />
+          ) : null}
+
           {products.length === 0 && (canCreateInvoices || canManageChallans) && !isLoading ? (
             <p className="state-message">Create at least one product before adding invoices or challans for this customer.</p>
           ) : null}
@@ -414,6 +478,9 @@ export function CustomerDetailPage() {
                         <div className="table-actions">
                           {canCreateInvoices && invoice.status === 0 ? (
                             <button className="text-button" onClick={() => void handlePostInvoice(invoice)} type="button">Post</button>
+                          ) : null}
+                          {canReceivePayments && canReceivePaymentForInvoice(invoice) ? (
+                            <button className="text-button" onClick={() => openPaymentForm(invoice)} type="button">Receive payment</button>
                           ) : null}
                         </div>
                       </td>

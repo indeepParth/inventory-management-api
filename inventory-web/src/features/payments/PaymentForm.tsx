@@ -14,8 +14,14 @@ type PaymentFormProps = {
   suppliers: Supplier[]
   invoices: SalesInvoice[]
   purchases: Purchase[]
+  initialCustomerId?: number
+  initialSalesInvoiceId?: number
+  initialAmount?: number
+  lockCustomer?: boolean
+  lockDocument?: boolean
   errors: FieldErrors
   isSubmitting: boolean
+  onCancel?: () => void
   onSubmit: (values: PaymentFormValues) => Promise<void>
 }
 
@@ -29,27 +35,37 @@ export function PaymentForm({
   suppliers,
   invoices,
   purchases,
+  initialCustomerId,
+  initialSalesInvoiceId,
+  initialAmount,
+  lockCustomer = false,
+  lockDocument = false,
   errors,
   isSubmitting,
+  onCancel,
   onSubmit,
 }: PaymentFormProps) {
   const firstCustomerId = customers[0]?.id ?? 0
   const firstSupplierId = suppliers[0]?.id ?? 0
+  const defaultCustomerId = mode === 'customer' ? initialCustomerId ?? firstCustomerId : firstCustomerId
+  const defaultDocumentId = mode === 'customer' && initialSalesInvoiceId ? initialSalesInvoiceId.toString() : ''
+  const defaultAmount = mode === 'customer' && initialAmount !== undefined ? initialAmount.toString() : '0'
   const [receiptNumber, setReceiptNumber] = useState('')
-  const [customerId, setCustomerId] = useState(firstCustomerId)
+  const [customerId, setCustomerId] = useState(defaultCustomerId)
   const [supplierId, setSupplierId] = useState(firstSupplierId)
-  const [documentId, setDocumentId] = useState('')
+  const [documentId, setDocumentId] = useState(defaultDocumentId)
   const [paymentDate, setPaymentDate] = useState(today())
-  const [amount, setAmount] = useState('0')
+  const [amount, setAmount] = useState(defaultAmount)
   const [method, setMethod] = useState<PaymentMethod>(0)
   const [externalReference, setExternalReference] = useState('')
   const [note, setNote] = useState('')
 
   useEffect(() => {
-    setCustomerId(firstCustomerId)
+    setCustomerId(defaultCustomerId)
     setSupplierId(firstSupplierId)
-    setDocumentId('')
-  }, [firstCustomerId, firstSupplierId, mode])
+    setDocumentId(defaultDocumentId)
+    setAmount(defaultAmount)
+  }, [defaultAmount, defaultCustomerId, defaultDocumentId, firstSupplierId, mode])
 
   const selectedCustomer = customers.find((customer) => customer.id === customerId)
 
@@ -112,7 +128,7 @@ export function PaymentForm({
         <label className="form-field">
           <span>{isCustomerMode ? 'Customer' : 'Supplier'}</span>
           {isCustomerMode ? (
-            <select disabled={isSubmitting} onChange={(event) => { setCustomerId(Number(event.target.value)); setDocumentId('') }} required value={customerId}>
+            <select disabled={isSubmitting || lockCustomer} onChange={(event) => { setCustomerId(Number(event.target.value)); setDocumentId('') }} required value={customerId}>
               {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
             </select>
           ) : (
@@ -123,7 +139,7 @@ export function PaymentForm({
         </label>
         <label className="form-field">
           <span>{isCustomerMode ? 'Sales invoice' : 'Purchase'}</span>
-          <select disabled={isSubmitting} onChange={(event) => setDocumentId(event.target.value)} value={documentId}>
+          <select disabled={isSubmitting || lockDocument} onChange={(event) => setDocumentId(event.target.value)} value={documentId}>
             <option value="">Apply to party balance</option>
             {(isCustomerMode ? customerInvoices : supplierPurchases).map((document) => (
               <option key={document.id} value={document.id}>
@@ -171,6 +187,7 @@ export function PaymentForm({
 
       <div className="form-actions">
         <button className="primary-button" disabled={isSubmitting || (isCustomerMode ? customers.length === 0 : suppliers.length === 0)} type="submit">{isSubmitting ? 'Saving...' : `Save ${isCustomerMode ? 'customer' : 'supplier'} payment`}</button>
+        {onCancel ? <button className="secondary-button" disabled={isSubmitting} onClick={onCancel} type="button">Cancel</button> : null}
       </div>
     </form>
   )

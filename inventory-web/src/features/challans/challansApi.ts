@@ -36,6 +36,7 @@ export type DeliveryChallan = {
   postedAtUtc?: string
   cancelledAtUtc?: string
   invoicedAtUtc?: string
+  isAvailableForInvoicing: boolean
   createdBy: string
   items: DeliveryChallanItem[]
 }
@@ -101,6 +102,10 @@ export function getDeliveryChallans(
   return apiRequest<PagedResponse<DeliveryChallan>>(
     `/api/delivery-challans?${buildChallanQuery(filters)}`,
   )
+}
+
+export function getDeliveryChallan(id: number): Promise<DeliveryChallan> {
+  return apiRequest<DeliveryChallan>(`/api/delivery-challans/${id}`)
 }
 
 export function createDeliveryChallan(

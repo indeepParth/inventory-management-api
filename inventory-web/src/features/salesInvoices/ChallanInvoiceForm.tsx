@@ -7,6 +7,7 @@ import type { ChallanInvoiceFormValues, ChallanInvoiceItemFormValues } from './s
 type ChallanInvoiceFormProps = {
   challans: DeliveryChallan[]
   errors: FieldErrors
+  initialChallanId?: number
   isSubmitting: boolean
   onCancel: () => void
   onSubmit: (values: ChallanInvoiceFormValues) => Promise<void>
@@ -20,9 +21,18 @@ function createBlankItem(itemId: number): ChallanInvoiceItemFormValues {
   }
 }
 
+function createItemsForChallan(challan?: DeliveryChallan): ChallanInvoiceItemFormValues[] {
+  if (!challan || challan.items.length === 0) {
+    return []
+  }
+
+  return challan.items.map((item) => createBlankItem(item.id))
+}
+
 export function ChallanInvoiceForm({
   challans,
   errors,
+  initialChallanId,
   isSubmitting,
   onCancel,
   onSubmit,
@@ -40,18 +50,24 @@ export function ChallanInvoiceForm({
     [challans],
   )
   const firstItemId = availableItems[0]?.id ?? 0
+  const initialChallan = initialChallanId
+    ? challans.find((challan) => challan.id === initialChallanId)
+    : undefined
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [invoiceDate, setInvoiceDate] = useState(toDateInputValue())
   const [discount, setDiscount] = useState('0')
   const [otherCharges, setOtherCharges] = useState('0')
   const [notes, setNotes] = useState('')
   const [items, setItems] = useState<ChallanInvoiceItemFormValues[]>([
-    createBlankItem(firstItemId),
+    ...(createItemsForChallan(initialChallan).length > 0
+      ? createItemsForChallan(initialChallan)
+      : [createBlankItem(firstItemId)]),
   ])
 
   useEffect(() => {
-    setItems([createBlankItem(firstItemId)])
-  }, [firstItemId])
+    const initialItems = createItemsForChallan(initialChallan)
+    setItems(initialItems.length > 0 ? initialItems : [createBlankItem(firstItemId)])
+  }, [firstItemId, initialChallan])
 
   function updateItem(index: number, values: Partial<ChallanInvoiceItemFormValues>): void {
     setItems((currentItems) =>

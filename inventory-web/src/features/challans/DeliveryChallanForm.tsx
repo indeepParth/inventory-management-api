@@ -12,6 +12,9 @@ type DeliveryChallanFormProps = {
   customers: Customer[]
   products: Product[]
   initialValue?: DeliveryChallan
+  initialCustomerId?: number
+  initialDeliveryAddress?: string
+  lockCustomer?: boolean
   errors: FieldErrors
   isSubmitting: boolean
   onCancel: () => void
@@ -37,19 +40,24 @@ export function DeliveryChallanForm({
   customers,
   products,
   initialValue,
+  initialCustomerId,
+  initialDeliveryAddress,
+  lockCustomer = false,
   errors,
   isSubmitting,
   onCancel,
   onSubmit,
 }: DeliveryChallanFormProps) {
   const firstCustomerId = customers[0]?.id ?? 0
+  const defaultCustomerId = initialValue?.customerId ?? initialCustomerId ?? firstCustomerId
+  const defaultDeliveryAddress = initialValue?.deliveryAddress ?? initialDeliveryAddress ?? ''
   const firstProductId = products[0]?.id ?? 0
   const [challanNumber, setChallanNumber] = useState(initialValue?.challanNumber ?? '')
-  const [customerId, setCustomerId] = useState(initialValue?.customerId ?? firstCustomerId)
+  const [customerId, setCustomerId] = useState(defaultCustomerId)
   const [challanDate, setChallanDate] = useState(toDateInputValue(initialValue?.challanDate))
   const [vehicleNumber, setVehicleNumber] = useState(initialValue?.vehicleNumber ?? '')
   const [driverName, setDriverName] = useState(initialValue?.driverName ?? '')
-  const [deliveryAddress, setDeliveryAddress] = useState(initialValue?.deliveryAddress ?? '')
+  const [deliveryAddress, setDeliveryAddress] = useState(defaultDeliveryAddress)
   const [notes, setNotes] = useState(initialValue?.notes ?? '')
   const [items, setItems] = useState<DeliveryChallanItemFormValues[]>(
     initialValue?.items.map((item) => ({
@@ -60,11 +68,11 @@ export function DeliveryChallanForm({
 
   useEffect(() => {
     setChallanNumber(initialValue?.challanNumber ?? '')
-    setCustomerId(initialValue?.customerId ?? firstCustomerId)
+    setCustomerId(defaultCustomerId)
     setChallanDate(toDateInputValue(initialValue?.challanDate))
     setVehicleNumber(initialValue?.vehicleNumber ?? '')
     setDriverName(initialValue?.driverName ?? '')
-    setDeliveryAddress(initialValue?.deliveryAddress ?? '')
+    setDeliveryAddress(defaultDeliveryAddress)
     setNotes(initialValue?.notes ?? '')
     setItems(
       initialValue?.items.map((item) => ({
@@ -72,7 +80,7 @@ export function DeliveryChallanForm({
         quantity: item.quantity,
       })) ?? [createBlankItem(firstProductId)],
     )
-  }, [firstCustomerId, firstProductId, initialValue])
+  }, [defaultCustomerId, defaultDeliveryAddress, firstProductId, initialValue])
 
   function updateItem(index: number, values: Partial<DeliveryChallanItemFormValues>): void {
     setItems((currentItems) =>
@@ -110,7 +118,7 @@ export function DeliveryChallanForm({
         </label>
         <label className="form-field">
           <span>Customer</span>
-          <select disabled={isSubmitting} onChange={(event) => setCustomerId(Number(event.target.value))} required value={customerId}>
+          <select disabled={isSubmitting || lockCustomer} onChange={(event) => setCustomerId(Number(event.target.value))} required value={customerId}>
             {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
           </select>
           {getFieldError(errors, 'CustomerId') ? <span className="field-error">{getFieldError(errors, 'CustomerId')}</span> : null}

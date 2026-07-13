@@ -19,7 +19,10 @@ namespace InventoryManagement.Infrastructure.Repositories
             Query(customerId, status, dateFrom, dateTo, challanNumber)
                 .AsNoTracking()
                 .Include(x => x.Customer)
-                .Include(x => x.Items).ThenInclude(x => x.Product)
+                .Include(x => x.Items)
+                    .ThenInclude(x => x.Product)
+                .Include(x => x.Items)
+                    .ThenInclude(x => x.SalesInvoiceItems)
                 .OrderByDescending(x => x.ChallanDate).ThenByDescending(x => x.Id)
                 .Skip((pageNumber - 1) * pageSize).Take(pageSize)
                 .ToListAsync(cancellationToken);
@@ -35,7 +38,10 @@ namespace InventoryManagement.Infrastructure.Repositories
             int id, CancellationToken cancellationToken = default) =>
             _context.DeliveryChallans.AsNoTracking()
                 .Include(x => x.Customer)
-                .Include(x => x.Items).ThenInclude(x => x.Product)
+                .Include(x => x.Items)
+                    .ThenInclude(x => x.Product)
+                .Include(x => x.Items)
+                    .ThenInclude(x => x.SalesInvoiceItems)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         public Task<DeliveryChallan?> GetForUpdateAsync(

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { hasRouteAccess } from '../features/auth/roleAccess'
 import { useAuth } from '../features/auth/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import { DeliveryChallanForm } from '../features/challans/DeliveryChallanForm'
 import {
   cancelDeliveryChallan,
@@ -25,9 +26,15 @@ import { formatDate } from '../shared/utils/formatters'
 
 const pageSize = 10
 
+function canCreateInvoiceFromChallan(challan: DeliveryChallan): boolean {
+  return challan.isAvailableForInvoicing
+}
+
 export function DeliveryChallansPage() {
   const { currentUser } = useAuth()
+  const navigate = useNavigate()
   const canCancelChallans = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
+  const canCreateInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
   const [response, setResponse] = useState<PagedResponse<DeliveryChallan> | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -142,6 +149,10 @@ export function DeliveryChallansPage() {
     }
   }
 
+  function handleCreateInvoice(challan: DeliveryChallan): void {
+    navigate(`/app/sales-invoices?mode=challans&challanId=${challan.id}`)
+  }
+
   const challans = response?.items ?? []
 
   return (
@@ -220,6 +231,9 @@ export function DeliveryChallansPage() {
                         ) : null}
                         {challan.status !== 2 && challan.status !== 3 && canCancelChallans ? (
                           <button className="danger-button" onClick={() => void handleCancel(challan)} type="button">Cancel</button>
+                        ) : null}
+                        {canCreateInvoices && canCreateInvoiceFromChallan(challan) ? (
+                          <button className="text-button" onClick={() => handleCreateInvoice(challan)} type="button">Create invoice</button>
                         ) : null}
                       </div>
                     </td>

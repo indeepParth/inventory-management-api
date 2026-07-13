@@ -1,4 +1,5 @@
 using InventoryManagement.Domain.Entities;
+using InventoryManagement.Domain.Enums;
 
 namespace InventoryManagement.Application.Features.DeliveryChallans
 {
@@ -22,6 +23,12 @@ namespace InventoryManagement.Application.Features.DeliveryChallans
                 PostedAtUtc = challan.PostedAtUtc,
                 CancelledAtUtc = challan.CancelledAtUtc,
                 InvoicedAtUtc = challan.InvoicedAtUtc,
+                IsAvailableForInvoicing =
+                    challan.Status == DeliveryChallanStatus.Posted &&
+                    challan.Items.Count > 0 &&
+                    challan.Items.All(item =>
+                        item.SalesInvoiceItems.All(link =>
+                            !link.IsChallanAllocationActive)),
                 CreatedBy = challan.CreatedBy,
                 Items = challan.Items.Select(x => new DeliveryChallanItemResponse
                 {

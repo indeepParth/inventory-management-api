@@ -19,6 +19,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans
         public DateTime? PostedAtUtc { get; set; }
         public DateTime? CancelledAtUtc { get; set; }
         public DateTime? InvoicedAtUtc { get; set; }
+        public bool IsAvailableForInvoicing { get; set; }
         public string CreatedBy { get; set; } = string.Empty;
         public List<DeliveryChallanItemResponse> Items { get; set; } = new();
     }

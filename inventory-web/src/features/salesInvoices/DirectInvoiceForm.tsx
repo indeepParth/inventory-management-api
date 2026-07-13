@@ -13,6 +13,8 @@ type DirectInvoiceFormProps = {
   customers: Customer[]
   products: Product[]
   initialValue?: SalesInvoice
+  initialCustomerId?: number
+  lockCustomer?: boolean
   errors: FieldErrors
   isSubmitting: boolean
   onCancel: () => void
@@ -36,15 +38,18 @@ export function DirectInvoiceForm({
   customers,
   products,
   initialValue,
+  initialCustomerId,
+  lockCustomer = false,
   errors,
   isSubmitting,
   onCancel,
   onSubmit,
 }: DirectInvoiceFormProps) {
   const firstCustomerId = customers[0]?.id ?? 0
+  const defaultCustomerId = initialCustomerId ?? firstCustomerId
   const firstProductId = products[0]?.id ?? 0
   const [invoiceNumber, setInvoiceNumber] = useState(initialValue?.invoiceNumber ?? '')
-  const [customerId, setCustomerId] = useState(initialValue?.customerId ?? firstCustomerId)
+  const [customerId, setCustomerId] = useState(initialValue?.customerId ?? defaultCustomerId)
   const [invoiceDate, setInvoiceDate] = useState(toDateInputValue(initialValue?.invoiceDate))
   const [discount, setDiscount] = useState(initialValue?.discount.toString() ?? '0')
   const [otherCharges, setOtherCharges] = useState(initialValue?.otherCharges.toString() ?? '0')
@@ -60,7 +65,7 @@ export function DirectInvoiceForm({
 
   useEffect(() => {
     setInvoiceNumber(initialValue?.invoiceNumber ?? '')
-    setCustomerId(initialValue?.customerId ?? firstCustomerId)
+    setCustomerId(initialValue?.customerId ?? defaultCustomerId)
     setInvoiceDate(toDateInputValue(initialValue?.invoiceDate))
     setDiscount(initialValue?.discount.toString() ?? '0')
     setOtherCharges(initialValue?.otherCharges.toString() ?? '0')
@@ -73,7 +78,7 @@ export function DirectInvoiceForm({
         taxRate: item.taxRate,
       })) ?? [createBlankItem(firstProductId)],
     )
-  }, [firstCustomerId, firstProductId, initialValue])
+  }, [defaultCustomerId, firstProductId, initialValue])
 
   function updateItem(index: number, values: Partial<DirectInvoiceItemFormValues>): void {
     setItems((currentItems) =>
@@ -120,7 +125,7 @@ export function DirectInvoiceForm({
         </label>
         <label className="form-field">
           <span>Customer</span>
-          <select disabled={isSubmitting} onChange={(event) => setCustomerId(Number(event.target.value))} required value={customerId}>
+          <select disabled={isSubmitting || lockCustomer} onChange={(event) => setCustomerId(Number(event.target.value))} required value={customerId}>
             {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
           </select>
           {getFieldError(errors, 'CustomerId') ? <span className="field-error">{getFieldError(errors, 'CustomerId')}</span> : null}

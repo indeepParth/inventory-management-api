@@ -20,6 +20,8 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<Customer> Customers => Set<Customer>();
 
+        public DbSet<Driver> Drivers => Set<Driver>();
+
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
         public DbSet<StockMovement> StockMovements => Set<StockMovement>();
@@ -120,6 +122,20 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.BalanceDue).HasPrecision(18, 2);
             });
 
+            builder.Entity<Driver>(entity =>
+            {
+                entity.HasIndex(x => x.Name)
+                      .IsUnique();
+
+                entity.Property(x => x.Name)
+                      .UseCollation("NOCASE")
+                      .HasMaxLength(150)
+                      .IsRequired();
+
+                entity.Property(x => x.Phone).HasMaxLength(30);
+                entity.Property(x => x.LicenseNumber).HasMaxLength(100);
+            });
+
             builder.Entity<Product>(entity =>
             {
                 entity.Property(x => x.Quantity)
@@ -215,12 +231,17 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.Status).IsRequired();
                 entity.Property(x => x.VehicleNumber).HasMaxLength(50);
                 entity.Property(x => x.DriverName).HasMaxLength(150);
+                entity.Property(x => x.DeliveryFromAddress).HasMaxLength(500).IsRequired();
                 entity.Property(x => x.DeliveryAddress).HasMaxLength(500).IsRequired();
+                entity.Property(x => x.DeliveryCharge).HasPrecision(18, 2);
                 entity.Property(x => x.Notes).HasMaxLength(1000);
                 entity.Property(x => x.CreatedBy).IsRequired();
                 entity.HasOne(x => x.Customer).WithMany()
                     .HasForeignKey(x => x.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                entity.HasOne(x => x.Driver).WithMany()
+                    .HasForeignKey(x => x.DriverId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<DeliveryChallanItem>(entity =>

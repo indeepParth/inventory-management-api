@@ -14,6 +14,7 @@ import {
   type DeliveryChallanFormValues,
   type PagedResponse,
 } from '../features/challans/challansApi'
+import { getDrivers, type Driver } from '../features/drivers/driversApi'
 import { getCustomers, type Customer } from '../features/parties/partiesApi'
 import { getProducts, type Product } from '../features/products/productsApi'
 import {
@@ -37,6 +38,7 @@ export function DeliveryChallansPage() {
   const canCreateInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
   const [response, setResponse] = useState<PagedResponse<DeliveryChallan> | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [drivers, setDrivers] = useState<Driver[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [editingChallan, setEditingChallan] = useState<DeliveryChallan | undefined>()
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -55,7 +57,7 @@ export function DeliveryChallansPage() {
     setErrorMessage(null)
 
     try {
-      const [challanPage, customerPage, productPage] = await Promise.all([
+      const [challanPage, customerPage, driverPage, productPage] = await Promise.all([
         getDeliveryChallans({
           pageNumber,
           pageSize,
@@ -64,10 +66,12 @@ export function DeliveryChallansPage() {
           challanNumber,
         }),
         getCustomers(1, 100, '', 'true'),
+        getDrivers(1, 100, '', 'true'),
         getProducts(1, 100),
       ])
       setResponse(challanPage)
       setCustomers(customerPage.items)
+      setDrivers(driverPage.items)
       setProducts(productPage.items)
     } catch (error) {
       setErrorMessage(getErrorMessage(error))
@@ -186,6 +190,7 @@ export function DeliveryChallansPage() {
       {isFormOpen ? (
         <DeliveryChallanForm
           customers={customers}
+          drivers={drivers}
           errors={fieldErrors}
           initialValue={editingChallan}
           isSubmitting={isSaving}

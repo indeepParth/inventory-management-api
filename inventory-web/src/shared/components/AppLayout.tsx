@@ -13,6 +13,7 @@ const navItems: NavItem[] = [
   { label: 'Products', to: '/app/products', policy: 'readProducts' },
   { label: 'Categories', to: '/app/categories', policy: 'readProducts' },
   { label: 'Customers', to: '/app/customers', policy: 'readCustomers' },
+  { label: 'Drivers', to: '/app/drivers', policy: 'readDrivers' },
   { label: 'Suppliers', to: '/app/suppliers', policy: 'readSuppliers' },
   { label: 'Purchases', to: '/app/purchases', policy: 'managePurchases' },
   { label: 'Challans', to: '/app/challans', policy: 'manageDeliveryChallans' },

@@ -19,6 +19,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             Query(customerId, status, dateFrom, dateTo, challanNumber)
                 .AsNoTracking()
                 .Include(x => x.Customer)
+                .Include(x => x.Driver)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
                 .Include(x => x.Items)
@@ -34,10 +35,38 @@ namespace InventoryManagement.Infrastructure.Repositories
             Query(customerId, status, dateFrom, dateTo, challanNumber)
                 .CountAsync(cancellationToken);
 
+        public Task<List<DeliveryChallan>> GetDriverDeliveriesAsync(
+            int driverId,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            bool? isDeliveryChargePaid,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken = default) =>
+            DriverDeliveriesQuery(driverId, dateFrom, dateTo, isDeliveryChargePaid)
+                .AsNoTracking()
+                .Include(x => x.Customer)
+                .Include(x => x.Items)
+                .OrderByDescending(x => x.ChallanDate)
+                .ThenByDescending(x => x.Id)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+
+        public Task<int> GetDriverDeliveriesCountAsync(
+            int driverId,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            bool? isDeliveryChargePaid,
+            CancellationToken cancellationToken = default) =>
+            DriverDeliveriesQuery(driverId, dateFrom, dateTo, isDeliveryChargePaid)
+                .CountAsync(cancellationToken);
+
         public Task<DeliveryChallan?> GetByIdAsync(
             int id, CancellationToken cancellationToken = default) =>
             _context.DeliveryChallans.AsNoTracking()
                 .Include(x => x.Customer)
+                .Include(x => x.Driver)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
                 .Include(x => x.Items)
@@ -48,6 +77,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             int id, CancellationToken cancellationToken = default) =>
             _context.DeliveryChallans
                 .Include(x => x.Customer)
+                .Include(x => x.Driver)
                 .Include(x => x.Items).ThenInclude(x => x.Product)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
@@ -106,6 +136,29 @@ namespace InventoryManagement.Infrastructure.Repositories
                 var value = challanNumber.Trim();
                 query = query.Where(x => x.ChallanNumber.Contains(value));
             }
+            return query;
+        }
+
+        private IQueryable<DeliveryChallan> DriverDeliveriesQuery(
+            int driverId,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            bool? isDeliveryChargePaid)
+        {
+            IQueryable<DeliveryChallan> query = _context.DeliveryChallans
+                .Where(x => x.DriverId == driverId)
+                .Where(x =>
+                    x.Status == DeliveryChallanStatus.Posted ||
+                    x.Status == DeliveryChallanStatus.Invoiced);
+
+            if (dateFrom.HasValue) query = query.Where(x => x.ChallanDate >= dateFrom);
+            if (dateTo.HasValue) query = query.Where(x => x.ChallanDate <= dateTo);
+            if (isDeliveryChargePaid.HasValue)
+            {
+                query = query.Where(
+                    x => x.IsDeliveryChargePaid == isDeliveryChargePaid.Value);
+            }
+
             return query;
         }
     }

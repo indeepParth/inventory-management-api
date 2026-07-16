@@ -17,6 +17,9 @@ namespace InventoryManagement.Application.Authorization
         public const string ManageCustomers = nameof(ManageCustomers);
         public const string ViewCustomerStatements = nameof(ViewCustomerStatements);
 
+        public const string ReadDrivers = nameof(ReadDrivers);
+        public const string ManageDrivers = nameof(ManageDrivers);
+
         public const string ReadSuppliers = nameof(ReadSuppliers);
         public const string ManageSuppliers = nameof(ManageSuppliers);
         public const string ViewSupplierStatements = nameof(ViewSupplierStatements);

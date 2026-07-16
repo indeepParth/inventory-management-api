@@ -912,6 +912,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                     ChallanNumber = challanNumber,
                     CustomerId = seed.CustomerId,
                     ChallanDate = new DateTime(2026, 7, 1),
+                    DeliveryFromAddress = "Dispatch warehouse",
                     DeliveryAddress = "Test address",
                     Items =
                     {

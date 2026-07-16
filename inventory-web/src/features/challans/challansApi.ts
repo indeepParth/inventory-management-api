@@ -28,8 +28,12 @@ export type DeliveryChallan = {
   challanDate: string
   status: DeliveryChallanStatus
   vehicleNumber?: string
+  driverId?: number | null
   driverName?: string
+  deliveryFromAddress: string
   deliveryAddress: string
+  deliveryCharge: number
+  isDeliveryChargePaid: boolean
   notes?: string
   createdAtUtc: string
   updatedAtUtc: string
@@ -51,8 +55,10 @@ export type DeliveryChallanFormValues = {
   customerId: number
   challanDate: string
   vehicleNumber: string
-  driverName: string
+  driverId: number | null
+  deliveryFromAddress: string
   deliveryAddress: string
+  deliveryCharge: number
   notes: string
   items: DeliveryChallanItemFormValues[]
 }
@@ -138,6 +144,12 @@ export function postDeliveryChallan(id: number): Promise<DeliveryChallan> {
 
 export function cancelDeliveryChallan(id: number): Promise<DeliveryChallan> {
   return apiRequest<DeliveryChallan>(`/api/delivery-challans/${id}/cancel`, {
+    method: 'POST',
+  })
+}
+
+export function markDeliveryChargePaid(id: number): Promise<DeliveryChallan> {
+  return apiRequest<DeliveryChallan>(`/api/delivery-challans/${id}/delivery-charge/mark-paid`, {
     method: 'POST',
   })
 }

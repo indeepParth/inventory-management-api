@@ -10,15 +10,18 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.UpdateDelive
     {
         private readonly IDeliveryChallanRepository _challans;
         private readonly ICustomerRepository _customers;
+        private readonly IDriverRepository _drivers;
         private readonly IProductRepository _products;
 
         public Handler(
             IDeliveryChallanRepository challans,
             ICustomerRepository customers,
+            IDriverRepository drivers,
             IProductRepository products)
         {
             _challans = challans;
             _customers = customers;
+            _drivers = drivers;
             _products = products;
         }
 
@@ -43,6 +46,17 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.UpdateDelive
             if (!customer.IsActive)
                 throw new BadRequestException("Customer is inactive.");
 
+            Driver? driver = null;
+            if (request.DriverId.HasValue)
+            {
+                driver = await _drivers.GetByIdAsync(
+                    request.DriverId.Value, cancellationToken);
+                if (driver is null)
+                    throw new NotFoundException("Driver not found.");
+                if (!driver.IsActive)
+                    throw new BadRequestException("Driver is inactive.");
+            }
+
             var replacementItems = new List<DeliveryChallanItem>();
             foreach (var input in request.Items)
             {
@@ -64,8 +78,12 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.UpdateDelive
             challan.Customer = customer;
             challan.ChallanDate = request.ChallanDate;
             challan.VehicleNumber = Normalize(request.VehicleNumber);
+            challan.DriverId = driver?.Id;
+            challan.Driver = driver;
             challan.DriverName = Normalize(request.DriverName);
+            challan.DeliveryFromAddress = request.DeliveryFromAddress.Trim();
             challan.DeliveryAddress = request.DeliveryAddress.Trim();
+            challan.DeliveryCharge = request.DeliveryCharge;
             challan.Notes = Normalize(request.Notes);
             challan.UpdatedAtUtc = DateTime.UtcNow;
             _challans.RemoveItems(challan.Items);

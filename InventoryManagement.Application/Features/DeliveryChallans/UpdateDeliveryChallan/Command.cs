@@ -8,8 +8,11 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.UpdateDelive
         int CustomerId,
         DateTime ChallanDate,
         string? VehicleNumber,
+        int? DriverId,
         string? DriverName,
+        string DeliveryFromAddress,
         string DeliveryAddress,
+        decimal DeliveryCharge,
         string? Notes,
         List<DeliveryChallanItemInput> Items) : IRequest<DeliveryChallanResponse>;
 

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { getFieldError, type FieldErrors } from '../../shared/api/apiErrorMessages'
+import type { Driver } from '../drivers/driversApi'
 import type { Customer } from '../parties/partiesApi'
 import type { Product } from '../products/productsApi'
 import type {
@@ -10,6 +11,7 @@ import type {
 
 type DeliveryChallanFormProps = {
   customers: Customer[]
+  drivers: Driver[]
   products: Product[]
   initialValue?: DeliveryChallan
   initialCustomerId?: number
@@ -38,6 +40,7 @@ function createBlankItem(productId: number): DeliveryChallanItemFormValues {
 
 export function DeliveryChallanForm({
   customers,
+  drivers,
   products,
   initialValue,
   initialCustomerId,
@@ -56,8 +59,10 @@ export function DeliveryChallanForm({
   const [customerId, setCustomerId] = useState(defaultCustomerId)
   const [challanDate, setChallanDate] = useState(toDateInputValue(initialValue?.challanDate))
   const [vehicleNumber, setVehicleNumber] = useState(initialValue?.vehicleNumber ?? '')
-  const [driverName, setDriverName] = useState(initialValue?.driverName ?? '')
+  const [driverId, setDriverId] = useState(initialValue?.driverId ?? 0)
+  const [deliveryFromAddress, setDeliveryFromAddress] = useState(initialValue?.deliveryFromAddress ?? '')
   const [deliveryAddress, setDeliveryAddress] = useState(defaultDeliveryAddress)
+  const [deliveryCharge, setDeliveryCharge] = useState((initialValue?.deliveryCharge ?? 0).toString())
   const [notes, setNotes] = useState(initialValue?.notes ?? '')
   const [items, setItems] = useState<DeliveryChallanItemFormValues[]>(
     initialValue?.items.map((item) => ({
@@ -71,8 +76,10 @@ export function DeliveryChallanForm({
     setCustomerId(defaultCustomerId)
     setChallanDate(toDateInputValue(initialValue?.challanDate))
     setVehicleNumber(initialValue?.vehicleNumber ?? '')
-    setDriverName(initialValue?.driverName ?? '')
+    setDriverId(initialValue?.driverId ?? 0)
+    setDeliveryFromAddress(initialValue?.deliveryFromAddress ?? '')
     setDeliveryAddress(defaultDeliveryAddress)
+    setDeliveryCharge((initialValue?.deliveryCharge ?? 0).toString())
     setNotes(initialValue?.notes ?? '')
     setItems(
       initialValue?.items.map((item) => ({
@@ -101,8 +108,10 @@ export function DeliveryChallanForm({
       customerId,
       challanDate,
       vehicleNumber,
-      driverName,
+      driverId: driverId > 0 ? driverId : null,
+      deliveryFromAddress,
       deliveryAddress,
+      deliveryCharge: Number(deliveryCharge),
       notes,
       items,
     })
@@ -133,16 +142,35 @@ export function DeliveryChallanForm({
           <input disabled={isSubmitting} maxLength={50} onChange={(event) => setVehicleNumber(event.target.value)} type="text" value={vehicleNumber} />
         </label>
         <label className="form-field">
-          <span>Driver name</span>
-          <input disabled={isSubmitting} maxLength={150} onChange={(event) => setDriverName(event.target.value)} type="text" value={driverName} />
+          <span>Driver</span>
+          <select disabled={isSubmitting} onChange={(event) => setDriverId(Number(event.target.value))} value={driverId}>
+            <option value={0}>No driver selected</option>
+            {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
+          </select>
+          {getFieldError(errors, 'DriverId') ? <span className="field-error">{getFieldError(errors, 'DriverId')}</span> : null}
         </label>
       </div>
 
       <label className="form-field">
-        <span>Delivery address</span>
+        <span>Delivery from address</span>
+        <textarea disabled={isSubmitting} maxLength={500} onChange={(event) => setDeliveryFromAddress(event.target.value)} required rows={3} value={deliveryFromAddress} />
+        {getFieldError(errors, 'DeliveryFromAddress') ? <span className="field-error">{getFieldError(errors, 'DeliveryFromAddress')}</span> : null}
+      </label>
+      <label className="form-field">
+        <span>Delivery to address</span>
         <textarea disabled={isSubmitting} maxLength={500} onChange={(event) => setDeliveryAddress(event.target.value)} required rows={3} value={deliveryAddress} />
         {getFieldError(errors, 'DeliveryAddress') ? <span className="field-error">{getFieldError(errors, 'DeliveryAddress')}</span> : null}
       </label>
+      <label className="form-field">
+        <span>Delivery charge</span>
+        <input disabled={isSubmitting} min="0" onChange={(event) => setDeliveryCharge(event.target.value)} required step="0.01" type="number" value={deliveryCharge} />
+        {getFieldError(errors, 'DeliveryCharge') ? <span className="field-error">{getFieldError(errors, 'DeliveryCharge')}</span> : null}
+      </label>
+      {initialValue && initialValue.deliveryCharge > 0 ? (
+        <p className="state-message">
+          Delivery charge status: {initialValue.isDeliveryChargePaid ? 'Paid' : 'Unpaid'}
+        </p>
+      ) : null}
       <label className="form-field">
         <span>Notes</span>
         <textarea disabled={isSubmitting} maxLength={1000} onChange={(event) => setNotes(event.target.value)} rows={2} value={notes} />

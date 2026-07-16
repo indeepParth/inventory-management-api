@@ -10,8 +10,11 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
             RuleFor(x => x.CustomerId).GreaterThan(0);
             RuleFor(x => x.ChallanDate).NotEmpty();
             RuleFor(x => x.VehicleNumber).MaximumLength(50);
+            RuleFor(x => x.DriverId).GreaterThan(0).When(x => x.DriverId.HasValue);
             RuleFor(x => x.DriverName).MaximumLength(150);
+            RuleFor(x => x.DeliveryFromAddress).NotEmpty().MaximumLength(500);
             RuleFor(x => x.DeliveryAddress).NotEmpty().MaximumLength(500);
+            RuleFor(x => x.DeliveryCharge).GreaterThanOrEqualTo(0);
             RuleFor(x => x.Notes).MaximumLength(1000);
             RuleFor(x => x.Items).NotEmpty();
             RuleForEach(x => x.Items).SetValidator(new ItemValidator());

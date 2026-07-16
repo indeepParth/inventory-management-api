@@ -21,6 +21,20 @@ namespace InventoryManagement.Application.Common.Persistence
             DateTime? dateTo,
             string? challanNumber,
             CancellationToken cancellationToken = default);
+        Task<List<DeliveryChallan>> GetDriverDeliveriesAsync(
+            int driverId,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            bool? isDeliveryChargePaid,
+            int pageNumber,
+            int pageSize,
+            CancellationToken cancellationToken = default);
+        Task<int> GetDriverDeliveriesCountAsync(
+            int driverId,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            bool? isDeliveryChargePaid,
+            CancellationToken cancellationToken = default);
         Task<DeliveryChallan?> GetByIdAsync(
             int id,
             CancellationToken cancellationToken = default);

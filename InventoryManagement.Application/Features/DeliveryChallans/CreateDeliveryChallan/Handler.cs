@@ -11,17 +11,20 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
     {
         private readonly IDeliveryChallanRepository _challans;
         private readonly ICustomerRepository _customers;
+        private readonly IDriverRepository _drivers;
         private readonly IProductRepository _products;
         private readonly ICurrentUserService _currentUser;
 
         public Handler(
             IDeliveryChallanRepository challans,
             ICustomerRepository customers,
+            IDriverRepository drivers,
             IProductRepository products,
             ICurrentUserService currentUser)
         {
             _challans = challans;
             _customers = customers;
+            _drivers = drivers;
             _products = products;
             _currentUser = currentUser;
         }
@@ -41,6 +44,17 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
             if (!customer.IsActive)
                 throw new BadRequestException("Customer is inactive.");
 
+            Driver? driver = null;
+            if (request.DriverId.HasValue)
+            {
+                driver = await _drivers.GetByIdAsync(
+                    request.DriverId.Value, cancellationToken);
+                if (driver is null)
+                    throw new NotFoundException("Driver not found.");
+                if (!driver.IsActive)
+                    throw new BadRequestException("Driver is inactive.");
+            }
+
             var now = DateTime.UtcNow;
             var challan = new DeliveryChallan
             {
@@ -50,8 +64,13 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
                 ChallanDate = request.ChallanDate,
                 Status = DeliveryChallanStatus.Draft,
                 VehicleNumber = Normalize(request.VehicleNumber),
+                DriverId = driver?.Id,
+                Driver = driver,
                 DriverName = Normalize(request.DriverName),
+                DeliveryFromAddress = request.DeliveryFromAddress.Trim(),
                 DeliveryAddress = request.DeliveryAddress.Trim(),
+                DeliveryCharge = request.DeliveryCharge,
+                IsDeliveryChargePaid = false,
                 Notes = Normalize(request.Notes),
                 CreatedAtUtc = now,
                 UpdatedAtUtc = now,

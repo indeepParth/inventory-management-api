@@ -9,6 +9,8 @@ import { CustomerReturnsPage } from '../pages/CustomerReturnsPage'
 import { CustomersPage } from '../pages/CustomersPage'
 import { DashboardPage } from '../pages/DashboardPage'
 import { DeliveryChallansPage } from '../pages/DeliveryChallansPage'
+import { DriverDetailPage } from '../pages/DriverDetailPage'
+import { DriversPage } from '../pages/DriversPage'
 import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
@@ -48,6 +50,10 @@ export function App() {
               <Route element={<RoleProtectedRoute policy="readCustomers" />}>
                 <Route path="customers" element={<CustomersPage />} />
                 <Route path="customers/:id" element={<CustomerDetailPage />} />
+              </Route>
+              <Route element={<RoleProtectedRoute policy="readDrivers" />}>
+                <Route path="drivers" element={<DriversPage />} />
+                <Route path="drivers/:id" element={<DriverDetailPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="readSuppliers" />}>
                 <Route path="suppliers" element={<SuppliersPage />} />

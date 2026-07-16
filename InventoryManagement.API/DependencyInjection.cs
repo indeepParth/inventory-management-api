@@ -138,6 +138,16 @@ namespace InventoryManagement.API
                         ApplicationRoles.Manager,
                         ApplicationRoles.Sales));
 
+                options.AddPolicy(AuthorizationPolicies.ReadDrivers,
+                    policy => policy.RequireRole(
+                        ApplicationRoles.Admin,
+                        ApplicationRoles.Manager,
+                        ApplicationRoles.Sales));
+                options.AddPolicy(AuthorizationPolicies.ManageDrivers,
+                    policy => policy.RequireRole(
+                        ApplicationRoles.Admin,
+                        ApplicationRoles.Manager));
+
                 options.AddPolicy(AuthorizationPolicies.ReadSuppliers,
                     policy => policy.RequireRole(
                         ApplicationRoles.Admin,

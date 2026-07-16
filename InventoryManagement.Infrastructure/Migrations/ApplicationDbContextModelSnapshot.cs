@@ -259,12 +259,27 @@ namespace InventoryManagement.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<decimal>("DeliveryCharge")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DeliveryFromAddress")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("DriverId")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("DriverName")
                         .HasMaxLength(150)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("InvoicedAtUtc")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeliveryChargePaid")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -289,6 +304,8 @@ namespace InventoryManagement.Infrastructure.Migrations
                         .IsUnique();
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("DriverId");
 
                     b.ToTable("DeliveryChallans");
                 });
@@ -316,6 +333,43 @@ namespace InventoryManagement.Infrastructure.Migrations
                     b.HasIndex("ProductId");
 
                     b.ToTable("DeliveryChallanItems");
+                });
+
+            modelBuilder.Entity("InventoryManagement.Domain.Entities.Driver", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("LicenseNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Drivers");
                 });
 
             modelBuilder.Entity("InventoryManagement.Domain.Entities.Payment", b =>
@@ -1176,7 +1230,14 @@ namespace InventoryManagement.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("InventoryManagement.Domain.Entities.Driver", "Driver")
+                        .WithMany()
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Customer");
+
+                    b.Navigation("Driver");
                 });
 
             modelBuilder.Entity("InventoryManagement.Domain.Entities.DeliveryChallanItem", b =>

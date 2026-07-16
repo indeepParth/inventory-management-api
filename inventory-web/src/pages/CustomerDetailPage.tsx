@@ -11,6 +11,7 @@ import {
   type DeliveryChallan,
   type DeliveryChallanFormValues,
 } from '../features/challans/challansApi'
+import { getDrivers, type Driver } from '../features/drivers/driversApi'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getCustomer, type Customer } from '../features/parties/partiesApi'
 import { PaymentForm } from '../features/payments/PaymentForm'
@@ -90,6 +91,7 @@ export function CustomerDetailPage() {
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [invoices, setInvoices] = useState<SalesInvoice[]>([])
   const [customerChallans, setCustomerChallans] = useState<DeliveryChallan[]>([])
+  const [drivers, setDrivers] = useState<Driver[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [editingChallan, setEditingChallan] = useState<DeliveryChallan | undefined>()
   const [paymentInvoice, setPaymentInvoice] = useState<SalesInvoice | undefined>()
@@ -119,7 +121,7 @@ export function CustomerDetailPage() {
     setErrorMessage(null)
 
     try {
-      const [customerResponse, invoiceResponse, challanResponse, productResponse] = await Promise.all([
+      const [customerResponse, invoiceResponse, challanResponse, driverResponse, productResponse] = await Promise.all([
         getCustomer(customerId),
         getSalesInvoices({
           pageNumber: 1,
@@ -139,12 +141,14 @@ export function CustomerDetailPage() {
           dateFrom: fromDate,
           dateTo: toDate,
         }),
+        getDrivers(1, 100, '', 'true'),
         getProducts(1, 100),
       ])
 
       setCustomer(customerResponse)
       setInvoices(invoiceResponse.items.filter(isCollectionInvoice))
       setCustomerChallans(challanResponse.items)
+      setDrivers(driverResponse.items)
       setProducts(productResponse.items)
     } catch (error) {
       setErrorMessage(getErrorMessage(error))
@@ -375,6 +379,7 @@ export function CustomerDetailPage() {
           {isChallanFormOpen ? (
             <DeliveryChallanForm
               customers={[customer]}
+              drivers={drivers}
               errors={fieldErrors}
               initialCustomerId={customer.id}
               initialDeliveryAddress={customer.deliveryAddress}

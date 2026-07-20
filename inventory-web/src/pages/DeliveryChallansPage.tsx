@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { hasRouteAccess } from '../features/auth/roleAccess'
 import { useAuth } from '../features/auth/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { DeliveryChallanForm } from '../features/challans/DeliveryChallanForm'
 import {
   cancelDeliveryChallan,
@@ -221,7 +221,7 @@ export function DeliveryChallansPage() {
               <tbody>
                 {challans.map((challan) => (
                   <tr key={challan.id}>
-                    <td>{challan.challanNumber}</td>
+                    <td><Link className="text-link" to={`/app/challans/${challan.id}`}>{challan.challanNumber}</Link></td>
                     <td>{challan.customerName}</td>
                     <td>{formatDate(challan.challanDate)}</td>
                     <td>{getDeliveryChallanStatusLabel(challan.status)}</td>

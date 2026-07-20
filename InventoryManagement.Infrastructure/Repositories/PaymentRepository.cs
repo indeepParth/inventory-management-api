@@ -33,6 +33,18 @@ namespace InventoryManagement.Infrastructure.Repositories
                     dateFrom, dateTo, receiptNumber)
                 .CountAsync(cancellationToken);
 
+        public Task<List<Payment>> GetBySalesInvoiceIdAsync(
+            int salesInvoiceId,
+            CancellationToken cancellationToken = default) =>
+            _context.Payments.AsNoTracking()
+                .Include(x => x.Customer)
+                .Include(x => x.SalesInvoice)
+                .Include(x => x.Reversal)
+                .Where(x => x.SalesInvoiceId == salesInvoiceId)
+                .OrderByDescending(x => x.PaymentDate)
+                .ThenByDescending(x => x.Id)
+                .ToListAsync(cancellationToken);
+
         public Task<bool> ReceiptNumberExistsAsync(
             string receiptNumber, CancellationToken cancellationToken = default) =>
             _context.Payments.AnyAsync(x => x.ReceiptNumber == receiptNumber, cancellationToken);

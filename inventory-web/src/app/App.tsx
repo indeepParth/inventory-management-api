@@ -8,6 +8,7 @@ import { CustomerDetailPage } from '../pages/CustomerDetailPage'
 import { CustomerReturnsPage } from '../pages/CustomerReturnsPage'
 import { CustomersPage } from '../pages/CustomersPage'
 import { DashboardPage } from '../pages/DashboardPage'
+import { DeliveryChallanDetailPage } from '../pages/DeliveryChallanDetailPage'
 import { DeliveryChallansPage } from '../pages/DeliveryChallansPage'
 import { DriverDetailPage } from '../pages/DriverDetailPage'
 import { DriversPage } from '../pages/DriversPage'
@@ -18,6 +19,7 @@ import { PaymentsPage } from '../pages/PaymentsPage'
 import { ProductsPage } from '../pages/ProductsPage'
 import { PurchasesPage } from '../pages/PurchasesPage'
 import { ReportsPage } from '../pages/ReportsPage'
+import { SalesInvoiceDetailPage } from '../pages/SalesInvoiceDetailPage'
 import { SalesInvoicesPage } from '../pages/SalesInvoicesPage'
 import { StockMovementsPage } from '../pages/StockMovementsPage'
 import { SupplierDetailPage } from '../pages/SupplierDetailPage'
@@ -64,9 +66,11 @@ export function App() {
               </Route>
               <Route element={<RoleProtectedRoute policy="manageDeliveryChallans" />}>
                 <Route path="challans" element={<DeliveryChallansPage />} />
+                <Route path="challans/:id" element={<DeliveryChallanDetailPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="manageSalesInvoices" />}>
                 <Route path="sales-invoices" element={<SalesInvoicesPage />} />
+                <Route path="sales-invoices/:id" element={<SalesInvoiceDetailPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="viewPayments" />}>
                 <Route path="payments" element={<PaymentsPage />} />

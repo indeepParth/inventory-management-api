@@ -22,8 +22,10 @@ export type SalesInvoiceItem = {
   taxRate: number
   taxAmount: number
   lineTotal: number
-  costAtSale?: number
-  deliveryChallanItemId?: number
+  costAtSale?: number | null
+  deliveryChallanItemId?: number | null
+  deliveryChallanId?: number | null
+  deliveryChallanNumber?: string | null
 }
 
 export type SalesInvoice = {
@@ -47,6 +49,46 @@ export type SalesInvoice = {
   cancelledAtUtc?: string
   createdBy: string
   items: SalesInvoiceItem[]
+}
+
+export type SalesInvoiceSourceChallan = {
+  id: number
+  challanNumber: string
+}
+
+export type SalesInvoicePayment = {
+  id: number
+  receiptNumber: string
+  paymentDate: string
+  amount: number
+  method: 0 | 1 | 2 | 3 | 4
+  externalReference?: string
+  note?: string
+  createdAtUtc: string
+  createdBy: string
+  reversesPaymentId?: number
+  reversalPaymentId?: number
+}
+
+export type SalesInvoiceCustomerReturn = {
+  id: number
+  returnNumber: string
+  returnDate: string
+  status: 0 | 1 | 2
+  subtotal: number
+  taxAmount: number
+  grandTotal: number
+  createdAtUtc: string
+  updatedAtUtc: string
+  postedAtUtc?: string
+  cancelledAtUtc?: string
+  createdBy: string
+}
+
+export type SalesInvoiceDetail = SalesInvoice & {
+  sourceChallans: SalesInvoiceSourceChallan[]
+  payments: SalesInvoicePayment[]
+  customerReturns: SalesInvoiceCustomerReturn[]
 }
 
 export type DirectInvoiceItemFormValues = {
@@ -126,6 +168,10 @@ export function getSalesInvoices(
   return apiRequest<PagedResponse<SalesInvoice>>(
     `/api/sales-invoices?${buildInvoiceQuery(filters)}`,
   )
+}
+
+export function getSalesInvoice(id: number): Promise<SalesInvoiceDetail> {
+  return apiRequest<SalesInvoiceDetail>(`/api/sales-invoices/${id}`)
 }
 
 export function createDirectInvoice(values: DirectInvoiceFormValues): Promise<SalesInvoice> {

@@ -15,6 +15,9 @@ namespace InventoryManagement.Application.Common.Persistence
             PaymentMethod? method,
             DateTime? dateFrom, DateTime? dateTo, string? receiptNumber,
             CancellationToken cancellationToken = default);
+        Task<List<Payment>> GetBySalesInvoiceIdAsync(
+            int salesInvoiceId,
+            CancellationToken cancellationToken = default);
         Task<bool> ReceiptNumberExistsAsync(
             string receiptNumber, CancellationToken cancellationToken = default);
         Task<Customer?> GetCustomerForUpdateAsync(

@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { hasRouteAccess } from '../features/auth/roleAccess'
+import { useAuth } from '../features/auth/AuthContext'
 import {
   getCurrentStock,
   getGrossProfit,
@@ -20,6 +23,8 @@ const pageSize = 10
 type ReportTab = 'stock' | 'purchases' | 'sales' | 'grossProfit'
 
 export function ReportsPage() {
+  const { currentUser } = useAuth()
+  const canViewInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
   const [tab, setTab] = useState<ReportTab>('stock')
   const [stock, setStock] = useState<PagedResponse<CurrentStockItem> | null>(null)
   const [purchases, setPurchases] = useState<RegisterResponse<PurchaseRegisterItem> | null>(null)
@@ -192,7 +197,13 @@ export function ReportsPage() {
               <tbody>
                 {sales.items.map((item) => (
                   <tr key={item.salesInvoiceId}>
-                    <td>{item.invoiceNumber}</td>
+                    <td>
+                      {canViewInvoices ? (
+                        <Link className="text-link" to={`/app/sales-invoices/${item.salesInvoiceId}`}>{item.invoiceNumber}</Link>
+                      ) : (
+                        item.invoiceNumber
+                      )}
+                    </td>
                     <td>{item.customerName}</td>
                     <td>{formatDate(item.date)}</td>
                     <td>{formatQuantity(item.totalQuantity)}</td>

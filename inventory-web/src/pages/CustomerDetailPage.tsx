@@ -473,7 +473,13 @@ export function CustomerDetailPage() {
                 <tbody>
                   {visibleInvoices.map((invoice) => (
                     <tr key={invoice.id}>
-                      <td>{invoice.invoiceNumber}</td>
+                      <td>
+                        {canCreateInvoices ? (
+                          <Link className="text-link" to={`/app/sales-invoices/${invoice.id}`}>{invoice.invoiceNumber}</Link>
+                        ) : (
+                          invoice.invoiceNumber
+                        )}
+                      </td>
                       <td>{formatDate(invoice.invoiceDate)}</td>
                       <td>{getSalesInvoiceStatusLabel(invoice.status as SalesInvoiceStatus)}</td>
                       <td>{formatCurrency(invoice.grandTotal)}</td>
@@ -514,7 +520,13 @@ export function CustomerDetailPage() {
                 <tbody>
                   {customerChallans.map((challan) => (
                     <tr key={challan.id}>
-                      <td>{challan.challanNumber}</td>
+                      <td>
+                        {canManageChallans ? (
+                          <Link className="text-link" to={`/app/challans/${challan.id}`}>{challan.challanNumber}</Link>
+                        ) : (
+                          challan.challanNumber
+                        )}
+                      </td>
                       <td>{formatDate(challan.challanDate)}</td>
                       <td>{getDeliveryChallanStatusLabel(challan.status)}</td>
                       <td>{challan.items.length}</td>

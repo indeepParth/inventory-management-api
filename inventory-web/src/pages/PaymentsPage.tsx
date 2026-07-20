@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { hasRouteAccess } from '../features/auth/roleAccess'
 import { useAuth } from '../features/auth/AuthContext'
 import { getCustomers, getSuppliers, type Customer, type Supplier } from '../features/parties/partiesApi'
@@ -50,6 +51,7 @@ function getPaymentState(payment: Payment): string {
 export function PaymentsPage() {
   const { currentUser } = useAuth()
   const canReversePayments = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
+  const canViewInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
   const [response, setResponse] = useState<PagedResponse<Payment> | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
@@ -237,7 +239,13 @@ export function PaymentsPage() {
                       <span>{formatDate(payment.paymentDate)}</span>
                     </td>
                     <td>{getPartyName(payment)}</td>
-                    <td>{getDocumentName(payment)}</td>
+                    <td>
+                      {payment.salesInvoiceId && payment.invoiceNumber && canViewInvoices ? (
+                        <Link className="text-link" to={`/app/sales-invoices/${payment.salesInvoiceId}`}>{payment.invoiceNumber}</Link>
+                      ) : (
+                        getDocumentName(payment)
+                      )}
+                    </td>
                     <td>{getPaymentMethodLabel(payment.method as PaymentMethod)}</td>
                     <td>{formatCurrency(payment.amount)}</td>
                     <td>{getPaymentState(payment)}</td>

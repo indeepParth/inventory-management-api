@@ -31,6 +31,17 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
+        public Task<List<CustomerReturn>> GetBySalesInvoiceIdAsync(
+            int salesInvoiceId,
+            CancellationToken cancellationToken = default)
+        {
+            return Query().AsNoTracking()
+                .Where(x => x.SalesInvoiceId == salesInvoiceId)
+                .OrderByDescending(x => x.ReturnDate)
+                .ThenByDescending(x => x.Id)
+                .ToListAsync(cancellationToken);
+        }
+
         public Task<SalesInvoice?> GetInvoiceForReturnAsync(
             int invoiceId,
             CancellationToken cancellationToken = default)

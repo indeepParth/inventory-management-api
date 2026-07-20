@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { hasRouteAccess } from '../features/auth/roleAccess'
+import { useAuth } from '../features/auth/AuthContext'
 import { markDeliveryChargePaid } from '../features/challans/challansApi'
 import {
   getDriverDeliveries,
@@ -23,7 +25,9 @@ function canMarkDeliveryChargePaid(delivery: DriverDeliveryRow): boolean {
 
 export function DriverDetailPage() {
   const { id } = useParams()
+  const { currentUser } = useAuth()
   const driverId = Number(id)
+  const canManageChallans = hasRouteAccess(currentUser?.roles ?? [], 'manageDeliveryChallans')
   const [response, setResponse] = useState<DriverDeliveriesResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [pageNumber, setPageNumber] = useState(1)
@@ -156,7 +160,13 @@ export function DriverDetailPage() {
                     {deliveries.map((delivery) => (
                       <tr key={delivery.challanId}>
                         <td>{formatDate(delivery.challanDate)}</td>
-                        <td>{delivery.challanNumber}</td>
+                        <td>
+                          {canManageChallans ? (
+                            <Link className="text-link" to={`/app/challans/${delivery.challanId}`}>{delivery.challanNumber}</Link>
+                          ) : (
+                            delivery.challanNumber
+                          )}
+                        </td>
                         <td>{delivery.customerName}</td>
                         <td>{delivery.deliveryFromAddress || '-'}</td>
                         <td>{delivery.deliveryToAddress || '-'}</td>

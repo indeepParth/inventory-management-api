@@ -6,7 +6,7 @@ import {
   getDeliveryChallans,
   type DeliveryChallan,
 } from '../features/challans/challansApi'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { getCustomers, type Customer } from '../features/parties/partiesApi'
 import { getProducts, type Product } from '../features/products/productsApi'
 import { ChallanInvoiceForm } from '../features/salesInvoices/ChallanInvoiceForm'
@@ -343,7 +343,7 @@ export function SalesInvoicesPage() {
                 {invoices.map((invoice) => (
                   <tr key={invoice.id}>
                     <td>
-                      <strong>{invoice.invoiceNumber}</strong>
+                      <Link className="text-link" to={`/app/sales-invoices/${invoice.id}`}>{invoice.invoiceNumber}</Link>
                       <br />
                       <span>{invoice.items.some((item) => item.deliveryChallanItemId) ? 'From challans' : 'Direct'}</span>
                     </td>

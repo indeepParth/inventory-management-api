@@ -109,6 +109,9 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Customer)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
+                .Include(x => x.Items)
+                    .ThenInclude(x => x.DeliveryChallanItem!)
+                        .ThenInclude(x => x.DeliveryChallan)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 

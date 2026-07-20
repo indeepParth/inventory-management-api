@@ -10,6 +10,9 @@ namespace InventoryManagement.Application.Common.Persistence
         Task<CustomerReturn?> GetForUpdateAsync(
             int id,
             CancellationToken cancellationToken = default);
+        Task<List<CustomerReturn>> GetBySalesInvoiceIdAsync(
+            int salesInvoiceId,
+            CancellationToken cancellationToken = default);
         Task<SalesInvoice?> GetInvoiceForReturnAsync(
             int invoiceId,
             CancellationToken cancellationToken = default);

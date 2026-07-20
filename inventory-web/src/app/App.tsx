@@ -16,6 +16,7 @@ import { HomePage } from '../pages/HomePage'
 import { LoginPage } from '../pages/LoginPage'
 import { NotFoundPage } from '../pages/NotFoundPage'
 import { PaymentsPage } from '../pages/PaymentsPage'
+import { ProfilePage } from '../pages/ProfilePage'
 import { ProductsPage } from '../pages/ProductsPage'
 import { PurchasesPage } from '../pages/PurchasesPage'
 import { ReportsPage } from '../pages/ReportsPage'
@@ -25,6 +26,7 @@ import { StockMovementsPage } from '../pages/StockMovementsPage'
 import { SupplierDetailPage } from '../pages/SupplierDetailPage'
 import { SupplierReturnsPage } from '../pages/SupplierReturnsPage'
 import { SuppliersPage } from '../pages/SuppliersPage'
+import { UsersPage } from '../pages/UsersPage'
 import './App.css'
 
 export function App() {
@@ -44,6 +46,10 @@ export function App() {
               <Route index element={<Navigate to="/app/dashboard" replace />} />
               <Route element={<RoleProtectedRoute policy="allAuthenticated" />}>
                 <Route path="dashboard" element={<DashboardPage />} />
+                <Route path="profile" element={<ProfilePage />} />
+              </Route>
+              <Route element={<RoleProtectedRoute policy="adminOnly" />}>
+                <Route path="users" element={<UsersPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="readProducts" />}>
                 <Route path="products" element={<ProductsPage />} />

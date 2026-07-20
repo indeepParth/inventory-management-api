@@ -61,6 +61,115 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         [Fact]
+        public async Task Me_Should_Return_Current_User_Details()
+        {
+            var user = await CreateUserAsync(ApplicationRoles.Sales);
+            await AuthenticateAsAsync(Client, user.UserName, user.Password);
+
+            var response = await Client.GetAsync("/api/users/me");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var body = await response.Content.ReadAsStringAsync();
+            body.Should().Contain(user.UserName);
+            body.Should().Contain(user.Email);
+            body.Should().Contain(ApplicationRoles.Sales);
+            body.Should().Contain("isDisabled");
+        }
+
+        [Fact]
+        public async Task ChangePassword_Should_Update_Current_User_Password()
+        {
+            var user = await CreateUserAsync(ApplicationRoles.Sales);
+            await AuthenticateAsAsync(Client, user.UserName, user.Password);
+
+            var response = await Client.PostAsJsonAsync(
+                "/api/users/me/change-password",
+                new
+                {
+                    CurrentPassword = user.Password,
+                    NewPassword = "NewPassword123",
+                    ConfirmPassword = "NewPassword123"
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+            await AuthenticateAsAsync(Client, user.UserName, "NewPassword123");
+        }
+
+        [Fact]
+        public async Task ChangePassword_Should_Reject_Wrong_Current_Password()
+        {
+            var user = await CreateUserAsync(ApplicationRoles.Sales);
+            await AuthenticateAsAsync(Client, user.UserName, user.Password);
+
+            var response = await Client.PostAsJsonAsync(
+                "/api/users/me/change-password",
+                new
+                {
+                    CurrentPassword = "WrongPassword123",
+                    NewPassword = "NewPassword123",
+                    ConfirmPassword = "NewPassword123"
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
+        [Fact]
+        public async Task CreateUser_Should_Create_User_With_Valid_Roles()
+        {
+            var admin = await CreateUserAsync(ApplicationRoles.Admin);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password);
+            var unique = Guid.NewGuid().ToString("N");
+            var userName = $"created_{unique}";
+
+            var response = await Client.PostAsJsonAsync(
+                "/api/users",
+                new
+                {
+                    UserName = userName,
+                    Email = $"{userName}@example.com",
+                    Password = "Password123",
+                    Roles = new[] { ApplicationRoles.Sales }
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var body = await response.Content.ReadAsStringAsync();
+            body.Should().Contain(userName);
+            body.Should().Contain(ApplicationRoles.Sales);
+
+            using var scope = _factory.Services.CreateScope();
+            var userManager = scope.ServiceProvider
+                .GetRequiredService<UserManager<ApplicationUser>>();
+            var createdUser = await userManager.FindByNameAsync(userName);
+            createdUser.Should().NotBeNull();
+            createdUser!.Email.Should().Be($"{userName}@example.com");
+            (await userManager.IsInRoleAsync(
+                createdUser,
+                ApplicationRoles.Sales)).Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task CreateUser_Should_Reject_Non_Admin_User()
+        {
+            var user = await CreateUserAsync(ApplicationRoles.Sales);
+            await AuthenticateAsAsync(Client, user.UserName, user.Password);
+
+            var response = await Client.PostAsJsonAsync(
+                "/api/users",
+                new
+                {
+                    UserName = $"created_{Guid.NewGuid():N}",
+                    Email = "created@example.com",
+                    Password = "Password123",
+                    Roles = new[] { ApplicationRoles.Sales }
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        [Fact]
         public async Task AssignRole_Should_Add_Supported_Role()
         {
             var admin = await CreateUserAsync(ApplicationRoles.Admin);
@@ -198,7 +307,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 addRoleResult.Succeeded.Should().BeTrue();
             }
 
-            return new TestUser(user.Id, user.UserName!, password);
+            return new TestUser(user.Id, user.UserName!, user.Email!, password);
         }
 
         private static async Task AuthenticateAsAsync(
@@ -304,6 +413,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         private sealed record TestUser(
             string Id,
             string UserName,
+            string Email,
             string Password);
     }
 }

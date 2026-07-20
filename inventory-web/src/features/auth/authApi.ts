@@ -15,6 +15,7 @@ export type CurrentUser = {
   username: string
   email?: string
   roles: string[]
+  isDisabled: boolean
 }
 
 export function login(request: LoginRequest): Promise<LoginResponse> {

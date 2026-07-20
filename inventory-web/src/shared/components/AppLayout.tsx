@@ -10,6 +10,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', to: '/app/dashboard', policy: 'allAuthenticated' },
+  { label: 'Users', to: '/app/users', policy: 'adminOnly' },
   { label: 'Products', to: '/app/products', policy: 'readProducts' },
   { label: 'Categories', to: '/app/categories', policy: 'readProducts' },
   { label: 'Customers', to: '/app/customers', policy: 'readCustomers' },
@@ -41,12 +42,12 @@ export function AppLayout() {
     <div className="app-layout">
       <aside className="app-sidebar" aria-label="Application navigation">
         <p className="app-brand">Inventory Web</p>
-        <div className="app-user">
+        <NavLink className="app-user" to="/app/profile">
           <span className="app-user-name">
             {isCurrentUserLoading ? 'Loading user...' : currentUser?.username ?? 'Unknown user'}
           </span>
           <span className="app-user-email">{currentUser?.email ?? 'Email not available'}</span>
-        </div>
+        </NavLink>
         <nav className="app-nav">
           {visibleNavItems.map((item) => (
             <NavLink

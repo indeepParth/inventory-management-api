@@ -2,6 +2,7 @@ export type AppRole = 'Admin' | 'Manager' | 'Sales' | 'Inventory'
 
 export type RoutePolicy =
   | 'allAuthenticated'
+  | 'adminOnly'
   | 'adminOrManager'
   | 'readProducts'
   | 'manageProducts'
@@ -20,10 +21,11 @@ export type RoutePolicy =
   | 'manageSupplierReturns'
   | 'viewReports'
 
-const allRoles: AppRole[] = ['Admin', 'Manager', 'Sales', 'Inventory']
+export const allRoles: AppRole[] = ['Admin', 'Manager', 'Sales', 'Inventory']
 
 const policyRoles: Record<RoutePolicy, AppRole[]> = {
   allAuthenticated: allRoles,
+  adminOnly: ['Admin'],
   adminOrManager: ['Admin', 'Manager'],
   readProducts: ['Admin', 'Manager', 'Sales', 'Inventory'],
   manageProducts: ['Admin', 'Manager'],
@@ -44,6 +46,10 @@ const policyRoles: Record<RoutePolicy, AppRole[]> = {
 }
 
 export function hasRouteAccess(userRoles: string[], policy: RoutePolicy): boolean {
+  if (policy === 'allAuthenticated') {
+    return true
+  }
+
   if (userRoles.includes('Admin')) {
     return true
   }

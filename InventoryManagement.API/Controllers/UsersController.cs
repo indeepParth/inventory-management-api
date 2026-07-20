@@ -31,12 +31,17 @@ namespace InventoryManagement.API.Controllers
         }
 
         [HttpGet("me")]
-        public IActionResult Me()
+        public async Task<IActionResult> Me()
         {
+            var user = await FindCurrentUserAsync();
+            var roles = await _userManager.GetRolesAsync(user);
+
             return Ok(new UserInfoDto
             {
-                Username = _currentUserService.Username ?? "",
-                Roles = _currentUserService.Roles.ToList()
+                Username = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                Roles = roles.OrderBy(x => x).ToList(),
+                IsDisabled = IsDisabled(user)
             });
         }
 
@@ -86,6 +91,80 @@ namespace InventoryManagement.API.Controllers
             }
 
             return Ok(response);
+        }
+
+        [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
+        public async Task<IActionResult> CreateUser(CreateUserRequest request)
+        {
+            var roles = (request.Roles ?? new List<string>())
+                .Select(ValidateRole)
+                .Distinct()
+                .ToList();
+
+            var user = new ApplicationUser
+            {
+                UserName = request.UserName,
+                Email = request.Email
+            };
+
+            var createResult = await _userManager.CreateAsync(
+                user,
+                request.Password);
+
+            if (!createResult.Succeeded)
+            {
+                throw new BadRequestException(
+                    string.Join(",", createResult.Errors.Select(x => x.Description)));
+            }
+
+            foreach (var role in roles)
+            {
+                if (!await _roleManager.RoleExistsAsync(role))
+                {
+                    await _roleManager.CreateAsync(new IdentityRole(role));
+                }
+            }
+
+            if (roles.Count > 0)
+            {
+                var roleResult = await _userManager.AddToRolesAsync(
+                    user,
+                    roles);
+
+                if (!roleResult.Succeeded)
+                {
+                    throw new BadRequestException(
+                        string.Join(",", roleResult.Errors.Select(x => x.Description)));
+                }
+            }
+
+            return Ok(await MapUserAsync(user));
+        }
+
+        [HttpPost("me/change-password")]
+        public async Task<IActionResult> ChangePassword(
+            ChangePasswordRequest request)
+        {
+            if (request.NewPassword != request.ConfirmPassword)
+            {
+                throw new BadRequestException(
+                    "New password and confirmation password do not match.");
+            }
+
+            var user = await FindCurrentUserAsync();
+            var result = await _userManager.ChangePasswordAsync(
+                user,
+                request.CurrentPassword,
+                request.NewPassword);
+
+            if (!result.Succeeded)
+            {
+                throw new BadRequestException(
+                    string.Join(",", result.Errors.Select(x => x.Description)));
+            }
+
+            return NoContent();
         }
 
         [HttpPost("{userId}/roles")]
@@ -203,6 +282,34 @@ namespace InventoryManagement.API.Controllers
             return user;
         }
 
+        private async Task<ApplicationUser> FindCurrentUserAsync()
+        {
+            var currentUserId =
+                User.FindFirstValue(JwtRegisteredClaimNames.Sub) ??
+                User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            ApplicationUser? user = null;
+
+            if (!string.IsNullOrWhiteSpace(currentUserId))
+            {
+                user = await _userManager.FindByIdAsync(currentUserId);
+            }
+
+            if (user is null &&
+                !string.IsNullOrWhiteSpace(_currentUserService.Username))
+            {
+                user = await _userManager.FindByNameAsync(
+                    _currentUserService.Username);
+            }
+
+            if (user is null)
+            {
+                throw new UnauthorizedAccessException("User not found.");
+            }
+
+            return user;
+        }
+
         private static string ValidateRole(string role)
         {
             if (!ApplicationRoles.All.Contains(role))
@@ -263,6 +370,21 @@ namespace InventoryManagement.API.Controllers
     public class AssignRoleRequest
     {
         public string Role { get; set; } = string.Empty;
+    }
+
+    public class CreateUserRequest
+    {
+        public string UserName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public List<string> Roles { get; set; } = new();
+    }
+
+    public class ChangePasswordRequest
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
     }
 
     public class UserManagementResponse

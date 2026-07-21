@@ -4,7 +4,7 @@ namespace InventoryManagement.Application.Features.Purchases.CreatePurchase
 {
     public class Command : IRequest<PurchaseResponse>
     {
-        public string PurchaseNumber { get; set; } = string.Empty;
+        public string? PurchaseNumber { get; set; }
         public int SupplierId { get; set; }
         public string? SupplierBillNumber { get; set; }
         public DateTime BillDate { get; set; }

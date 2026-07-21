@@ -35,16 +35,7 @@ namespace InventoryManagement.Application.Features.Purchases.UpdatePurchase
                 throw new BadRequestException("Only Draft purchases may be edited.");
             }
 
-            var purchaseNumber = request.PurchaseNumber.Trim();
             var supplierBillNumber = NormalizeOptional(request.SupplierBillNumber);
-
-            if (await _purchaseRepository.PurchaseNumberExistsForOtherAsync(
-                purchaseNumber,
-                purchase.Id,
-                cancellationToken))
-            {
-                throw new BadRequestException("Purchase number already exists.");
-            }
 
             var supplier = await _supplierRepository.GetByIdAsync(
                 request.SupplierId,
@@ -103,7 +94,6 @@ namespace InventoryManagement.Application.Features.Purchases.UpdatePurchase
                 taxAmountTotal += taxAmount;
             }
 
-            purchase.PurchaseNumber = purchaseNumber;
             purchase.SupplierId = supplier.Id;
             purchase.Supplier = supplier;
             purchase.SupplierBillNumber = supplierBillNumber;

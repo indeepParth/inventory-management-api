@@ -4,7 +4,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
 {
     public class Command : IRequest<DeliveryChallanResponse>
     {
-        public string ChallanNumber { get; set; } = string.Empty;
+        public string? ChallanNumber { get; set; }
         public int CustomerId { get; set; }
         public DateTime ChallanDate { get; set; }
         public string? VehicleNumber { get; set; }

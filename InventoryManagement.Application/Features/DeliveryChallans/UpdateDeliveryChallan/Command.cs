@@ -4,7 +4,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.UpdateDelive
 {
     public sealed record Command(
         int Id,
-        string ChallanNumber,
+        string? ChallanNumber,
         int CustomerId,
         DateTime ChallanDate,
         string? VehicleNumber,

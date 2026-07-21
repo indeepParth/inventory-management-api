@@ -4,7 +4,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
 {
     public class Command : IRequest<SalesInvoiceResponse>
     {
-        public string InvoiceNumber { get; set; } = string.Empty;
+        public string? InvoiceNumber { get; set; }
         public int CustomerId { get; set; }
         public DateTime InvoiceDate { get; set; }
         public decimal Discount { get; set; }

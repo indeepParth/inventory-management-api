@@ -6,7 +6,6 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
     {
         public Validator()
         {
-            RuleFor(x => x.ChallanNumber).NotEmpty().MaximumLength(50);
             RuleFor(x => x.CustomerId).GreaterThan(0);
             RuleFor(x => x.ChallanDate).NotEmpty();
             RuleFor(x => x.VehicleNumber).MaximumLength(50);

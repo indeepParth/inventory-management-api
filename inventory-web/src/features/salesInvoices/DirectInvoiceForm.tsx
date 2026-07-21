@@ -48,7 +48,6 @@ export function DirectInvoiceForm({
   const firstCustomerId = customers[0]?.id ?? 0
   const defaultCustomerId = initialCustomerId ?? firstCustomerId
   const firstProductId = products[0]?.id ?? 0
-  const [invoiceNumber, setInvoiceNumber] = useState(initialValue?.invoiceNumber ?? '')
   const [customerId, setCustomerId] = useState(initialValue?.customerId ?? defaultCustomerId)
   const [invoiceDate, setInvoiceDate] = useState(toDateInputValue(initialValue?.invoiceDate))
   const [discount, setDiscount] = useState(initialValue?.discount.toString() ?? '0')
@@ -64,7 +63,6 @@ export function DirectInvoiceForm({
   )
 
   useEffect(() => {
-    setInvoiceNumber(initialValue?.invoiceNumber ?? '')
     setCustomerId(initialValue?.customerId ?? defaultCustomerId)
     setInvoiceDate(toDateInputValue(initialValue?.invoiceDate))
     setDiscount(initialValue?.discount.toString() ?? '0')
@@ -95,7 +93,6 @@ export function DirectInvoiceForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     await onSubmit({
-      invoiceNumber,
       customerId,
       invoiceDate,
       discount: Number(discount),
@@ -118,11 +115,12 @@ export function DirectInvoiceForm({
   return (
     <form className="entity-form" onSubmit={handleSubmit}>
       <div className="form-grid">
-        <label className="form-field">
-          <span>Invoice number</span>
-          <input disabled={isSubmitting} maxLength={50} onChange={(event) => setInvoiceNumber(event.target.value)} required type="text" value={invoiceNumber} />
-          {getFieldError(errors, 'InvoiceNumber') ? <span className="field-error">{getFieldError(errors, 'InvoiceNumber')}</span> : null}
-        </label>
+        {initialValue ? (
+          <div className="form-field">
+            <span>Invoice number</span>
+            <strong>{initialValue.invoiceNumber}</strong>
+          </div>
+        ) : null}
         <label className="form-field">
           <span>Customer</span>
           <select disabled={isSubmitting || lockCustomer} onChange={(event) => setCustomerId(Number(event.target.value))} required value={customerId}>

@@ -137,14 +137,6 @@ export function PaymentsPage() {
   }
 
   async function handleReverse(payment: Payment): Promise<void> {
-    const receiptNumberForReversal = window.prompt(
-      `Enter reversal receipt number for "${payment.receiptNumber}"`,
-    )
-
-    if (!receiptNumberForReversal) {
-      return
-    }
-
     const confirmed = window.confirm(`Reverse payment "${payment.receiptNumber}"?`)
 
     if (!confirmed) {
@@ -155,7 +147,6 @@ export function PaymentsPage() {
 
     try {
       await reversePayment(payment.id, {
-        receiptNumber: receiptNumberForReversal,
         paymentDate: toDateInputValue(),
         externalReference: '',
         note: `Reversal for ${payment.receiptNumber}`,

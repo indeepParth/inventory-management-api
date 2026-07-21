@@ -51,7 +51,6 @@ export type DeliveryChallanItemFormValues = {
 }
 
 export type DeliveryChallanFormValues = {
-  challanNumber: string
   customerId: number
   challanDate: string
   vehicleNumber: string

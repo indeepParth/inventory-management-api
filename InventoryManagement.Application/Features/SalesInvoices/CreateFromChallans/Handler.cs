@@ -11,13 +11,16 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
     {
         private readonly ISalesInvoiceRepository _invoices;
         private readonly ICurrentUserService _currentUser;
+        private readonly IDocumentNumberService _documentNumbers;
 
         public Handler(
             ISalesInvoiceRepository invoices,
-            ICurrentUserService currentUser)
+            ICurrentUserService currentUser,
+            IDocumentNumberService documentNumbers)
         {
             _invoices = invoices;
             _currentUser = currentUser;
+            _documentNumbers = documentNumbers;
         }
 
         public async Task<SalesInvoiceResponse> Handle(
@@ -27,12 +30,10 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
             SalesInvoice? created = null;
             await _invoices.ExecuteInTransactionAsync(async transactionToken =>
             {
-                var invoiceNumber = request.InvoiceNumber.Trim();
-                if (await _invoices.InvoiceNumberExistsAsync(
-                    invoiceNumber, transactionToken))
-                {
-                    throw new BadRequestException("Invoice number already exists.");
-                }
+                var invoiceNumber = await _documentNumbers.GenerateAsync(
+                    DocumentNumberType.SalesInvoice,
+                    request.InvoiceDate,
+                    cancellationToken: transactionToken);
 
                 var ids = request.Items.Select(x => x.DeliveryChallanItemId).ToList();
                 if (ids.Distinct().Count() != ids.Count)

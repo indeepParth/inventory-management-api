@@ -50,6 +50,8 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<Payment> Payments => Set<Payment>();
 
+        public DbSet<DocumentSequence> DocumentSequences => Set<DocumentSequence>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -63,6 +65,16 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .IsRequired();
 
                 entity.Property(x => x.UserId)
+                      .IsRequired();
+            });
+
+            builder.Entity<DocumentSequence>(entity =>
+            {
+                entity.HasIndex(x => new { x.DocumentType, x.Year })
+                      .IsUnique();
+
+                entity.Property(x => x.DocumentType)
+                      .HasMaxLength(50)
                       .IsRequired();
             });
 

@@ -55,7 +55,6 @@ export function DeliveryChallanForm({
   const defaultCustomerId = initialValue?.customerId ?? initialCustomerId ?? firstCustomerId
   const defaultDeliveryAddress = initialValue?.deliveryAddress ?? initialDeliveryAddress ?? ''
   const firstProductId = products[0]?.id ?? 0
-  const [challanNumber, setChallanNumber] = useState(initialValue?.challanNumber ?? '')
   const [customerId, setCustomerId] = useState(defaultCustomerId)
   const [challanDate, setChallanDate] = useState(toDateInputValue(initialValue?.challanDate))
   const [vehicleNumber, setVehicleNumber] = useState(initialValue?.vehicleNumber ?? '')
@@ -72,7 +71,6 @@ export function DeliveryChallanForm({
   )
 
   useEffect(() => {
-    setChallanNumber(initialValue?.challanNumber ?? '')
     setCustomerId(defaultCustomerId)
     setChallanDate(toDateInputValue(initialValue?.challanDate))
     setVehicleNumber(initialValue?.vehicleNumber ?? '')
@@ -104,7 +102,6 @@ export function DeliveryChallanForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     await onSubmit({
-      challanNumber,
       customerId,
       challanDate,
       vehicleNumber,
@@ -120,11 +117,12 @@ export function DeliveryChallanForm({
   return (
     <form className="entity-form" onSubmit={handleSubmit}>
       <div className="form-grid">
-        <label className="form-field">
-          <span>Challan number</span>
-          <input disabled={isSubmitting} maxLength={50} onChange={(event) => setChallanNumber(event.target.value)} required type="text" value={challanNumber} />
-          {getFieldError(errors, 'ChallanNumber') ? <span className="field-error">{getFieldError(errors, 'ChallanNumber')}</span> : null}
-        </label>
+        {initialValue ? (
+          <div className="form-field">
+            <span>Challan number</span>
+            <strong>{initialValue.challanNumber}</strong>
+          </div>
+        ) : null}
         <label className="form-field">
           <span>Customer</span>
           <select disabled={isSubmitting || lockCustomer} onChange={(event) => setCustomerId(Number(event.target.value))} required value={customerId}>

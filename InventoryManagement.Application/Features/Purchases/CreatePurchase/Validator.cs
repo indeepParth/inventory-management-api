@@ -6,7 +6,6 @@ namespace InventoryManagement.Application.Features.Purchases.CreatePurchase
     {
         public Validator()
         {
-            RuleFor(x => x.PurchaseNumber).NotEmpty();
             RuleFor(x => x.SupplierId).GreaterThan(0);
             RuleFor(x => x.BillDate).NotEmpty();
             RuleFor(x => x.Discount).GreaterThanOrEqualTo(0);

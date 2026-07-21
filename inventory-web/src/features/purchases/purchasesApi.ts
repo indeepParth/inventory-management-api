@@ -55,7 +55,6 @@ export type PurchaseItemFormValues = {
 }
 
 export type PurchaseFormValues = {
-  purchaseNumber: string
   supplierId: number
   supplierBillNumber: string
   billDate: string

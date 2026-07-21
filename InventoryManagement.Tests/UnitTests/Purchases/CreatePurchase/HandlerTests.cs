@@ -26,6 +26,7 @@ namespace InventoryManagement.Tests.UnitTests.Purchases.CreatePurchase
             purchaseRepository
                 .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
+            SetupTransaction(purchaseRepository);
 
             var supplierRepository = new Mock<ISupplierRepository>();
             supplierRepository
@@ -42,12 +43,21 @@ namespace InventoryManagement.Tests.UnitTests.Purchases.CreatePurchase
 
             var currentUser = new Mock<ICurrentUserService>();
             currentUser.SetupGet(x => x.Username).Returns("buyer");
+            var documentNumbers = new Mock<IDocumentNumberService>();
+            documentNumbers
+                .Setup(x => x.GenerateAsync(
+                    DocumentNumberType.Purchase,
+                    new DateTime(2026, 7, 1),
+                    false,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync("P_2026_0001");
 
             var response = await new Handler(
                 purchaseRepository.Object,
                 supplierRepository.Object,
                 productRepository.Object,
-                currentUser.Object).Handle(new Command
+                currentUser.Object,
+                documentNumbers.Object).Handle(new Command
                 {
                     PurchaseNumber = " PUR-100 ",
                     SupplierId = 1,
@@ -75,7 +85,7 @@ namespace InventoryManagement.Tests.UnitTests.Purchases.CreatePurchase
                 }, CancellationToken.None);
 
             addedPurchase.Should().NotBeNull();
-            addedPurchase!.PurchaseNumber.Should().Be("PUR-100");
+            addedPurchase!.PurchaseNumber.Should().Be("P_2026_0001");
             addedPurchase.SupplierBillNumber.Should().Be("BILL-9");
             addedPurchase.Status.Should().Be(PurchaseStatus.Draft);
             addedPurchase.Subtotal.Should().Be(30.01m);
@@ -92,6 +102,7 @@ namespace InventoryManagement.Tests.UnitTests.Purchases.CreatePurchase
         public async Task Handle_Should_Reject_Inactive_Supplier()
         {
             var purchaseRepository = new Mock<IPurchaseRepository>();
+            SetupTransaction(purchaseRepository);
             var supplierRepository = new Mock<ISupplierRepository>();
             supplierRepository
                 .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
@@ -101,7 +112,8 @@ namespace InventoryManagement.Tests.UnitTests.Purchases.CreatePurchase
                 purchaseRepository.Object,
                 supplierRepository.Object,
                 Mock.Of<IProductRepository>(),
-                Mock.Of<ICurrentUserService>()).Handle(
+                Mock.Of<ICurrentUserService>(),
+                CreateDocumentNumbers()).Handle(
                     ValidCommand(),
                     CancellationToken.None);
 
@@ -116,6 +128,7 @@ namespace InventoryManagement.Tests.UnitTests.Purchases.CreatePurchase
         public async Task Handle_Should_Reject_Missing_Product()
         {
             var purchaseRepository = new Mock<IPurchaseRepository>();
+            SetupTransaction(purchaseRepository);
             var supplierRepository = new Mock<ISupplierRepository>();
             supplierRepository
                 .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
@@ -125,7 +138,8 @@ namespace InventoryManagement.Tests.UnitTests.Purchases.CreatePurchase
                 purchaseRepository.Object,
                 supplierRepository.Object,
                 Mock.Of<IProductRepository>(),
-                Mock.Of<ICurrentUserService>()).Handle(
+                Mock.Of<ICurrentUserService>(),
+                CreateDocumentNumbers()).Handle(
                     ValidCommand(),
                     CancellationToken.None);
 
@@ -151,5 +165,28 @@ namespace InventoryManagement.Tests.UnitTests.Purchases.CreatePurchase
                 }
             }
         };
+
+        private static IDocumentNumberService CreateDocumentNumbers()
+        {
+            var documentNumbers = new Mock<IDocumentNumberService>();
+            documentNumbers
+                .Setup(x => x.GenerateAsync(
+                    DocumentNumberType.Purchase,
+                    It.IsAny<DateTime>(),
+                    false,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync("P_2026_0001");
+            return documentNumbers.Object;
+        }
+
+        private static void SetupTransaction(Mock<IPurchaseRepository> repository)
+        {
+            repository
+                .Setup(x => x.ExecuteInTransactionAsync(
+                    It.IsAny<Func<CancellationToken, Task>>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns<Func<CancellationToken, Task>, CancellationToken>(
+                    (operation, token) => operation(token));
+        }
     }
 }

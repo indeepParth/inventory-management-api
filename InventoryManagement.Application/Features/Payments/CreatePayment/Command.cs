@@ -5,7 +5,7 @@ namespace InventoryManagement.Application.Features.Payments.CreatePayment
 {
     public record Command : IRequest<PaymentResponse>
     {
-        public string ReceiptNumber { get; init; } = string.Empty;
+        public string? ReceiptNumber { get; init; }
         public int? CustomerId { get; init; }
         public int? SalesInvoiceId { get; init; }
         public int? SupplierId { get; init; }

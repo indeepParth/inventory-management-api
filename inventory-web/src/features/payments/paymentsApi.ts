@@ -35,7 +35,6 @@ export type Payment = {
 }
 
 export type PaymentFormValues = {
-  receiptNumber: string
   customerId?: number
   salesInvoiceId?: number
   supplierId?: number
@@ -48,7 +47,6 @@ export type PaymentFormValues = {
 }
 
 export type ReversePaymentValues = {
-  receiptNumber: string
   paymentDate: string
   externalReference: string
   note: string

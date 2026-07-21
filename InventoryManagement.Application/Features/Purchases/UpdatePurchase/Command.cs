@@ -4,7 +4,7 @@ namespace InventoryManagement.Application.Features.Purchases.UpdatePurchase
 {
     public sealed record Command(
         int Id,
-        string PurchaseNumber,
+        string? PurchaseNumber,
         int SupplierId,
         string? SupplierBillNumber,
         DateTime BillDate,

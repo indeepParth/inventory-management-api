@@ -11,11 +11,16 @@ namespace InventoryManagement.Application.Features.Payments.ReversePayment
     {
         private readonly IPaymentRepository _payments;
         private readonly ICurrentUserService _currentUser;
+        private readonly IDocumentNumberService _documentNumbers;
 
-        public Handler(IPaymentRepository payments, ICurrentUserService currentUser)
+        public Handler(
+            IPaymentRepository payments,
+            ICurrentUserService currentUser,
+            IDocumentNumberService documentNumbers)
         {
             _payments = payments;
             _currentUser = currentUser;
+            _documentNumbers = documentNumbers;
         }
 
         public async Task<PaymentResponse> Handle(
@@ -32,9 +37,10 @@ namespace InventoryManagement.Application.Features.Payments.ReversePayment
                 if (original.Reversal != null)
                     throw new BadRequestException("Payment has already been reversed.");
 
-                var receiptNumber = request.ReceiptNumber.Trim();
-                if (await _payments.ReceiptNumberExistsAsync(receiptNumber, transactionToken))
-                    throw new BadRequestException("Receipt number already exists.");
+                var receiptNumber = await _documentNumbers.GenerateAsync(
+                    DocumentNumberType.PaymentReceipt,
+                    request.PaymentDate,
+                    cancellationToken: transactionToken);
 
                 var now = DateTime.UtcNow;
                 reversal = new Payment

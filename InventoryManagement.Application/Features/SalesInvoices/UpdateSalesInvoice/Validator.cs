@@ -7,7 +7,6 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
         public Validator()
         {
             RuleFor(x => x.Id).GreaterThan(0);
-            RuleFor(x => x.InvoiceNumber).NotEmpty().MaximumLength(50);
             RuleFor(x => x.CustomerId).GreaterThan(0);
             RuleFor(x => x.InvoiceDate).NotEmpty();
             RuleFor(x => x.Discount).GreaterThanOrEqualTo(0);

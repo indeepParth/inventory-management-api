@@ -99,7 +99,6 @@ export type DirectInvoiceItemFormValues = {
 }
 
 export type DirectInvoiceFormValues = {
-  invoiceNumber: string
   customerId: number
   invoiceDate: string
   discount: number
@@ -115,7 +114,6 @@ export type ChallanInvoiceItemFormValues = {
 }
 
 export type ChallanInvoiceFormValues = {
-  invoiceNumber: string
   invoiceDate: string
   discount: number
   otherCharges: number

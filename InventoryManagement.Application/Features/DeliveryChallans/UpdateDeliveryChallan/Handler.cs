@@ -34,11 +34,6 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.UpdateDelive
             if (challan.Status != DeliveryChallanStatus.Draft)
                 throw new BadRequestException("Only Draft delivery challans may be edited.");
 
-            var number = request.ChallanNumber.Trim();
-            if (await _challans.ChallanNumberExistsForOtherAsync(
-                number, challan.Id, cancellationToken))
-                throw new BadRequestException("Challan number already exists.");
-
             var customer = await _customers.GetByIdAsync(
                 request.CustomerId, cancellationToken);
             if (customer is null)
@@ -73,7 +68,6 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.UpdateDelive
                 });
             }
 
-            challan.ChallanNumber = number;
             challan.CustomerId = customer.Id;
             challan.Customer = customer;
             challan.ChallanDate = request.ChallanDate;

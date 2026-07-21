@@ -50,7 +50,6 @@ export function PaymentForm({
   const defaultCustomerId = mode === 'customer' ? initialCustomerId ?? firstCustomerId : firstCustomerId
   const defaultDocumentId = mode === 'customer' && initialSalesInvoiceId ? initialSalesInvoiceId.toString() : ''
   const defaultAmount = mode === 'customer' && initialAmount !== undefined ? initialAmount.toString() : '0'
-  const [receiptNumber, setReceiptNumber] = useState('')
   const [customerId, setCustomerId] = useState(defaultCustomerId)
   const [supplierId, setSupplierId] = useState(firstSupplierId)
   const [documentId, setDocumentId] = useState(defaultDocumentId)
@@ -102,7 +101,6 @@ export function PaymentForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     await onSubmit({
-      receiptNumber,
       customerId: mode === 'customer' ? customerId : undefined,
       salesInvoiceId: mode === 'customer' && documentId ? Number(documentId) : undefined,
       supplierId: mode === 'supplier' ? supplierId : undefined,
@@ -120,11 +118,6 @@ export function PaymentForm({
   return (
     <form className="entity-form" onSubmit={handleSubmit}>
       <div className="form-grid">
-        <label className="form-field">
-          <span>Receipt number</span>
-          <input disabled={isSubmitting} maxLength={50} onChange={(event) => setReceiptNumber(event.target.value)} required type="text" value={receiptNumber} />
-          {getFieldError(errors, 'ReceiptNumber') ? <span className="field-error">{getFieldError(errors, 'ReceiptNumber')}</span> : null}
-        </label>
         <label className="form-field">
           <span>{isCustomerMode ? 'Customer' : 'Supplier'}</span>
           {isCustomerMode ? (

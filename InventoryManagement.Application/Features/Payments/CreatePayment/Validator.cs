@@ -6,7 +6,6 @@ namespace InventoryManagement.Application.Features.Payments.CreatePayment
     {
         public Validator()
         {
-            RuleFor(x => x.ReceiptNumber).NotEmpty().MaximumLength(50);
             RuleFor(x => x.CustomerId).GreaterThan(0).When(x => x.CustomerId.HasValue);
             RuleFor(x => x.SalesInvoiceId).GreaterThan(0).When(x => x.SalesInvoiceId.HasValue);
             RuleFor(x => x.SupplierId).GreaterThan(0).When(x => x.SupplierId.HasValue);

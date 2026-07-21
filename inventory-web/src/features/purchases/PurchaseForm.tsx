@@ -39,7 +39,6 @@ export function PurchaseForm({
 }: PurchaseFormProps) {
   const firstSupplierId = suppliers[0]?.id ?? 0
   const firstProductId = products[0]?.id ?? 0
-  const [purchaseNumber, setPurchaseNumber] = useState(initialValue?.purchaseNumber ?? '')
   const [supplierId, setSupplierId] = useState(initialValue?.supplierId ?? firstSupplierId)
   const [supplierBillNumber, setSupplierBillNumber] = useState(initialValue?.supplierBillNumber ?? '')
   const [billDate, setBillDate] = useState(toDateInputValue(initialValue?.billDate))
@@ -56,7 +55,6 @@ export function PurchaseForm({
   )
 
   useEffect(() => {
-    setPurchaseNumber(initialValue?.purchaseNumber ?? '')
     setSupplierId(initialValue?.supplierId ?? firstSupplierId)
     setSupplierBillNumber(initialValue?.supplierBillNumber ?? '')
     setBillDate(toDateInputValue(initialValue?.billDate))
@@ -88,7 +86,6 @@ export function PurchaseForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     await onSubmit({
-      purchaseNumber,
       supplierId,
       supplierBillNumber,
       billDate,
@@ -109,11 +106,12 @@ export function PurchaseForm({
   return (
     <form className="entity-form" onSubmit={handleSubmit}>
       <div className="form-grid">
-        <label className="form-field">
-          <span>Purchase number</span>
-          <input disabled={isSubmitting} onChange={(event) => setPurchaseNumber(event.target.value)} required type="text" value={purchaseNumber} />
-          {getFieldError(errors, 'PurchaseNumber') ? <span className="field-error">{getFieldError(errors, 'PurchaseNumber')}</span> : null}
-        </label>
+        {initialValue ? (
+          <div className="form-field">
+            <span>Purchase number</span>
+            <strong>{initialValue.purchaseNumber}</strong>
+          </div>
+        ) : null}
         <label className="form-field">
           <span>Supplier</span>
           <select disabled={isSubmitting} onChange={(event) => setSupplierId(Number(event.target.value))} required value={supplierId}>

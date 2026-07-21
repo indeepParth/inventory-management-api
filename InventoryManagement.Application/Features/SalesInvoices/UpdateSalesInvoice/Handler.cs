@@ -43,15 +43,6 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
                     "Only Draft sales invoices may be edited.");
             }
 
-            var invoiceNumber = request.InvoiceNumber.Trim();
-            if (await _invoiceRepository.InvoiceNumberExistsForOtherAsync(
-                invoiceNumber,
-                invoice.Id,
-                cancellationToken))
-            {
-                throw new BadRequestException("Invoice number already exists.");
-            }
-
             var customer = await _customerRepository.GetByIdAsync(
                 request.CustomerId,
                 cancellationToken);
@@ -107,7 +98,6 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
                 throw new BadRequestException("Grand total cannot be negative.");
             }
 
-            invoice.InvoiceNumber = invoiceNumber;
             invoice.CustomerId = customer.Id;
             invoice.Customer = customer;
             invoice.InvoiceDate = request.InvoiceDate;

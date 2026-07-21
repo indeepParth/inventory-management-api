@@ -22,6 +22,7 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                 .Returns(Task.CompletedTask);
             challans.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
+            SetupTransaction(challans);
             var customers = new Mock<ICustomerRepository>();
             customers.Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Customer { Id = 1, Name = "Customer", IsActive = true });
@@ -37,13 +38,22 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                 .ReturnsAsync(product);
             var currentUser = new Mock<ICurrentUserService>();
             currentUser.SetupGet(x => x.Username).Returns("dispatcher");
+            var documentNumbers = new Mock<IDocumentNumberService>();
+            documentNumbers
+                .Setup(x => x.GenerateAsync(
+                    DocumentNumberType.DeliveryChallan,
+                    new DateTime(2026, 7, 1),
+                    false,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync("CH_2026_0001");
 
             var response = await new Handler(
                 challans.Object,
                 customers.Object,
                 drivers.Object,
                 products.Object,
-                currentUser.Object)
+                currentUser.Object,
+                documentNumbers.Object)
                 .Handle(new Command
                 {
                     ChallanNumber = " DC-1 ",
@@ -59,7 +69,7 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
 
             added.Should().NotBeNull();
             added!.Status.Should().Be(DeliveryChallanStatus.Draft);
-            added.ChallanNumber.Should().Be("DC-1");
+            added.ChallanNumber.Should().Be("CH_2026_0001");
             added.DriverId.Should().Be(3);
             added.DriverName.Should().Be("Legacy driver");
             added.DeliveryFromAddress.Should().Be("Main warehouse");
@@ -80,6 +90,7 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
         public async Task Handle_Should_Reject_Inactive_Driver()
         {
             var challans = new Mock<IDeliveryChallanRepository>();
+            SetupTransaction(challans);
             var customers = new Mock<ICustomerRepository>();
             customers.Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Customer { Id = 1, Name = "Customer", IsActive = true });
@@ -92,7 +103,8 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                 customers.Object,
                 drivers.Object,
                 Mock.Of<IProductRepository>(),
-                Mock.Of<ICurrentUserService>())
+                Mock.Of<ICurrentUserService>(),
+                CreateDocumentNumbers())
                 .Handle(new Command
                 {
                     ChallanNumber = "DC-1",
@@ -108,6 +120,29 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                 .WithMessage("Driver is inactive.");
             challans.Verify(x => x.AddAsync(
                 It.IsAny<DeliveryChallan>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        private static IDocumentNumberService CreateDocumentNumbers()
+        {
+            var documentNumbers = new Mock<IDocumentNumberService>();
+            documentNumbers
+                .Setup(x => x.GenerateAsync(
+                    DocumentNumberType.DeliveryChallan,
+                    It.IsAny<DateTime>(),
+                    false,
+                    It.IsAny<CancellationToken>()))
+                .ReturnsAsync("CH_2026_0001");
+            return documentNumbers.Object;
+        }
+
+        private static void SetupTransaction(Mock<IDeliveryChallanRepository> repository)
+        {
+            repository
+                .Setup(x => x.ExecuteInTransactionAsync(
+                    It.IsAny<Func<CancellationToken, Task>>(),
+                    It.IsAny<CancellationToken>()))
+                .Returns<Func<CancellationToken, Task>, CancellationToken>(
+                    (operation, token) => operation(token));
         }
     }
 }

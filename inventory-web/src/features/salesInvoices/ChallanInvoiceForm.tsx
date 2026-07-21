@@ -53,7 +53,6 @@ export function ChallanInvoiceForm({
   const initialChallan = initialChallanId
     ? challans.find((challan) => challan.id === initialChallanId)
     : undefined
-  const [invoiceNumber, setInvoiceNumber] = useState('')
   const [invoiceDate, setInvoiceDate] = useState(toDateInputValue())
   const [discount, setDiscount] = useState('0')
   const [otherCharges, setOtherCharges] = useState('0')
@@ -84,7 +83,6 @@ export function ChallanInvoiceForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     await onSubmit({
-      invoiceNumber,
       invoiceDate,
       discount: Number(discount),
       otherCharges: Number(otherCharges),
@@ -115,11 +113,6 @@ export function ChallanInvoiceForm({
   return (
     <form className="entity-form" onSubmit={handleSubmit}>
       <div className="form-grid">
-        <label className="form-field">
-          <span>Invoice number</span>
-          <input disabled={isSubmitting} maxLength={50} onChange={(event) => setInvoiceNumber(event.target.value)} required type="text" value={invoiceNumber} />
-          {getFieldError(errors, 'InvoiceNumber') ? <span className="field-error">{getFieldError(errors, 'InvoiceNumber')}</span> : null}
-        </label>
         <label className="form-field">
           <span>Invoice date</span>
           <input disabled={isSubmitting} onChange={(event) => setInvoiceDate(event.target.value)} required type="date" value={invoiceDate} />

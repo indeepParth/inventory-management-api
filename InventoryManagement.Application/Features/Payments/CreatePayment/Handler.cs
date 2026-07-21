@@ -11,11 +11,16 @@ namespace InventoryManagement.Application.Features.Payments.CreatePayment
     {
         private readonly IPaymentRepository _payments;
         private readonly ICurrentUserService _currentUser;
+        private readonly IDocumentNumberService _documentNumbers;
 
-        public Handler(IPaymentRepository payments, ICurrentUserService currentUser)
+        public Handler(
+            IPaymentRepository payments,
+            ICurrentUserService currentUser,
+            IDocumentNumberService documentNumbers)
         {
             _payments = payments;
             _currentUser = currentUser;
+            _documentNumbers = documentNumbers;
         }
 
         public async Task<PaymentResponse> Handle(
@@ -24,9 +29,10 @@ namespace InventoryManagement.Application.Features.Payments.CreatePayment
             Payment? created = null;
             await _payments.ExecuteInTransactionAsync(async transactionToken =>
             {
-                var receiptNumber = request.ReceiptNumber.Trim();
-                if (await _payments.ReceiptNumberExistsAsync(receiptNumber, transactionToken))
-                    throw new BadRequestException("Receipt number already exists.");
+                var receiptNumber = await _documentNumbers.GenerateAsync(
+                    DocumentNumberType.PaymentReceipt,
+                    request.PaymentDate,
+                    cancellationToken: transactionToken);
 
                 Customer? customer = null;
                 SalesInvoice? invoice = null;

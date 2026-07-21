@@ -4,7 +4,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
 {
     public sealed record Command(
         int Id,
-        string InvoiceNumber,
+        string? InvoiceNumber,
         int CustomerId,
         DateTime InvoiceDate,
         decimal Discount,

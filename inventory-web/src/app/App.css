@@ -623,7 +623,7 @@
 
 .ledger-table .numeric-cell {
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  text-align: left;
   white-space: nowrap;
 }
 

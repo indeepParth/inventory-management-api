@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../features/auth/AuthContext'
 import { hasRouteAccess, type RoutePolicy } from '../../features/auth/roleAccess'
+import { getAppName } from '../config/appConfig'
 
 type NavItem = {
   label: string
@@ -118,11 +119,12 @@ export function AppLayout() {
 
   const canViewCompanyProfile = hasRouteAccess(currentUser?.roles ?? [], 'adminOnly')
   const accountPanelId = 'sidebar-account-items'
+  const appName = getAppName()
 
   return (
     <div className="app-layout">
       <aside className="app-sidebar" aria-label="Application navigation">
-        <p className="app-brand">Inventory Web</p>
+        <p className="app-brand">{appName}</p>
         <div className="app-account">
           <button
             aria-controls={accountPanelId}

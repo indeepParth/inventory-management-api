@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../shared/api/apiClient'
 import { useAuth } from '../features/auth/AuthContext'
+import { getAppName } from '../shared/config/appConfig'
 
 function getLoginErrorMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -24,6 +25,7 @@ function getLoginErrorMessage(error: unknown): string {
 export function LoginPage() {
   const navigate = useNavigate()
   const { login } = useAuth()
+  const appName = getAppName()
   const [userName, setUserName] = useState('')
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -51,7 +53,7 @@ export function LoginPage() {
     <section className="public-panel" aria-labelledby="login-title">
       <p className="page-kicker">Sign in</p>
       <h1 id="login-title" className="page-title">
-        Login to Inventory Web.
+        Login to {appName}.
       </h1>
       <form className="login-form" onSubmit={handleSubmit}>
         <label className="form-field">

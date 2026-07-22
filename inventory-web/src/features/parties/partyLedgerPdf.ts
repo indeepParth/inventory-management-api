@@ -1,4 +1,5 @@
 import { formatCurrency, formatDate } from '../../shared/utils/formatters'
+import { getAppName } from '../../shared/config/appConfig'
 import type { StatementEntry, StatementResponse } from './partiesApi'
 
 export type PartyLedgerPdfDetail = {
@@ -103,6 +104,7 @@ export async function downloadPartyLedgerPdf({
   const details = partyDetails
     .filter((detail) => detail.value)
     .map((detail) => `${detail.label}: ${detail.value}`)
+  const appName = getAppName()
 
   const body = [
     [
@@ -137,7 +139,7 @@ export async function downloadPartyLedgerPdf({
       subject: title,
     },
     content: [
-      { text: 'Inventory Web', style: 'appHeading' },
+      { text: appName, style: 'appHeading' },
       { text: title, style: 'title' },
       {
         columns: [

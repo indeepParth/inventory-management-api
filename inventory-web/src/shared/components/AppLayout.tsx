@@ -58,6 +58,14 @@ function isPathInNavItem(pathname: string, item: NavItem): boolean {
   return pathname === item.to || pathname.startsWith(`${item.to}/`)
 }
 
+function isAccountPath(pathname: string): boolean {
+  return (
+    pathname === '/app/profile' ||
+    pathname === '/app/change-password' ||
+    pathname === '/app/company-profile'
+  )
+}
+
 export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -79,6 +87,7 @@ export function AppLayout() {
     )?.id
   }, [location.pathname, visibleNavGroups])
   const [openGroupIds, setOpenGroupIds] = useState<string[]>(['inventory'])
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(isAccountPath(location.pathname))
 
   useEffect(() => {
     const groupIdToOpen = activeGroupId ?? 'inventory'
@@ -87,6 +96,12 @@ export function AppLayout() {
       current.includes(groupIdToOpen) ? current : [...current, groupIdToOpen],
     )
   }, [activeGroupId, location.pathname])
+
+  useEffect(() => {
+    if (isAccountPath(location.pathname)) {
+      setIsAccountMenuOpen(true)
+    }
+  }, [location.pathname])
 
   function handleLogout(): void {
     logout()
@@ -101,16 +116,50 @@ export function AppLayout() {
     )
   }
 
+  const canViewCompanyProfile = hasRouteAccess(currentUser?.roles ?? [], 'adminOnly')
+  const accountPanelId = 'sidebar-account-items'
+
   return (
     <div className="app-layout">
       <aside className="app-sidebar" aria-label="Application navigation">
         <p className="app-brand">Inventory Web</p>
-        <NavLink className="app-user" to="/app/profile">
-          <span className="app-user-name">
-            {isCurrentUserLoading ? 'Loading user...' : currentUser?.username ?? 'Unknown user'}
-          </span>
-          <span className="app-user-email">{currentUser?.email ?? 'Email not available'}</span>
-        </NavLink>
+        <div className="app-account">
+          <button
+            aria-controls={accountPanelId}
+            aria-expanded={isAccountMenuOpen}
+            className={isAccountPath(location.pathname) ? 'app-user active' : 'app-user'}
+            onClick={() => setIsAccountMenuOpen((isOpen) => !isOpen)}
+            type="button"
+          >
+            <span>
+              <span className="app-user-name">
+                {isCurrentUserLoading ? 'Loading user...' : currentUser?.username ?? 'Unknown user'}
+              </span>
+              <span className="app-user-email">{currentUser?.email ?? 'Email not available'}</span>
+            </span>
+            <span className="app-nav-chevron" aria-hidden="true">
+              {isAccountMenuOpen ? 'v' : '>'}
+            </span>
+          </button>
+          {isAccountMenuOpen ? (
+            <div className="app-account-menu" id={accountPanelId}>
+              <NavLink className={({ isActive }) => isActive ? 'app-nav-link app-nav-child-link active' : 'app-nav-link app-nav-child-link'} to="/app/profile">
+                My Profile
+              </NavLink>
+              {canViewCompanyProfile ? (
+                <NavLink className={({ isActive }) => isActive ? 'app-nav-link app-nav-child-link active' : 'app-nav-link app-nav-child-link'} to="/app/company-profile">
+                  Company Profile
+                </NavLink>
+              ) : null}
+              <NavLink className={({ isActive }) => isActive ? 'app-nav-link app-nav-child-link active' : 'app-nav-link app-nav-child-link'} to="/app/change-password">
+                Change Password
+              </NavLink>
+              <button className="app-account-logout" onClick={handleLogout} type="button">
+                Logout
+              </button>
+            </div>
+          ) : null}
+        </div>
         <nav className="app-nav">
           {visibleDirectNavItems.slice(0, 1).map((item) => (
             <NavLink
@@ -172,9 +221,6 @@ export function AppLayout() {
             </NavLink>
           ))}
         </nav>
-        <button className="logout-button" onClick={handleLogout} type="button">
-          Logout
-        </button>
       </aside>
       <main className="app-main">
         <Outlet />

@@ -4,6 +4,8 @@ import { ProtectedRoute, PublicOnlyRoute, RoleProtectedRoute } from '../features
 import { AppLayout } from '../shared/components/AppLayout'
 import { PublicLayout } from '../shared/components/PublicLayout'
 import { CategoriesPage } from '../pages/CategoriesPage'
+import { ChangePasswordPage } from '../pages/ChangePasswordPage'
+import { CompanyProfilePage } from '../pages/CompanyProfilePage'
 import { CustomerDetailPage } from '../pages/CustomerDetailPage'
 import { CustomerLedgerPage } from '../pages/CustomerLedgerPage'
 import { CustomerReturnsPage } from '../pages/CustomerReturnsPage'
@@ -49,9 +51,11 @@ export function App() {
               <Route element={<RoleProtectedRoute policy="allAuthenticated" />}>
                 <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="profile" element={<ProfilePage />} />
+                <Route path="change-password" element={<ChangePasswordPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="adminOnly" />}>
                 <Route path="users" element={<UsersPage />} />
+                <Route path="company-profile" element={<CompanyProfilePage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="readProducts" />}>
                 <Route path="products" element={<ProductsPage />} />

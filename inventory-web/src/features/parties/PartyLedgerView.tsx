@@ -219,15 +219,24 @@ export function PartyLedgerView({
             <>
               <div className="table-wrap">
                 <table className="data-table ledger-table">
+                  <colgroup>
+                    <col className="ledger-date-column" />
+                    <col className="ledger-type-column" />
+                    <col className="ledger-reference-column" />
+                    <col className="ledger-description-column" />
+                    <col className="ledger-amount-column" />
+                    <col className="ledger-amount-column" />
+                    <col className="ledger-balance-column" />
+                  </colgroup>
                   <thead>
                     <tr>
                       <th>Date</th>
                       <th>Type</th>
                       <th>Document / Reference No.</th>
                       <th>Description</th>
-                      <th>Debit</th>
-                      <th>Credit</th>
-                      <th>Running balance</th>
+                      <th className="numeric-cell">Debit</th>
+                      <th className="numeric-cell">Credit</th>
+                      <th className="numeric-cell">Running balance</th>
                     </tr>
                   </thead>
                   <tbody>

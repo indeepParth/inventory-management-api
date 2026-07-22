@@ -88,6 +88,7 @@ export function CustomerDetailPage() {
   const canManageChallans = hasRouteAccess(currentUser?.roles ?? [], 'manageDeliveryChallans')
   const canCreateInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
   const canReceivePayments = hasRouteAccess(currentUser?.roles ?? [], 'viewPayments')
+  const canViewLedger = hasRouteAccess(currentUser?.roles ?? [], 'viewCustomerStatements')
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [invoices, setInvoices] = useState<SalesInvoice[]>([])
   const [customerChallans, setCustomerChallans] = useState<DeliveryChallan[]>([])
@@ -375,6 +376,12 @@ export function CustomerDetailPage() {
               <strong>{availableChallanCount}</strong>
             </article>
           </div>
+
+          {canViewLedger ? (
+            <p className="page-action">
+              <Link className="text-link" to={`/app/customers/${customer.id}/ledger`}>View ledger</Link>
+            </p>
+          ) : null}
 
           {isChallanFormOpen ? (
             <DeliveryChallanForm

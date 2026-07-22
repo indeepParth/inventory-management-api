@@ -5,6 +5,7 @@ import { AppLayout } from '../shared/components/AppLayout'
 import { PublicLayout } from '../shared/components/PublicLayout'
 import { CategoriesPage } from '../pages/CategoriesPage'
 import { CustomerDetailPage } from '../pages/CustomerDetailPage'
+import { CustomerLedgerPage } from '../pages/CustomerLedgerPage'
 import { CustomerReturnsPage } from '../pages/CustomerReturnsPage'
 import { CustomersPage } from '../pages/CustomersPage'
 import { DashboardPage } from '../pages/DashboardPage'
@@ -24,6 +25,7 @@ import { SalesInvoiceDetailPage } from '../pages/SalesInvoiceDetailPage'
 import { SalesInvoicesPage } from '../pages/SalesInvoicesPage'
 import { StockMovementsPage } from '../pages/StockMovementsPage'
 import { SupplierDetailPage } from '../pages/SupplierDetailPage'
+import { SupplierLedgerPage } from '../pages/SupplierLedgerPage'
 import { SupplierReturnsPage } from '../pages/SupplierReturnsPage'
 import { SuppliersPage } from '../pages/SuppliersPage'
 import { UsersPage } from '../pages/UsersPage'
@@ -59,6 +61,9 @@ export function App() {
                 <Route path="customers" element={<CustomersPage />} />
                 <Route path="customers/:id" element={<CustomerDetailPage />} />
               </Route>
+              <Route element={<RoleProtectedRoute policy="viewCustomerStatements" />}>
+                <Route path="customers/:id/ledger" element={<CustomerLedgerPage />} />
+              </Route>
               <Route element={<RoleProtectedRoute policy="readDrivers" />}>
                 <Route path="drivers" element={<DriversPage />} />
                 <Route path="drivers/:id" element={<DriverDetailPage />} />
@@ -66,6 +71,9 @@ export function App() {
               <Route element={<RoleProtectedRoute policy="readSuppliers" />}>
                 <Route path="suppliers" element={<SuppliersPage />} />
                 <Route path="suppliers/:id" element={<SupplierDetailPage />} />
+              </Route>
+              <Route element={<RoleProtectedRoute policy="viewSupplierStatements" />}>
+                <Route path="suppliers/:id/ledger" element={<SupplierLedgerPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="managePurchases" />}>
                 <Route path="purchases" element={<PurchasesPage />} />

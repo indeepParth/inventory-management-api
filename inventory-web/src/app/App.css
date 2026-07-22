@@ -562,6 +562,22 @@
   text-transform: uppercase;
 }
 
+.ledger-table th,
+.ledger-table td {
+  white-space: nowrap;
+}
+
+.ledger-table .ledger-reference-cell,
+.ledger-table .ledger-description-cell {
+  min-width: 180px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.ledger-table .numeric-cell {
+  text-align: right;
+}
+
 .pagination {
   justify-content: flex-end;
   margin-top: 18px;

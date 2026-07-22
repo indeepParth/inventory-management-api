@@ -38,6 +38,46 @@ export type Supplier = {
   createdAt: string
 }
 
+export type StatementEntryType = 0 | 1 | 2 | 3
+
+export type StatementEntry = {
+  type: StatementEntryType
+  transactionId: number
+  transactionDate: string
+  timestampUtc: string
+  referenceNumber: string
+  externalReference?: string
+  note?: string
+  amount: number
+  balanceChange: number
+  runningBalance: number
+}
+
+export type StatementResponse = {
+  partyId: number
+  dateFrom: string
+  dateTo: string
+  openingBalance: number
+  closingBalance: number
+  totalCharges: number
+  totalPayments: number
+  totalReversals: number
+  entries: StatementEntry[]
+  pageNumber: number
+  pageSize: number
+  totalCount: number
+  totalPages: number
+  hasPreviousPage: boolean
+  hasNextPage: boolean
+}
+
+export type StatementFilters = {
+  dateFrom: string
+  dateTo: string
+  pageNumber: number
+  pageSize: number
+}
+
 export type CustomerFormValues = {
   name: string
   contactPerson: string
@@ -82,6 +122,17 @@ function buildListQuery(pageNumber: number, pageSize: number, search: string, is
   return query.toString()
 }
 
+function buildStatementQuery(filters: StatementFilters): string {
+  const query = new URLSearchParams({
+    DateFrom: filters.dateFrom,
+    DateTo: filters.dateTo,
+    PageNumber: filters.pageNumber.toString(),
+    PageSize: filters.pageSize.toString(),
+  })
+
+  return query.toString()
+}
+
 export function getCustomers(
   pageNumber: number,
   pageSize: number,
@@ -95,6 +146,15 @@ export function getCustomers(
 
 export function getCustomer(id: number): Promise<Customer> {
   return apiRequest<Customer>(`/api/Customers/${id}`)
+}
+
+export function getCustomerStatement(
+  id: number,
+  filters: StatementFilters,
+): Promise<StatementResponse> {
+  return apiRequest<StatementResponse>(
+    `/api/Customers/${id}/statement?${buildStatementQuery(filters)}`,
+  )
 }
 
 export function createCustomer(values: Omit<CustomerFormValues, 'isActive'>): Promise<Customer> {
@@ -130,6 +190,15 @@ export function getSuppliers(
 
 export function getSupplier(id: number): Promise<Supplier> {
   return apiRequest<Supplier>(`/api/Suppliers/${id}`)
+}
+
+export function getSupplierStatement(
+  id: number,
+  filters: StatementFilters,
+): Promise<StatementResponse> {
+  return apiRequest<StatementResponse>(
+    `/api/Suppliers/${id}/statement?${buildStatementQuery(filters)}`,
+  )
 }
 
 export function createSupplier(values: Omit<SupplierFormValues, 'isActive'>): Promise<Supplier> {

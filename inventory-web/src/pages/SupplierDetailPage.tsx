@@ -20,6 +20,7 @@ export function SupplierDetailPage() {
   const { currentUser } = useAuth()
   const supplierId = Number(id)
   const canViewPurchases = hasRouteAccess(currentUser?.roles ?? [], 'managePurchases')
+  const canViewLedger = hasRouteAccess(currentUser?.roles ?? [], 'viewSupplierStatements')
   const [supplier, setSupplier] = useState<Supplier | null>(null)
   const [purchaseResponse, setPurchaseResponse] = useState<PagedResponse<Purchase> | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -85,14 +86,22 @@ export function SupplierDetailPage() {
       {isLoading ? <LoadingState>Loading supplier...</LoadingState> : null}
       {errorMessage ? <ErrorBanner>{errorMessage}</ErrorBanner> : null}
       {supplier ? (
-        <div className="detail-grid">
-          <span>Status</span><strong>{supplier.isActive ? 'Active' : 'Inactive'}</strong>
-          <span>Contact person</span><strong>{supplier.contactPerson || '-'}</strong>
-          <span>Phone</span><strong>{supplier.phone || '-'}</strong>
-          <span>Email</span><strong>{supplier.email || '-'}</strong>
-          <span>GST number</span><strong>{supplier.gstNumber || '-'}</strong>
-          <span>Address</span><strong>{supplier.address || '-'}</strong>
-        </div>
+        <>
+          <div className="detail-grid">
+            <span>Status</span><strong>{supplier.isActive ? 'Active' : 'Inactive'}</strong>
+            <span>Contact person</span><strong>{supplier.contactPerson || '-'}</strong>
+            <span>Phone</span><strong>{supplier.phone || '-'}</strong>
+            <span>Email</span><strong>{supplier.email || '-'}</strong>
+            <span>GST number</span><strong>{supplier.gstNumber || '-'}</strong>
+            <span>Address</span><strong>{supplier.address || '-'}</strong>
+          </div>
+
+          {canViewLedger ? (
+            <p className="page-action">
+              <Link className="text-link" to={`/app/suppliers/${supplier.id}/ledger`}>View ledger</Link>
+            </p>
+          ) : null}
+        </>
       ) : null}
 
       {supplier && canViewPurchases ? (

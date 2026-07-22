@@ -8,10 +8,12 @@ export type RoutePolicy =
   | 'manageProducts'
   | 'readCustomers'
   | 'manageCustomers'
+  | 'viewCustomerStatements'
   | 'readDrivers'
   | 'manageDrivers'
   | 'readSuppliers'
   | 'manageSuppliers'
+  | 'viewSupplierStatements'
   | 'managePurchases'
   | 'manageDeliveryChallans'
   | 'manageSalesInvoices'
@@ -31,10 +33,12 @@ const policyRoles: Record<RoutePolicy, AppRole[]> = {
   manageProducts: ['Admin', 'Manager'],
   readCustomers: ['Admin', 'Manager', 'Sales'],
   manageCustomers: ['Admin', 'Manager'],
+  viewCustomerStatements: ['Admin', 'Manager', 'Sales'],
   readDrivers: ['Admin', 'Manager', 'Sales'],
   manageDrivers: ['Admin', 'Manager'],
   readSuppliers: ['Admin', 'Manager', 'Inventory'],
   manageSuppliers: ['Admin', 'Manager'],
+  viewSupplierStatements: ['Admin', 'Manager'],
   managePurchases: ['Admin', 'Manager', 'Inventory'],
   manageDeliveryChallans: ['Admin', 'Manager', 'Sales'],
   manageSalesInvoices: ['Admin', 'Manager', 'Sales'],

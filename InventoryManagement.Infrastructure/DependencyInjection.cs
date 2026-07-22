@@ -44,6 +44,7 @@ namespace InventoryManagement.Infrastructure
             services.AddScoped<IPaymentRepository, PaymentRepository>();
             services.AddScoped<IPartyStatementRepository, PartyStatementRepository>();
             services.AddScoped<IGrossProfitReportRepository, GrossProfitReportRepository>();
+            services.AddScoped<ICompanyProfileRepository, CompanyProfileRepository>();
             services.AddScoped<IDocumentNumberService, DocumentNumberService>();
             services.AddScoped<IIdentityService, IdentityService>();
             services.AddScoped<IdentityBootstrapService>();

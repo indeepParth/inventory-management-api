@@ -52,6 +52,8 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<DocumentSequence> DocumentSequences => Set<DocumentSequence>();
 
+        public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -76,6 +78,22 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.DocumentType)
                       .HasMaxLength(50)
                       .IsRequired();
+            });
+
+            builder.Entity<CompanyProfile>(entity =>
+            {
+                entity.Property(x => x.Id)
+                      .ValueGeneratedNever();
+                entity.Property(x => x.CompanyName)
+                      .HasMaxLength(150)
+                      .IsRequired();
+                entity.Property(x => x.Address).HasMaxLength(500);
+                entity.Property(x => x.GstNumber)
+                      .UseCollation("NOCASE")
+                      .HasMaxLength(15);
+                entity.Property(x => x.Email).HasMaxLength(254);
+                entity.Property(x => x.Phone).HasMaxLength(30);
+                entity.Property(x => x.Website).HasMaxLength(200);
             });
 
             builder.Entity<Category>(entity =>

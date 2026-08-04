@@ -35,5 +35,9 @@ namespace InventoryManagement.Application.Features.DeliveryChallans
         public string ProductName { get; set; } = string.Empty;
         public string ProductSku { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
+        public decimal EnteredQuantity { get; set; }
+        public int UnitId { get; set; }
+        public string UnitName { get; set; } = string.Empty;
+        public decimal ConvertedBaseQuantity { get; set; }
     }
 }

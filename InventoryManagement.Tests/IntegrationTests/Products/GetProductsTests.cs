@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Tests.IntegrationTests.Common;
-using InventoryManagement.Domain.Enums;
 using ProductListResponse = InventoryManagement.Application.Common.Models.PagedResponse<InventoryManagement.Application.Features.Products.GetProducts.Response>;
 using CreateCategoryCommand = InventoryManagement.Application.Features.Categories.CreateCategory.Command;
 using CategoryResponse = InventoryManagement.Application.Features.Categories.Response;
@@ -26,7 +25,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             {
                 Name = "Keyboard",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                BaseUnit = UnitOfMeasure.Piece,
+                BaseUnitId = 4,
                 DefaultSellingPrice = 49.99m,
                 CategoryId = category.Id
             });
@@ -48,7 +47,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             result.Items.First().CategoryId.Should().Be(category.Id);
             result.Items.First().CategoryName.Should().Be(category.Name);
             result.Items.First().Quantity.Should().Be(0m);
-            result.Items.First().BaseUnit.Should().Be(UnitOfMeasure.Piece.ToString());
+            result.Items.First().BaseUnitId.Should().Be(4);
+            result.Items.First().BaseUnitName.Should().Be("Piece");
             result.Items.First().DefaultSellingPrice.Should().Be(49.99m);
             result.Items.First().AverageCost.Should().Be(0m);
         }

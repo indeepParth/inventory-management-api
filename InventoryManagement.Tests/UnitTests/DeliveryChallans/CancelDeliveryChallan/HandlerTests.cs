@@ -28,12 +28,12 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CancelDeliveryCha
         }
 
         [Fact]
-        public async Task Handle_Should_Restore_Posted_Stock_And_Keep_Original_Movement()
+        public async Task Handle_Should_Restore_Posted_Converted_Base_Quantity_And_Keep_Original_Movement()
         {
             var challan = Challan(DeliveryChallanStatus.Posted);
             var product = new Product
             {
-                Id = 2, Name = "Product", SKU = "SKU", Quantity = 7, AverageCost = 12
+                Id = 2, Name = "Sand", SKU = "SAND", Quantity = 2, AverageCost = 12
             };
             var original = new StockMovement
             {
@@ -41,7 +41,7 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CancelDeliveryCha
                 ProductId = product.Id,
                 Product = product,
                 MovementType = StockMovementType.Sale,
-                QuantityChange = -3,
+                QuantityChange = -8,
                 UnitCost = 12
             };
             var repository = TransactionalRepository(challan);
@@ -63,8 +63,8 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CancelDeliveryCha
             original.MovementType.Should().Be(StockMovementType.Sale);
             reversal.Should().NotBeNull();
             reversal!.MovementType.Should().Be(StockMovementType.Reversal);
-            reversal.QuantityChange.Should().Be(3);
-            reversal.BalanceBefore.Should().Be(7);
+            reversal.QuantityChange.Should().Be(8);
+            reversal.BalanceBefore.Should().Be(2);
             reversal.BalanceAfter.Should().Be(10);
             reversal.UnitCost.Should().Be(12);
         }

@@ -40,14 +40,31 @@ public class ProductSupplierMigrationTests
 
             await migrator.MigrateAsync("20260701051812_RemoveProductSupplierRelationship");
 
-            (await db.Products.AsNoTracking().SingleAsync()).Name
+            (await GetSingleStringAsync(db, "SELECT Name FROM Products"))
                 .Should().Be("Migration product");
-            (await db.Suppliers.AsNoTracking().SingleAsync()).Name
+            (await GetSingleStringAsync(db, "SELECT Name FROM Suppliers"))
                 .Should().Be("Migration supplier");
         }
         finally
         {
             File.Delete(databasePath);
         }
+    }
+
+    private static async Task<string> GetSingleStringAsync(
+        ApplicationDbContext db,
+        string sql)
+    {
+        var connection = db.Database.GetDbConnection();
+        await using var command = connection.CreateCommand();
+        command.CommandText = sql;
+
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        var result = await command.ExecuteScalarAsync();
+        return result?.ToString() ?? string.Empty;
     }
 }

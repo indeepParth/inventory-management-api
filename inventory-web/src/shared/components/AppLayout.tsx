@@ -29,6 +29,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Products', to: '/app/products', policy: 'readProducts' },
       { label: 'Categories', to: '/app/categories', policy: 'readProducts' },
+      { label: 'Units', to: '/app/units', policy: 'readProducts' },
       { label: 'Stock Movements', to: '/app/stock-movements', policy: 'viewStockMovements' },
     ],
   },

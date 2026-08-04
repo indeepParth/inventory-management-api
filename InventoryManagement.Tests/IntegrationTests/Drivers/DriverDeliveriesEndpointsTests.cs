@@ -122,6 +122,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 Name = $"History product A {suffix}",
                 SKU = $"HISTA-{suffix}",
                 Quantity = 10,
+                BaseUnitId = 1,
                 AverageCost = 20,
                 Category = category
             };
@@ -130,6 +131,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 Name = $"History product B {suffix}",
                 SKU = $"HISTB-{suffix}",
                 Quantity = 10,
+                BaseUnitId = 1,
                 AverageCost = 30,
                 Category = category
             };
@@ -224,7 +226,9 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 challan.Items.Add(new DeliveryChallanItem
                 {
                     Product = product,
-                    Quantity = 1
+                    EnteredQuantity = 1,
+                    UnitId = 1,
+                    ConvertedBaseQuantity = 1
                 });
             }
 

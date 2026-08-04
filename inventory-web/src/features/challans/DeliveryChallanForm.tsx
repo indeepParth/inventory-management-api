@@ -2,7 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { getFieldError, type FieldErrors } from '../../shared/api/apiErrorMessages'
 import type { Driver } from '../drivers/driversApi'
 import type { Customer } from '../parties/partiesApi'
-import type { Product } from '../products/productsApi'
+import {
+  getUnits,
+  type Product,
+  type Unit,
+} from '../products/productsApi'
 import type {
   DeliveryChallan,
   DeliveryChallanFormValues,
@@ -31,10 +35,11 @@ function toDateInputValue(value?: string): string {
   return value.slice(0, 10)
 }
 
-function createBlankItem(productId: number): DeliveryChallanItemFormValues {
+function createBlankItem(product?: Product): DeliveryChallanItemFormValues {
   return {
-    productId,
-    quantity: 1,
+    productId: product?.id ?? 0,
+    enteredQuantity: 1,
+    unitId: product?.baseUnitId ?? 0,
   }
 }
 
@@ -55,6 +60,7 @@ export function DeliveryChallanForm({
   const defaultCustomerId = initialValue?.customerId ?? initialCustomerId ?? firstCustomerId
   const defaultDeliveryAddress = initialValue?.deliveryAddress ?? initialDeliveryAddress ?? ''
   const firstProductId = products[0]?.id ?? 0
+  const firstProduct = products[0]
   const [customerId, setCustomerId] = useState(defaultCustomerId)
   const [challanDate, setChallanDate] = useState(toDateInputValue(initialValue?.challanDate))
   const [vehicleNumber, setVehicleNumber] = useState(initialValue?.vehicleNumber ?? '')
@@ -66,9 +72,12 @@ export function DeliveryChallanForm({
   const [items, setItems] = useState<DeliveryChallanItemFormValues[]>(
     initialValue?.items.map((item) => ({
       productId: item.productId,
-      quantity: item.quantity,
-    })) ?? [createBlankItem(firstProductId)],
+      enteredQuantity: item.enteredQuantity ?? item.quantity,
+      unitId: item.unitId,
+    })) ?? [createBlankItem(firstProduct)],
   )
+  const [units, setUnits] = useState<Unit[]>([])
+  const [unitLoadError, setUnitLoadError] = useState('')
 
   useEffect(() => {
     setCustomerId(defaultCustomerId)
@@ -82,10 +91,33 @@ export function DeliveryChallanForm({
     setItems(
       initialValue?.items.map((item) => ({
         productId: item.productId,
-        quantity: item.quantity,
-      })) ?? [createBlankItem(firstProductId)],
+        enteredQuantity: item.enteredQuantity ?? item.quantity,
+        unitId: item.unitId || products.find((product) => product.id === item.productId)?.baseUnitId || 0,
+      })) ?? [createBlankItem(firstProduct)],
     )
-  }, [defaultCustomerId, defaultDeliveryAddress, firstProductId, initialValue])
+  }, [defaultCustomerId, defaultDeliveryAddress, firstProduct, firstProductId, initialValue, products])
+
+  useEffect(() => {
+    let isActive = true
+
+    setUnitLoadError('')
+    void getUnits()
+      .then((loadedUnits) => {
+        if (!isActive) {
+          return
+        }
+        setUnits(loadedUnits.filter((unit) => unit.isActive))
+      })
+      .catch(() => {
+        if (isActive) {
+          setUnitLoadError('Unable to load units for selected product.')
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   function updateItem(index: number, values: Partial<DeliveryChallanItemFormValues>): void {
     setItems((currentItems) =>
@@ -177,24 +209,61 @@ export function DeliveryChallanForm({
       <div className="line-items">
         <div className="line-items-header">
           <h2>Items</h2>
-          <button className="secondary-button" disabled={isSubmitting || products.length === 0} onClick={() => setItems((currentItems) => [...currentItems, createBlankItem(firstProductId)])} type="button">Add item</button>
+          <button className="secondary-button" disabled={isSubmitting || products.length === 0} onClick={() => setItems((currentItems) => [...currentItems, createBlankItem(firstProduct)])} type="button">Add item</button>
         </div>
         {getFieldError(errors, 'Items') ? <span className="field-error">{getFieldError(errors, 'Items')}</span> : null}
-        {items.map((item, index) => (
-          <div className="line-item-row compact-line-item-row" key={index}>
-            <label className="form-field">
-              <span>Product</span>
-              <select disabled={isSubmitting} onChange={(event) => updateItem(index, { productId: Number(event.target.value) })} required value={item.productId}>
-                {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
-              </select>
-            </label>
-            <label className="form-field">
-              <span>Quantity</span>
-              <input disabled={isSubmitting} min="0.001" onChange={(event) => updateItem(index, { quantity: Number(event.target.value) })} required step="0.001" type="number" value={item.quantity} />
-            </label>
-            <button className="danger-button" disabled={isSubmitting || items.length === 1} onClick={() => removeItem(index)} type="button">Remove</button>
-          </div>
-        ))}
+        {unitLoadError ? <span className="field-error">{unitLoadError}</span> : null}
+        {items.map((item, index) => {
+          const selectedProduct = products.find((product) => product.id === item.productId)
+          const availableUnits = selectedProduct
+            ? units.filter((unit) => unit.baseUnitId === selectedProduct.baseUnitId)
+            : []
+          return (
+            <div className="line-item-row compact-line-item-row" key={index}>
+              <label className="form-field">
+                <span>Product</span>
+                <select
+                  disabled={isSubmitting}
+                  onChange={(event) => {
+                    const productId = Number(event.target.value)
+                    const product = products.find((candidate) => candidate.id === productId)
+                    updateItem(index, {
+                      productId,
+                      unitId: product?.baseUnitId ?? 0,
+                    })
+                  }}
+                  required
+                  value={item.productId}
+                >
+                  {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+                </select>
+              </label>
+              <label className="form-field">
+                <span>Quantity</span>
+                <input disabled={isSubmitting} min="0.001" onChange={(event) => updateItem(index, { enteredQuantity: Number(event.target.value) })} required step="0.001" type="number" value={item.enteredQuantity} />
+              </label>
+              <label className="form-field">
+                <span>Unit</span>
+                <select
+                  disabled={isSubmitting || availableUnits.length === 0}
+                  onChange={(event) => updateItem(index, { unitId: Number(event.target.value) })}
+                  required
+                  value={item.unitId || selectedProduct?.baseUnitId || 0}
+                >
+                  {availableUnits.length === 0 ? (
+                    <option value={selectedProduct?.baseUnitId ?? 0}>Loading units...</option>
+                  ) : null}
+                  {availableUnits.map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {unit.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button className="danger-button" disabled={isSubmitting || items.length === 1} onClick={() => removeItem(index)} type="button">Remove</button>
+            </div>
+          )
+        })}
       </div>
 
       <div className="form-actions">

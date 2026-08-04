@@ -24,7 +24,7 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.UpdateDeliveryCha
                 null,
                 new List<DeliveryChallanItemInput>
                 {
-                    new() { ProductId = 1, Quantity = 1 }
+                    new() { ProductId = 1, EnteredQuantity = 1, UnitId = 1 }
                 }));
 
             result.Errors.Should().Contain(x => x.PropertyName == "DeliveryFromAddress");

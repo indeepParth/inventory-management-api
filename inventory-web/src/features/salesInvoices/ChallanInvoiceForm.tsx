@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { getFieldError, type FieldErrors } from '../../shared/api/apiErrorMessages'
-import { formatCurrency, toDateInputValue } from '../../shared/utils/formatters'
+import { formatCurrency, formatQuantity, toDateInputValue } from '../../shared/utils/formatters'
 import type { DeliveryChallan } from '../challans/challansApi'
 import type { ChallanInvoiceFormValues, ChallanInvoiceItemFormValues } from './salesInvoicesApi'
 
@@ -42,9 +42,11 @@ export function ChallanInvoiceForm({
       challans.flatMap((challan) =>
         challan.items.map((item) => ({
           id: item.id,
-          label: `${challan.challanNumber} - ${item.productName} (${item.quantity})`,
+          label: `${challan.challanNumber} - ${item.productName} (${formatQuantity(item.enteredQuantity)} ${item.unitName})`,
+          challanId: challan.id,
           customerId: challan.customerId,
-          quantity: item.quantity,
+          deliveryCharge: challan.deliveryCharge,
+          quantity: item.enteredQuantity,
         })),
       ),
     [challans],
@@ -80,12 +82,36 @@ export function ChallanInvoiceForm({
     setItems((currentItems) => currentItems.filter((_, itemIndex) => itemIndex !== index))
   }
 
+  function getSelectedDeliveryChargeTotal(): number {
+    const selectedChallans = new Map<number, number>()
+
+    items.forEach((item) => {
+      const sourceItem = availableItems.find(
+        (option) => option.id === item.deliveryChallanItemId,
+      )
+
+      if (sourceItem) {
+        selectedChallans.set(sourceItem.challanId, sourceItem.deliveryCharge)
+      }
+    })
+
+    return Array.from(selectedChallans.values()).reduce(
+      (total, deliveryCharge) => total + deliveryCharge,
+      0,
+    )
+  }
+
+  const selectedDeliveryChargeTotal = getSelectedDeliveryChargeTotal()
+  const effectiveOtherCharges = selectedDeliveryChargeTotal > 0
+    ? selectedDeliveryChargeTotal
+    : Number(otherCharges || 0)
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     await onSubmit({
       invoiceDate,
       discount: Number(discount),
-      otherCharges: Number(otherCharges),
+      otherCharges: effectiveOtherCharges,
       notes,
       items,
     })
@@ -108,7 +134,7 @@ export function ChallanInvoiceForm({
     },
     0,
   )
-  const total = subtotal - Number(discount || 0) + taxAmount + Number(otherCharges || 0)
+  const total = subtotal - Number(discount || 0) + taxAmount + effectiveOtherCharges
 
   return (
     <form className="entity-form" onSubmit={handleSubmit}>
@@ -121,10 +147,17 @@ export function ChallanInvoiceForm({
           <span>Discount</span>
           <input disabled={isSubmitting} min="0" onChange={(event) => setDiscount(event.target.value)} step="0.01" type="number" value={discount} />
         </label>
-        <label className="form-field">
-          <span>Other charges</span>
-          <input disabled={isSubmitting} min="0" onChange={(event) => setOtherCharges(event.target.value)} step="0.01" type="number" value={otherCharges} />
-        </label>
+        {selectedDeliveryChargeTotal > 0 ? (
+          <div className="form-field">
+            <span>Delivery charge</span>
+            <strong>{formatCurrency(selectedDeliveryChargeTotal)}</strong>
+          </div>
+        ) : (
+          <label className="form-field">
+            <span>Delivery / other charges</span>
+            <input disabled={isSubmitting} min="0" onChange={(event) => setOtherCharges(event.target.value)} step="0.01" type="number" value={otherCharges} />
+          </label>
+        )}
       </div>
 
       <label className="form-field">
@@ -162,6 +195,7 @@ export function ChallanInvoiceForm({
       <div className="summary-strip">
         <span>Line prices: {formatCurrency(subtotal)}</span>
         <span>Tax: {formatCurrency(taxAmount)}</span>
+        <span>Charges: {formatCurrency(effectiveOtherCharges)}</span>
         <strong>Total: {formatCurrency(total)}</strong>
       </div>
 

@@ -14,7 +14,12 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<Product> Products => Set<Product>();
 
+        public DbSet<ProductUnitConversion> ProductUnitConversions =>
+            Set<ProductUnitConversion>();
+
         public DbSet<Category> Categories => Set<Category>();
+
+        public DbSet<Unit> Units => Set<Unit>();
 
         public DbSet<Supplier> Suppliers => Set<Supplier>();
 
@@ -111,6 +116,93 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .IsRequired();
             });
 
+            builder.Entity<Unit>(entity =>
+            {
+                entity.HasIndex(x => x.Name)
+                      .IsUnique();
+
+                entity.Property(x => x.Name)
+                      .UseCollation("NOCASE")
+                      .HasMaxLength(100)
+                      .IsRequired();
+
+                entity.Property(x => x.ShortName)
+                      .HasMaxLength(20);
+
+                entity.Property(x => x.FactorToBaseUnit)
+                      .HasPrecision(18, 6);
+
+                entity.Property(x => x.IsActive)
+                      .IsRequired();
+
+                entity.HasOne(x => x.BaseUnit)
+                      .WithMany()
+                      .HasForeignKey(x => x.BaseUnitId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasData(
+                    new Unit
+                    {
+                        Id = 1,
+                        Name = "Ton",
+                        ShortName = null,
+                        FactorToBaseUnit = 1m,
+                        BaseUnitId = 1,
+                        IsActive = true,
+                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
+                    },
+                    new Unit
+                    {
+                        Id = 2,
+                        Name = "Kilogram",
+                        ShortName = null,
+                        FactorToBaseUnit = 1m,
+                        BaseUnitId = 2,
+                        IsActive = true,
+                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
+                    },
+                    new Unit
+                    {
+                        Id = 3,
+                        Name = "Bag",
+                        ShortName = null,
+                        FactorToBaseUnit = 1m,
+                        BaseUnitId = 3,
+                        IsActive = true,
+                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
+                    },
+                    new Unit
+                    {
+                        Id = 4,
+                        Name = "Piece",
+                        ShortName = null,
+                        FactorToBaseUnit = 1m,
+                        BaseUnitId = 4,
+                        IsActive = true,
+                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
+                    },
+                    new Unit
+                    {
+                        Id = 5,
+                        Name = "Cubic foot",
+                        ShortName = null,
+                        FactorToBaseUnit = 1m,
+                        BaseUnitId = 5,
+                        IsActive = true,
+                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
+                    },
+                    new Unit
+                    {
+                        Id = 6,
+                        Name = "Cubic meter",
+                        ShortName = null,
+                        FactorToBaseUnit = 1m,
+                        BaseUnitId = 6,
+                        IsActive = true,
+                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
+                    });
+            });
+
             builder.Entity<Supplier>(entity =>
             {
                 entity.HasIndex(x => x.Name)
@@ -177,12 +269,39 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.AverageCost)
                       .HasPrecision(18, 2);
 
-                entity.Property(x => x.BaseUnit)
+                entity.HasOne(x => x.BaseUnit)
+                      .WithMany()
+                      .HasForeignKey(x => x.BaseUnitId)
+                      .OnDelete(DeleteBehavior.Restrict)
                       .IsRequired();
 
                 entity.HasOne(x => x.Category)
                       .WithMany(x => x.Products)
                       .HasForeignKey(x => x.CategoryId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
+            });
+
+            builder.Entity<ProductUnitConversion>(entity =>
+            {
+                entity.HasIndex(x => new { x.ProductId, x.UnitId })
+                      .IsUnique();
+
+                entity.Property(x => x.FactorToBaseUnit)
+                      .HasPrecision(18, 6);
+
+                entity.Property(x => x.IsActive)
+                      .IsRequired();
+
+                entity.HasOne(x => x.Product)
+                      .WithMany(x => x.UnitConversions)
+                      .HasForeignKey(x => x.ProductId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
+
+                entity.HasOne(x => x.Unit)
+                      .WithMany()
+                      .HasForeignKey(x => x.UnitId)
                       .OnDelete(DeleteBehavior.Restrict)
                       .IsRequired();
             });
@@ -276,13 +395,18 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<DeliveryChallanItem>(entity =>
             {
-                entity.Property(x => x.Quantity).HasPrecision(18, 3);
+                entity.Ignore(x => x.Quantity);
+                entity.Property(x => x.EnteredQuantity).HasPrecision(18, 3);
+                entity.Property(x => x.ConvertedBaseQuantity).HasPrecision(18, 3);
                 entity.HasOne(x => x.DeliveryChallan).WithMany(x => x.Items)
                     .HasForeignKey(x => x.DeliveryChallanId)
                     .OnDelete(DeleteBehavior.Cascade).IsRequired();
                 entity.HasOne(x => x.Product).WithMany()
                     .HasForeignKey(x => x.ProductId)
                       .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                entity.HasOne(x => x.Unit).WithMany()
+                    .HasForeignKey(x => x.UnitId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
             });
 
             builder.Entity<SalesInvoice>(entity =>

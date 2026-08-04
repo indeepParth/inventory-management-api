@@ -25,7 +25,8 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
         public ItemValidator()
         {
             RuleFor(x => x.ProductId).GreaterThan(0);
-            RuleFor(x => x.Quantity).GreaterThan(0);
+            RuleFor(x => x.EnteredQuantity).GreaterThan(0);
+            RuleFor(x => x.UnitId).GreaterThan(0);
         }
     }
 }

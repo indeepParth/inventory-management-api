@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using InventoryManagement.Domain.Enums;
-
 namespace InventoryManagement.Application.Features.Products.CreateProduct
 {
     public class Response
@@ -12,7 +6,8 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
         public string Name { get; set; } = string.Empty;
         public string SKU { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
-        public UnitOfMeasure BaseUnit { get; set; }
+        public int BaseUnitId { get; set; }
+        public string BaseUnitName { get; set; } = string.Empty;
         public decimal DefaultSellingPrice { get; set; }
         public decimal AverageCost { get; set; }
         public int CategoryId { get; set; }

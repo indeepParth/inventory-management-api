@@ -7,7 +7,6 @@ using FluentAssertions;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Application.Features.Products.UpdateProduct;
 using InventoryManagement.Domain.Entities;
-using InventoryManagement.Domain.Enums;
 using Moq;
 
 namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
@@ -35,7 +34,15 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
                 Name = "Old Product",
                 SKU = "OLD123",
                 Quantity = 5.500m,
-                BaseUnit = UnitOfMeasure.Bag,
+                BaseUnitId = 3,
+                BaseUnit = new Unit
+                {
+                    Id = 3,
+                    Name = "Bag",
+                    BaseUnitId = 3,
+                    FactorToBaseUnit = 1m,
+                    IsActive = true
+                },
                 DefaultSellingPrice = 50,
                 AverageCost = 35,
                 CategoryId = 1,
@@ -50,13 +57,21 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
                 Id = 2,
                 Name = "New Category"
             };
+            var unit = new Unit
+            {
+                Id = 2,
+                Name = "Kilogram",
+                BaseUnitId = 2,
+                FactorToBaseUnit = 1m,
+                IsActive = true
+            };
 
             var updateDto = new Command
             (
                 1,
                 "Updated Product",
                 "NEW123",
-                UnitOfMeasure.Kilogram,
+                2,
                 150,
                 2
             );
@@ -64,9 +79,13 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
 
             var _repositoryMock = new Mock<IProductRepository>();
             var categoryRepositoryMock = new Mock<ICategoryRepository>();
+            var unitRepositoryMock = new Mock<IUnitRepository>();
             categoryRepositoryMock
                 .Setup(x => x.GetByIdAsync(2, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(category);
+            unitRepositoryMock
+                .Setup(x => x.GetByIdAsync(2, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(unit);
             _repositoryMock.Setup(x => x.GetProductByIdAsync(1, It.IsAny<CancellationToken>()))
                             .ReturnsAsync(existingProduct);
             _repositoryMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
@@ -74,7 +93,8 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
 
             var handler = new Handler(
                 _repositoryMock.Object,
-                categoryRepositoryMock.Object);
+                categoryRepositoryMock.Object,
+                unitRepositoryMock.Object);
 
             // ACT
             await handler.Handle(updateDto, It.IsAny<CancellationToken>());
@@ -83,7 +103,7 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
             existingProduct.Name.Should().Be("Updated Product");
             existingProduct.SKU.Should().Be("NEW123");
             existingProduct.Quantity.Should().Be(5.500m);
-            existingProduct.BaseUnit.Should().Be(UnitOfMeasure.Kilogram);
+            existingProduct.BaseUnitId.Should().Be(2);
             existingProduct.DefaultSellingPrice.Should().Be(150);
             existingProduct.AverageCost.Should().Be(35);
             existingProduct.CategoryId.Should().Be(2);

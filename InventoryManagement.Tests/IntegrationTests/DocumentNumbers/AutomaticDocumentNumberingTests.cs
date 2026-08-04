@@ -158,6 +158,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
                 Name = $"Number product {suffix}",
                 SKU = $"NUM-{suffix}",
                 Quantity = 100,
+                BaseUnitId = 1,
                 AverageCost = 10,
                 Category = new Category
                 {
@@ -167,6 +168,13 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
                     CreatedAt = DateTime.UtcNow
                 }
             };
+            db.ProductUnitConversions.Add(new ProductUnitConversion
+            {
+                Product = product,
+                UnitId = 1,
+                FactorToBaseUnit = 1,
+                IsActive = true
+            });
             db.AddRange(supplier, customer, product);
             await db.SaveChangesAsync();
 
@@ -215,7 +223,8 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
                         new CreateChallanItemInput
                         {
                             ProductId = seed.ProductId,
-                            Quantity = 1
+                            EnteredQuantity = 1,
+                            UnitId = 1
                         }
                     }
                 });

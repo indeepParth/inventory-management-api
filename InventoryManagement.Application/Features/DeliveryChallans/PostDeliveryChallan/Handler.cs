@@ -38,7 +38,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.PostDelivery
 
                 foreach (var group in challan.Items.GroupBy(x => x.ProductId))
                 {
-                    var required = group.Sum(x => x.Quantity);
+                    var required = group.Sum(x => x.ConvertedBaseQuantity);
                     if (group.First().Product.Quantity < required)
                         throw new BadRequestException(
                             $"Insufficient stock for product {group.Key}.");
@@ -49,13 +49,13 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.PostDelivery
                 {
                     var product = item.Product;
                     var before = product.Quantity;
-                    product.Quantity -= item.Quantity;
+                    product.Quantity -= item.ConvertedBaseQuantity;
                     await _movements.AddAsync(new StockMovement
                     {
                         ProductId = product.Id,
                         Product = product,
                         MovementType = StockMovementType.Sale,
-                        QuantityChange = -item.Quantity,
+                        QuantityChange = -item.ConvertedBaseQuantity,
                         BalanceBefore = before,
                         BalanceAfter = product.Quantity,
                         UnitCost = product.AverageCost,

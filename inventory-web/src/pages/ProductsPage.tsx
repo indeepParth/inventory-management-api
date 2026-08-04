@@ -8,11 +8,13 @@ import {
   deleteProduct,
   getCategories,
   getProducts,
+  getUnits,
   updateProduct,
   type Category,
   type PagedResponse,
   type Product,
   type ProductFormValues,
+  type Unit,
 } from '../features/products/productsApi'
 import {
   getErrorMessage,
@@ -29,6 +31,7 @@ export function ProductsPage() {
   const canManageProducts = hasRouteAccess(currentUser?.roles ?? [], 'manageProducts')
   const [productsResponse, setProductsResponse] = useState<PagedResponse<Product> | null>(null)
   const [categories, setCategories] = useState<Category[]>([])
+  const [units, setUnits] = useState<Unit[]>([])
   const [editingProduct, setEditingProduct] = useState<Product | undefined>()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -45,12 +48,14 @@ export function ProductsPage() {
     setErrorMessage(null)
 
     try {
-      const [productPage, categoryItems] = await Promise.all([
+      const [productPage, categoryItems, unitItems] = await Promise.all([
         getProducts(pageNumber, pageSize, search),
         getCategories(),
+        getUnits(),
       ])
       setProductsResponse(productPage)
       setCategories(categoryItems)
+      setUnits(unitItems.filter((unit) => unit.isActive))
     } catch (error) {
       setErrorMessage(getErrorMessage(error))
     } finally {
@@ -115,6 +120,7 @@ export function ProductsPage() {
   }
 
   const products = productsResponse?.items ?? []
+  const baseUnits = units.filter((unit) => unit.baseUnitId === unit.id)
 
   return (
     <section className="content-panel wide-panel" aria-labelledby="products-title">
@@ -128,7 +134,7 @@ export function ProductsPage() {
         {canManageProducts ? (
           <button
             className="primary-button"
-            disabled={categories.length === 0}
+            disabled={categories.length === 0 || units.length === 0}
             onClick={() => {
               setIsFormOpen(true)
               setEditingProduct(undefined)
@@ -156,11 +162,19 @@ export function ProductsPage() {
         <Link className="text-link" to="/app/categories">
           Manage categories
         </Link>
+        <Link className="text-link" to="/app/units">
+          Manage units
+        </Link>
       </form>
 
       {categories.length === 0 && canManageProducts ? (
         <p className="state-message">
           Create a category before adding products.
+        </p>
+      ) : null}
+      {units.length === 0 && canManageProducts ? (
+        <p className="state-message">
+          Activate a unit before adding products.
         </p>
       ) : null}
 
@@ -169,14 +183,17 @@ export function ProductsPage() {
       ) : null}
 
       {isFormOpen ? (
-        <ProductForm
-          categories={categories}
-          errors={fieldErrors}
-          initialValue={editingProduct}
-          isSubmitting={isSaving}
-          onCancel={closeForm}
-          onSubmit={handleSubmit}
-        />
+        <>
+          <ProductForm
+            categories={categories}
+            units={baseUnits}
+            errors={fieldErrors}
+            initialValue={editingProduct}
+            isSubmitting={isSaving}
+            onCancel={closeForm}
+            onSubmit={handleSubmit}
+          />
+        </>
       ) : null}
 
       {isLoading ? <LoadingState>Loading products...</LoadingState> : null}
@@ -208,7 +225,7 @@ export function ProductsPage() {
                     <td>{product.sku}</td>
                     <td>{product.categoryName}</td>
                     <td>
-                      {formatQuantity(product.quantity)} {product.baseUnit}
+                      {formatQuantity(product.quantity)} {product.baseUnitName}
                     </td>
                     <td>{formatCurrency(product.defaultSellingPrice)}</td>
                     {canManageProducts ? (

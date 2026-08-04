@@ -13,6 +13,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
         private readonly ICustomerRepository _customers;
         private readonly IDriverRepository _drivers;
         private readonly IProductRepository _products;
+        private readonly IUnitRepository _units;
         private readonly ICurrentUserService _currentUser;
         private readonly IDocumentNumberService _documentNumbers;
 
@@ -21,6 +22,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
             ICustomerRepository customers,
             IDriverRepository drivers,
             IProductRepository products,
+            IUnitRepository units,
             ICurrentUserService currentUser,
             IDocumentNumberService documentNumbers)
         {
@@ -28,6 +30,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
             _customers = customers;
             _drivers = drivers;
             _products = products;
+            _units = units;
             _currentUser = currentUser;
             _documentNumbers = documentNumbers;
         }
@@ -90,12 +93,24 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
                         input.ProductId, transactionToken);
                     if (product is null)
                         throw new NotFoundException($"Product {input.ProductId} not found.");
+                    var unit = await _units.GetByIdAsync(input.UnitId, transactionToken);
+                    if (unit is null)
+                        throw new NotFoundException($"Unit {input.UnitId} not found.");
+                    if (!unit.IsActive || unit.BaseUnitId != product.BaseUnitId)
+                    {
+                        throw new BadRequestException(
+                            $"Unit {input.UnitId} is not valid for product {input.ProductId}.");
+                    }
 
                     challan.Items.Add(new DeliveryChallanItem
                     {
                         ProductId = product.Id,
                         Product = product,
-                        Quantity = input.Quantity
+                        EnteredQuantity = input.EnteredQuantity,
+                        UnitId = unit.Id,
+                        Unit = unit,
+                        ConvertedBaseQuantity =
+                            input.EnteredQuantity * unit.FactorToBaseUnit
                     });
                 }
 

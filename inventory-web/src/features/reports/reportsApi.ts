@@ -30,7 +30,8 @@ export type CurrentStockItem = {
   productId: number
   productName: string
   category: string
-  unit: number
+  unitId: number
+  unitName: string
   quantity: number
   averageCost: number
   stockValue: number

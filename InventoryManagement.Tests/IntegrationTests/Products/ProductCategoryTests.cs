@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Tests.IntegrationTests.Common;
-using InventoryManagement.Domain.Enums;
 using CreateCategoryCommand = InventoryManagement.Application.Features.Categories.CreateCategory.Command;
 using CategoryResponse = InventoryManagement.Application.Features.Categories.Response;
 using CreateProductCommand = InventoryManagement.Application.Features.Products.CreateProduct.Command;
@@ -26,7 +25,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             {
                 Name = "Uncategorized product",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                BaseUnit = UnitOfMeasure.Piece,
+                BaseUnitId = 4,
                 DefaultSellingPrice = 10
             });
 
@@ -42,9 +41,27 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             {
                 Name = "Invalid category product",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                BaseUnit = UnitOfMeasure.Piece,
+                BaseUnitId = 4,
                 DefaultSellingPrice = 10,
                 CategoryId = int.MaxValue
+            });
+
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
+
+        [Fact]
+        public async Task CreateProduct_Should_Reject_Invalid_BaseUnitId()
+        {
+            await AuthenticateAsync();
+            var category = await CreateCategoryAsync();
+
+            var response = await Client.PostAsJsonAsync("/api/products", new CreateProductCommand
+            {
+                Name = "Invalid unit product",
+                SKU = $"SKU-{Guid.NewGuid():N}",
+                BaseUnitId = int.MaxValue,
+                DefaultSellingPrice = 10,
+                CategoryId = category.Id
             });
 
             response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -60,7 +77,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             {
                 Name = "Product to update",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                BaseUnit = UnitOfMeasure.Piece,
+                BaseUnitId = 4,
                 DefaultSellingPrice = 10,
                 CategoryId = category.Id
             });
@@ -75,7 +92,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
                     product.Id,
                     product.Name,
                     product.SKU,
-                    product.BaseUnit,
+                    product.BaseUnitId,
                     product.DefaultSellingPrice,
                     int.MaxValue));
 

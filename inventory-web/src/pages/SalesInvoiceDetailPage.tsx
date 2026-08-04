@@ -22,6 +22,12 @@ function getInvoiceSourceType(invoice: SalesInvoiceDetail): string {
     : 'Direct'
 }
 
+function getOtherChargesLabel(invoice: SalesInvoiceDetail): string {
+  return invoice.items.some((item) => item.deliveryChallanItemId)
+    ? 'Delivery / other charges'
+    : 'Other charges'
+}
+
 function getPaymentState(payment: SalesInvoicePayment): string {
   if (payment.reversesPaymentId) {
     return `Reversal of #${payment.reversesPaymentId}`
@@ -89,7 +95,7 @@ export function SalesInvoiceDetailPage() {
             <span>Subtotal</span><strong>{formatCurrency(invoice.subtotal)}</strong>
             <span>Discount</span><strong>{formatCurrency(invoice.discount)}</strong>
             <span>Tax amount</span><strong>{formatCurrency(invoice.taxAmount)}</strong>
-            <span>Other charges</span><strong>{formatCurrency(invoice.otherCharges)}</strong>
+            <span>{getOtherChargesLabel(invoice)}</span><strong>{formatCurrency(invoice.otherCharges)}</strong>
             <span>Grand total</span><strong>{formatCurrency(invoice.grandTotal)}</strong>
             <span>Amount paid</span><strong>{formatCurrency(invoice.amountPaid)}</strong>
             <span>Balance due</span><strong>{formatCurrency(invoice.balanceDue)}</strong>

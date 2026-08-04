@@ -17,12 +17,20 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                 ChallanDate = DateTime.UtcNow,
                 DeliveryFromAddress = "Warehouse",
                 DeliveryAddress = "Address",
-                Items = { new DeliveryChallanItemInput { ProductId = 1, Quantity = 0 } }
+                Items =
+                {
+                    new DeliveryChallanItemInput
+                    {
+                        ProductId = 1,
+                        EnteredQuantity = 0,
+                        UnitId = 1
+                    }
+                }
             });
 
             empty.Errors.Should().Contain(x => x.PropertyName == "Items");
             invalidItem.Errors.Should().Contain(x =>
-                x.PropertyName == "Items[0].Quantity");
+                x.PropertyName == "Items[0].EnteredQuantity");
         }
 
         [Fact]
@@ -37,7 +45,15 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                 ChallanDate = DateTime.UtcNow,
                 DeliveryAddress = "Customer address",
                 DeliveryCharge = -1,
-                Items = { new DeliveryChallanItemInput { ProductId = 1, Quantity = 1 } }
+                Items =
+                {
+                    new DeliveryChallanItemInput
+                    {
+                        ProductId = 1,
+                        EnteredQuantity = 1,
+                        UnitId = 1
+                    }
+                }
             });
 
             result.Errors.Should().Contain(x => x.PropertyName == "DeliveryFromAddress");

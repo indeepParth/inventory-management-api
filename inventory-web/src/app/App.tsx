@@ -30,6 +30,7 @@ import { SupplierDetailPage } from '../pages/SupplierDetailPage'
 import { SupplierLedgerPage } from '../pages/SupplierLedgerPage'
 import { SupplierReturnsPage } from '../pages/SupplierReturnsPage'
 import { SuppliersPage } from '../pages/SuppliersPage'
+import { UnitsPage } from '../pages/UnitsPage'
 import { UsersPage } from '../pages/UsersPage'
 import './App.css'
 
@@ -60,6 +61,7 @@ export function App() {
               <Route element={<RoleProtectedRoute policy="readProducts" />}>
                 <Route path="products" element={<ProductsPage />} />
                 <Route path="categories" element={<CategoriesPage />} />
+                <Route path="units" element={<UnitsPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="readCustomers" />}>
                 <Route path="customers" element={<CustomersPage />} />

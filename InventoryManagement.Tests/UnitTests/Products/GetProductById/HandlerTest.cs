@@ -7,7 +7,6 @@ using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Application.Features.Products.GetProductById;
 using InventoryManagement.Domain.Entities;
-using InventoryManagement.Domain.Enums;
 using Moq;
 
 namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
@@ -27,7 +26,8 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
                                 Name = "Test Product",
                                 SKU = "TEST123",
                                 Quantity = 10.125m,
-                                BaseUnit = UnitOfMeasure.CubicMeter,
+                                BaseUnitId = 6,
+                                BaseUnit = new Unit { Id = 6, Name = "Cubic meter", IsActive = true },
                                 DefaultSellingPrice = 99.99m,
                                 AverageCost = 75.50m,
                                 CategoryId = 1,
@@ -50,7 +50,8 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProductById
             product.Name.Should().Be("Test Product");
             product.SKU.Should().Be("TEST123");
             product.Quantity.Should().Be(10.125m);
-            product.BaseUnit.Should().Be(UnitOfMeasure.CubicMeter.ToString());
+            product.BaseUnitId.Should().Be(6);
+            product.BaseUnitName.Should().Be("Cubic meter");
             product.DefaultSellingPrice.Should().Be(99.99m);
             product.AverageCost.Should().Be(75.50m);
             product.CategoryId.Should().Be(1);

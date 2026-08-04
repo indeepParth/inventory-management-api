@@ -21,6 +21,95 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
             _factory = factory;
         }
 
+        [Fact]
+        public async Task Create_And_Post_Should_Store_Entered_Unit_And_Post_Base_Quantity()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedProductWithConversionAsync();
+
+            var createResponse = await Client.PostAsJsonAsync(
+                "/api/delivery-challans",
+                new
+                {
+                    CustomerId = seed.CustomerId,
+                    ChallanDate = new DateTime(2026, 7, 31),
+                    DeliveryFromAddress = "Warehouse",
+                    DeliveryAddress = "Customer site",
+                    Items = new[]
+                    {
+                        new
+                        {
+                            ProductId = seed.ProductId,
+                            EnteredQuantity = 1.5m,
+                            UnitId = 3
+                        }
+                    }
+                });
+
+            createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+            var draft = await createResponse.Content
+                .ReadFromJsonAsync<DeliveryChallanResponse>();
+            draft.Should().NotBeNull();
+            draft!.Items.Should().ContainSingle(x =>
+                x.EnteredQuantity == 1.5m &&
+                x.UnitId == 3 &&
+                x.UnitName == "Bag" &&
+                x.ConvertedBaseQuantity == 3m &&
+                x.Quantity == 3m);
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var product = await db.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.ProductId);
+                product.Quantity.Should().Be(10m);
+            }
+
+            var postResponse = await Client.PostAsync(
+                $"/api/delivery-challans/{draft.Id}/post",
+                null);
+
+            postResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var product = await db.Products.AsNoTracking()
+                    .SingleAsync(x => x.Id == seed.ProductId);
+                product.Quantity.Should().Be(7m);
+                var movement = await db.StockMovements.AsNoTracking()
+                    .SingleAsync(x => x.ProductId == seed.ProductId);
+                movement.QuantityChange.Should().Be(-3m);
+            }
+        }
+
+        [Fact]
+        public async Task Create_Should_Reject_Unit_Without_Active_Product_Conversion()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedProductWithConversionAsync();
+
+            var response = await Client.PostAsJsonAsync(
+                "/api/delivery-challans",
+                new
+                {
+                    CustomerId = seed.CustomerId,
+                    ChallanDate = new DateTime(2026, 7, 31),
+                    DeliveryFromAddress = "Warehouse",
+                    DeliveryAddress = "Customer site",
+                    Items = new[]
+                    {
+                        new
+                        {
+                            ProductId = seed.ProductId,
+                            EnteredQuantity = 1m,
+                            UnitId = 2
+                        }
+                    }
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         [Theory]
         [InlineData(DeliveryChallanStatus.Posted)]
         [InlineData(DeliveryChallanStatus.Invoiced)]
@@ -92,6 +181,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
                 Name = $"Challan product {suffix}",
                 SKU = $"CH-{suffix}",
                 Quantity = 10,
+                BaseUnitId = 1,
                 AverageCost = 20,
                 Category = new Category
                 {
@@ -119,7 +209,9 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
                     new DeliveryChallanItem
                     {
                         Product = product,
-                        Quantity = 1
+                        EnteredQuantity = 1,
+                        UnitId = 1,
+                        ConvertedBaseQuantity = 1
                     }
                 }
             };
@@ -128,5 +220,55 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
             await db.SaveChangesAsync();
             return challan.Id;
         }
+
+        private async Task<ConversionSeed> SeedProductWithConversionAsync()
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var suffix = Guid.NewGuid().ToString("N");
+            var customer = new Customer
+            {
+                Name = $"Conversion customer {suffix}",
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow
+            };
+            var product = new Product
+            {
+                Name = $"Conversion product {suffix}",
+                SKU = $"CH-CONV-{suffix}",
+                Quantity = 10,
+                BaseUnitId = 1,
+                AverageCost = 20,
+                Category = new Category
+                {
+                    Name = $"Conversion category {suffix}",
+                    Description = "Test",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                },
+                UnitConversions =
+                {
+                    new ProductUnitConversion
+                    {
+                        UnitId = 1,
+                        FactorToBaseUnit = 1,
+                        IsActive = true
+                    },
+                    new ProductUnitConversion
+                    {
+                        UnitId = 3,
+                        FactorToBaseUnit = 2,
+                        IsActive = true
+                    }
+                }
+            };
+            db.AddRange(customer, product);
+            await db.SaveChangesAsync();
+
+            return new ConversionSeed(customer.Id, product.Id);
+        }
+
+        private sealed record ConversionSeed(int CustomerId, int ProductId);
     }
 }

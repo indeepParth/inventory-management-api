@@ -23,6 +23,8 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
                 .Include(x => x.Items)
+                    .ThenInclude(x => x.Unit)
+                .Include(x => x.Items)
                     .ThenInclude(x => x.SalesInvoiceItems)
                 .OrderByDescending(x => x.ChallanDate).ThenByDescending(x => x.Id)
                 .Skip((pageNumber - 1) * pageSize).Take(pageSize)
@@ -70,6 +72,8 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
                 .Include(x => x.Items)
+                    .ThenInclude(x => x.Unit)
+                .Include(x => x.Items)
                     .ThenInclude(x => x.SalesInvoiceItems)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
@@ -79,6 +83,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Customer)
                 .Include(x => x.Driver)
                 .Include(x => x.Items).ThenInclude(x => x.Product)
+                .Include(x => x.Items).ThenInclude(x => x.Unit)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
         public Task<bool> ChallanNumberExistsAsync(

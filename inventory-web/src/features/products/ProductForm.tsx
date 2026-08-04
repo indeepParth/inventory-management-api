@@ -1,31 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { getFieldError, type FieldErrors } from '../../shared/api/apiErrorMessages'
-import type { Category, Product, ProductFormValues, UnitOfMeasure } from './productsApi'
-
-const unitOptions: Array<{ label: string; value: UnitOfMeasure }> = [
-  { label: 'Ton', value: 1 },
-  { label: 'Kilogram', value: 2 },
-  { label: 'Bag', value: 3 },
-  { label: 'Piece', value: 4 },
-  { label: 'Cubic foot', value: 5 },
-  { label: 'Cubic meter', value: 6 },
-]
-
-function getUnitValue(baseUnit?: string): UnitOfMeasure {
-  const unitNameToValue: Record<string, UnitOfMeasure> = {
-    Ton: 1,
-    Kilogram: 2,
-    Bag: 3,
-    Piece: 4,
-    CubicFoot: 5,
-    CubicMeter: 6,
-  }
-
-  return baseUnit ? unitNameToValue[baseUnit] ?? 4 : 4
-}
+import type { Category, Product, ProductFormValues, Unit } from './productsApi'
 
 type ProductFormProps = {
   categories: Category[]
+  units: Unit[]
   initialValue?: Product
   errors: FieldErrors
   isSubmitting: boolean
@@ -35,6 +14,7 @@ type ProductFormProps = {
 
 export function ProductForm({
   categories,
+  units,
   initialValue,
   errors,
   isSubmitting,
@@ -42,9 +22,10 @@ export function ProductForm({
   onSubmit,
 }: ProductFormProps) {
   const firstCategoryId = categories[0]?.id ?? 0
+  const firstUnitId = units[0]?.id ?? 0
   const [name, setName] = useState(initialValue?.name ?? '')
   const [sku, setSku] = useState(initialValue?.sku ?? '')
-  const [baseUnit, setBaseUnit] = useState<UnitOfMeasure>(getUnitValue(initialValue?.baseUnit))
+  const [baseUnitId, setBaseUnitId] = useState(initialValue?.baseUnitId ?? firstUnitId)
   const [defaultSellingPrice, setDefaultSellingPrice] = useState(
     initialValue?.defaultSellingPrice.toString() ?? '',
   )
@@ -53,17 +34,17 @@ export function ProductForm({
   useEffect(() => {
     setName(initialValue?.name ?? '')
     setSku(initialValue?.sku ?? '')
-    setBaseUnit(getUnitValue(initialValue?.baseUnit))
+    setBaseUnitId(initialValue?.baseUnitId ?? firstUnitId)
     setDefaultSellingPrice(initialValue?.defaultSellingPrice.toString() ?? '')
     setCategoryId(initialValue?.categoryId ?? firstCategoryId)
-  }, [firstCategoryId, initialValue])
+  }, [firstCategoryId, firstUnitId, initialValue])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     await onSubmit({
       name,
       sku,
-      baseUnit,
+      baseUnitId,
       defaultSellingPrice: Number(defaultSellingPrice),
       categoryId,
     })
@@ -122,18 +103,18 @@ export function ProductForm({
         <span>Base unit</span>
         <select
           disabled={isSubmitting}
-          onChange={(event) => setBaseUnit(Number(event.target.value) as UnitOfMeasure)}
+          onChange={(event) => setBaseUnitId(Number(event.target.value))}
           required
-          value={baseUnit}
+          value={baseUnitId}
         >
-          {unitOptions.map((unit) => (
-            <option key={unit.value} value={unit.value}>
-              {unit.label}
+          {units.map((unit) => (
+            <option key={unit.id} value={unit.id}>
+              {unit.name}
             </option>
           ))}
         </select>
-        {getFieldError(errors, 'BaseUnit') ? (
-          <span className="field-error">{getFieldError(errors, 'BaseUnit')}</span>
+        {getFieldError(errors, 'BaseUnitId') ? (
+          <span className="field-error">{getFieldError(errors, 'BaseUnitId')}</span>
         ) : null}
       </label>
 
@@ -156,7 +137,7 @@ export function ProductForm({
       <div className="form-actions">
         <button
           className="primary-button"
-          disabled={isSubmitting || categories.length === 0}
+          disabled={isSubmitting || categories.length === 0 || units.length === 0}
           type="submit"
         >
           {isSubmitting ? 'Saving...' : 'Save'}

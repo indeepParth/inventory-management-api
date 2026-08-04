@@ -72,6 +72,14 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
                         "All delivery challans must belong to the same customer.");
                 }
 
+                var deliveryChargeTotal = RoundMoney(challanItems
+                    .Select(x => x.DeliveryChallan)
+                    .DistinctBy(x => x.Id)
+                    .Sum(x => x.DeliveryCharge));
+                var otherCharges = deliveryChargeTotal > 0
+                    ? deliveryChargeTotal
+                    : request.OtherCharges;
+
                 var now = DateTime.UtcNow;
                 var invoice = new SalesInvoice
                 {
@@ -81,7 +89,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
                     InvoiceDate = request.InvoiceDate,
                     Status = SalesInvoiceStatus.Draft,
                     Discount = request.Discount,
-                    OtherCharges = request.OtherCharges,
+                    OtherCharges = otherCharges,
                     Notes = string.IsNullOrWhiteSpace(request.Notes)
                         ? null : request.Notes.Trim(),
                     CreatedAtUtc = now,
@@ -94,13 +102,13 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
                     var source = challanItems.Single(x =>
                         x.Id == input.DeliveryChallanItemId);
                     var lineSubtotal = RoundMoney(
-                        source.Quantity * input.SellingUnitPrice);
+                        source.EnteredQuantity * input.SellingUnitPrice);
                     var tax = RoundMoney(lineSubtotal * input.TaxRate / 100m);
                     invoice.Items.Add(new SalesInvoiceItem
                     {
                         ProductId = source.ProductId,
                         Product = source.Product,
-                        Quantity = source.Quantity,
+                        Quantity = source.EnteredQuantity,
                         SellingUnitPrice = input.SellingUnitPrice,
                         TaxRate = input.TaxRate,
                         TaxAmount = tax,

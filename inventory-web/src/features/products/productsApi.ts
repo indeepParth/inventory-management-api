@@ -18,14 +18,24 @@ export type Category = {
   createdAt: string
 }
 
-export type UnitOfMeasure = 1 | 2 | 3 | 4 | 5 | 6
+export type Unit = {
+  id: number
+  name: string
+  shortName: string | null
+  factorToBaseUnit: number
+  baseUnitId: number | null
+  baseUnitName: string | null
+  isActive: boolean
+  createdAtUtc: string
+}
 
 export type Product = {
   id: number
   name: string
   sku: string
   quantity: number
-  baseUnit: string
+  baseUnitId: number
+  baseUnitName: string
   defaultSellingPrice: number
   averageCost: number
   categoryId: number
@@ -38,10 +48,28 @@ export type CategoryFormValues = {
   isActive: boolean
 }
 
+export type UnitFormValues = {
+  name: string
+  shortName: string
+  factorToBaseUnit: number
+  baseUnitId: number | null
+  isActive: boolean
+}
+
+export type ProductUnitConversion = {
+  id: number
+  productId: number
+  unitId: number
+  unitName: string
+  factorToBaseUnit: number
+  isActive: boolean
+  isBaseUnit: boolean
+}
+
 export type ProductFormValues = {
   name: string
   sku: string
-  baseUnit: UnitOfMeasure
+  baseUnitId: number
   defaultSellingPrice: number
   categoryId: number
 }
@@ -49,6 +77,16 @@ export type ProductFormValues = {
 type DeleteResponse = {
   id: number
   message: string
+}
+
+export type ProductUnitConversionFormValues = {
+  unitId: number
+  factorToBaseUnit: number
+}
+
+export type ProductUnitConversionUpdateValues = {
+  factorToBaseUnit: number
+  isActive: boolean
 }
 
 export function getCategories(): Promise<Category[]> {
@@ -73,6 +111,73 @@ export function deleteCategory(id: number): Promise<DeleteResponse> {
   return apiRequest<DeleteResponse>(`/api/Categories/${id}`, {
     method: 'DELETE',
   })
+}
+
+export function getUnits(): Promise<Unit[]> {
+  return apiRequest<Unit[]>('/api/Units')
+}
+
+export function createUnit(values: Omit<UnitFormValues, 'isActive'>): Promise<Unit> {
+  return apiRequest<Unit, Omit<UnitFormValues, 'isActive'>>('/api/Units', {
+    method: 'POST',
+    body: values,
+  })
+}
+
+export function updateUnit(id: number, values: UnitFormValues): Promise<Unit> {
+  return apiRequest<Unit, UnitFormValues>(`/api/Units/${id}`, {
+    method: 'PUT',
+    body: values,
+  })
+}
+
+export function deleteUnit(id: number): Promise<DeleteResponse> {
+  return apiRequest<DeleteResponse>(`/api/Units/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export function getProductUnitConversions(productId: number): Promise<ProductUnitConversion[]> {
+  return apiRequest<ProductUnitConversion[]>(`/api/Products/${productId}/unit-conversions`)
+}
+
+export function createProductUnitConversion(
+  productId: number,
+  values: ProductUnitConversionFormValues,
+): Promise<ProductUnitConversion> {
+  return apiRequest<ProductUnitConversion, ProductUnitConversionFormValues>(
+    `/api/Products/${productId}/unit-conversions`,
+    {
+      method: 'POST',
+      body: values,
+    },
+  )
+}
+
+export function updateProductUnitConversion(
+  productId: number,
+  id: number,
+  values: ProductUnitConversionUpdateValues,
+): Promise<ProductUnitConversion> {
+  return apiRequest<ProductUnitConversion, ProductUnitConversionUpdateValues>(
+    `/api/Products/${productId}/unit-conversions/${id}`,
+    {
+      method: 'PUT',
+      body: values,
+    },
+  )
+}
+
+export function deactivateProductUnitConversion(
+  productId: number,
+  id: number,
+): Promise<ProductUnitConversion> {
+  return apiRequest<ProductUnitConversion>(
+    `/api/Products/${productId}/unit-conversions/${id}/deactivate`,
+    {
+      method: 'PATCH',
+    },
+  )
 }
 
 export function getProducts(

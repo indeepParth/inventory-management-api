@@ -96,7 +96,7 @@ export function DeliveryChallanDetailPage() {
                     <tr key={item.id}>
                       <td>{item.productName}</td>
                       <td>{item.productSku}</td>
-                      <td>{formatQuantity(item.quantity)}</td>
+                      <td>{formatQuantity(item.enteredQuantity)} {item.unitName}</td>
                     </tr>
                   ))}
                 </tbody>

@@ -59,7 +59,8 @@ namespace InventoryManagement.Infrastructure.Repositories
         private IQueryable<Product> BuildSearchQuery(string? search)
         {
             IQueryable<Product> query = _context.Products
-                .Include(x => x.Category);
+                .Include(x => x.Category)
+                .Include(x => x.BaseUnit);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -76,7 +77,8 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             IQueryable<Product> query = _context.Products
                 .AsNoTracking()
-                .Include(x => x.Category);
+                .Include(x => x.Category)
+                .Include(x => x.BaseUnit);
 
             if (categoryId.HasValue)
                 query = query.Where(x => x.CategoryId == categoryId.Value);
@@ -96,6 +98,7 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             return await _context.Products
                 .Include(x => x.Category)
+                .Include(x => x.BaseUnit)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 

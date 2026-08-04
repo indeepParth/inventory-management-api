@@ -358,21 +358,30 @@ namespace InventoryManagement.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal>("ConvertedBaseQuantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("DeliveryChallanId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("EnteredQuantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("ProductId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<decimal>("Quantity")
-                        .HasPrecision(18, 3)
-                        .HasColumnType("TEXT");
+                    b.Property<int>("UnitId")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DeliveryChallanId");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("UnitId");
 
                     b.ToTable("DeliveryChallanItems");
                 });
@@ -409,6 +418,13 @@ namespace InventoryManagement.Infrastructure.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("BaseUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("FactorToBaseUnit")
+                        .HasPrecision(18, 6)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsActive")
@@ -519,7 +535,7 @@ namespace InventoryManagement.Infrastructure.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("BaseUnit")
+                    b.Property<int>("BaseUnitId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("CategoryId")
@@ -543,9 +559,40 @@ namespace InventoryManagement.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BaseUnitId");
+
                     b.HasIndex("CategoryId");
 
                     b.ToTable("Products");
+                });
+
+            modelBuilder.Entity("InventoryManagement.Domain.Entities.ProductUnitConversion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("FactorToBaseUnit")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("UnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UnitId");
+
+                    b.HasIndex("ProductId", "UnitId")
+                        .IsUnique();
+
+                    b.ToTable("ProductUnitConversions");
                 });
 
             modelBuilder.Entity("InventoryManagement.Domain.Entities.Purchase", b =>
@@ -1051,6 +1098,101 @@ namespace InventoryManagement.Infrastructure.Migrations
                     b.ToTable("SupplierReturnItems");
                 });
 
+            modelBuilder.Entity("InventoryManagement.Domain.Entities.Unit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("BaseUnitId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("FactorToBaseUnit")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT")
+                        .UseCollation("NOCASE");
+
+                    b.Property<string>("ShortName")
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BaseUnitId");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Units");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            BaseUnitId = 1,
+                            CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FactorToBaseUnit = 1m,
+                            IsActive = true,
+                            Name = "Ton"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            BaseUnitId = 2,
+                            CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FactorToBaseUnit = 1m,
+                            IsActive = true,
+                            Name = "Kilogram"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            BaseUnitId = 3,
+                            CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FactorToBaseUnit = 1m,
+                            IsActive = true,
+                            Name = "Bag"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            BaseUnitId = 4,
+                            CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FactorToBaseUnit = 1m,
+                            IsActive = true,
+                            Name = "Piece"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            BaseUnitId = 5,
+                            CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FactorToBaseUnit = 1m,
+                            IsActive = true,
+                            Name = "Cubic foot"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            BaseUnitId = 6,
+                            CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            FactorToBaseUnit = 1m,
+                            IsActive = true,
+                            Name = "Cubic meter"
+                        });
+                });
+
             modelBuilder.Entity("InventoryManagement.Infrastructure.Identity.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -1321,9 +1463,17 @@ namespace InventoryManagement.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("InventoryManagement.Domain.Entities.Unit", "Unit")
+                        .WithMany()
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("DeliveryChallan");
 
                     b.Navigation("Product");
+
+                    b.Navigation("Unit");
                 });
 
             modelBuilder.Entity("InventoryManagement.Domain.Entities.Payment", b =>
@@ -1366,13 +1516,50 @@ namespace InventoryManagement.Infrastructure.Migrations
 
             modelBuilder.Entity("InventoryManagement.Domain.Entities.Product", b =>
                 {
+                    b.HasOne("InventoryManagement.Domain.Entities.Unit", "BaseUnit")
+                        .WithMany()
+                        .HasForeignKey("BaseUnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("InventoryManagement.Domain.Entities.Category", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("BaseUnit");
+
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("InventoryManagement.Domain.Entities.ProductUnitConversion", b =>
+                {
+                    b.HasOne("InventoryManagement.Domain.Entities.Product", "Product")
+                        .WithMany("UnitConversions")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("InventoryManagement.Domain.Entities.Unit", "Unit")
+                        .WithMany()
+                        .HasForeignKey("UnitId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Unit");
+                });
+
+            modelBuilder.Entity("InventoryManagement.Domain.Entities.Unit", b =>
+                {
+                    b.HasOne("InventoryManagement.Domain.Entities.Unit", "BaseUnit")
+                        .WithMany()
+                        .HasForeignKey("BaseUnitId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("BaseUnit");
                 });
 
             modelBuilder.Entity("InventoryManagement.Domain.Entities.Purchase", b =>
@@ -1578,6 +1765,8 @@ namespace InventoryManagement.Infrastructure.Migrations
             modelBuilder.Entity("InventoryManagement.Domain.Entities.Product", b =>
                 {
                     b.Navigation("StockMovements");
+
+                    b.Navigation("UnitConversions");
                 });
 
             modelBuilder.Entity("InventoryManagement.Domain.Entities.Purchase", b =>

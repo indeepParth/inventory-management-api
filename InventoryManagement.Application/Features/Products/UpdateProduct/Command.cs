@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MediatR;
-using InventoryManagement.Domain.Enums;
 
 namespace InventoryManagement.Application.Features.Products.UpdateProduct
 {
@@ -11,7 +10,7 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
         int Id,
         string Name,
         string SKU,
-        UnitOfMeasure BaseUnit,
+        int BaseUnitId,
         decimal DefaultSellingPrice,
         int CategoryId
     ) : IRequest<Response>;

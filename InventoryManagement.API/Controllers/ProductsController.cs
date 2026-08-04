@@ -68,7 +68,7 @@ namespace InventoryManagement.API.Controllers
                 id,
                 command.Name,
                 command.SKU,
-                command.BaseUnit,
+                command.BaseUnitId,
                 command.DefaultSellingPrice,
                 command.CategoryId
             );
@@ -86,6 +86,74 @@ namespace InventoryManagement.API.Controllers
                     Id = id
                 }
             );
+            return Ok(response);
+        }
+
+        [HttpGet("{productId}/unit-conversions")]
+        [Authorize(Policy = AuthorizationPolicies.ReadProducts)]
+        public async Task<IActionResult> GetProductUnitConversions(int productId)
+        {
+            var response = await _sender.Send(
+                new Application.Features.ProductUnitConversions.GetProductUnitConversions.Query
+                {
+                    ProductId = productId
+                });
+
+            return Ok(response);
+        }
+
+        [HttpPost("{productId}/unit-conversions")]
+        [Authorize(Policy = AuthorizationPolicies.ManageProducts)]
+        public async Task<IActionResult> CreateProductUnitConversion(
+            int productId,
+            [FromBody] Application.Features.ProductUnitConversions.CreateProductUnitConversion.Command command)
+        {
+            var request = new Application.Features.ProductUnitConversions.CreateProductUnitConversion.Command
+            {
+                ProductId = productId,
+                UnitId = command.UnitId,
+                FactorToBaseUnit = command.FactorToBaseUnit
+            };
+
+            var response = await _sender.Send(request);
+
+            return CreatedAtAction(
+                nameof(GetProductUnitConversions),
+                new { productId },
+                response);
+        }
+
+        [HttpPut("{productId}/unit-conversions/{id}")]
+        [Authorize(Policy = AuthorizationPolicies.ManageProducts)]
+        public async Task<IActionResult> UpdateProductUnitConversion(
+            int productId,
+            int id,
+            [FromBody] Application.Features.ProductUnitConversions.UpdateProductUnitConversion.Command command)
+        {
+            var request = new Application.Features.ProductUnitConversions.UpdateProductUnitConversion.Command(
+                productId,
+                id,
+                command.FactorToBaseUnit,
+                command.IsActive);
+
+            var response = await _sender.Send(request);
+
+            return Ok(response);
+        }
+
+        [HttpPatch("{productId}/unit-conversions/{id}/deactivate")]
+        [Authorize(Policy = AuthorizationPolicies.ManageProducts)]
+        public async Task<IActionResult> DeactivateProductUnitConversion(
+            int productId,
+            int id)
+        {
+            var response = await _sender.Send(
+                new Application.Features.ProductUnitConversions.DeactivateProductUnitConversion.Command
+                {
+                    ProductId = productId,
+                    Id = id
+                });
+
             return Ok(response);
         }
     }

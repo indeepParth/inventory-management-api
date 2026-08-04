@@ -1,5 +1,4 @@
 using MediatR;
-using InventoryManagement.Domain.Enums;
 
 namespace InventoryManagement.Application.Features.Products.CreateProduct
 {
@@ -7,7 +6,7 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
     {
         public string Name { get; set; } = string.Empty;
         public string SKU { get; set; } = string.Empty;
-        public UnitOfMeasure BaseUnit { get; set; }
+        public int BaseUnitId { get; set; }
         public decimal DefaultSellingPrice { get; set; }
         public int CategoryId { get; set; }
     }

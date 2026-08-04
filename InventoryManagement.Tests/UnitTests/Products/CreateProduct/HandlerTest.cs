@@ -7,7 +7,6 @@ using FluentAssertions;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Application.Features.Products.CreateProduct;
 using InventoryManagement.Domain.Entities;
-using InventoryManagement.Domain.Enums;
 using Moq;
 
 namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
@@ -24,28 +23,40 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
                 Id = 1,
                 Name = "Dairy"
             };
+            var unit = new Unit
+            {
+                Id = 2,
+                Name = "Kilogram",
+                BaseUnitId = 2,
+                FactorToBaseUnit = 1m,
+                IsActive = true
+            };
             // CancellationToken cancellationToken = new CancellationToken();
             
             var _repositoryMock = new Mock<IProductRepository>();
             var categoryRepositoryMock = new Mock<ICategoryRepository>();
+            var unitRepositoryMock = new Mock<IUnitRepository>();
             categoryRepositoryMock
                 .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(category);
+            unitRepositoryMock
+                .Setup(x => x.GetByIdAsync(2, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(unit);
             _repositoryMock.Setup(x => x.AddProductAsync(It.IsAny<Product>(), It.IsAny<CancellationToken>()))
                             .Callback<Product, CancellationToken>((p,ct) => addedProduct = p)
                             .Returns(Task.CompletedTask);
             _repositoryMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
                             .Returns(Task.CompletedTask);
-
             var handler = new Handler(
                 _repositoryMock.Object,
-                categoryRepositoryMock.Object);
+                categoryRepositoryMock.Object,
+                unitRepositoryMock.Object);
 
             var newProduct = new Command
             {
                 Name = "Test Product",
                 SKU = "TEST123",
-                BaseUnit = UnitOfMeasure.Kilogram,
+                BaseUnitId = 2,
                 DefaultSellingPrice = 99.99m,
                 CategoryId = 1
             };
@@ -57,7 +68,7 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             addedProduct.Name.Should().Be(newProduct.Name);
             addedProduct.SKU.Should().Be(newProduct.SKU);
             addedProduct.Quantity.Should().Be(0m);
-            addedProduct.BaseUnit.Should().Be(newProduct.BaseUnit);
+            addedProduct.BaseUnitId.Should().Be(newProduct.BaseUnitId);
             addedProduct.DefaultSellingPrice.Should().Be(newProduct.DefaultSellingPrice);
             addedProduct.AverageCost.Should().Be(0m);
             addedProduct.CategoryId.Should().Be(newProduct.CategoryId);

@@ -1,9 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using InventoryManagement.Domain.Enums;
-
 namespace InventoryManagement.Application.Features.Products.GetProductById
 {
     public class Response
@@ -12,7 +6,8 @@ namespace InventoryManagement.Application.Features.Products.GetProductById
         public string Name { get; set; } = string.Empty;
         public string SKU { get; set; } = string.Empty;
         public decimal Quantity { get; set; }
-        public string BaseUnit { get; set; } = string.Empty;
+        public int BaseUnitId { get; set; }
+        public string BaseUnitName { get; set; } = string.Empty;
         public decimal DefaultSellingPrice { get; set; }
         public decimal AverageCost { get; set; }
         public int CategoryId { get; set; }

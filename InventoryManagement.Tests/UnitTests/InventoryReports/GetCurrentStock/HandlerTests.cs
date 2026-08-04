@@ -2,7 +2,6 @@ using FluentAssertions;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Application.Features.InventoryReports.GetCurrentStock;
 using InventoryManagement.Domain.Entities;
-using InventoryManagement.Domain.Enums;
 using Moq;
 
 namespace InventoryManagement.Tests.UnitTests.InventoryReports.GetCurrentStock;
@@ -23,7 +22,8 @@ public class HandlerTests
                     Id = 4,
                     Name = "Cement",
                     Category = new Category { Name = "Building Materials" },
-                    BaseUnit = UnitOfMeasure.Bag,
+                    BaseUnitId = 3,
+                    BaseUnit = new Unit { Id = 3, Name = "Bag", IsActive = true },
                     Quantity = 12.5m,
                     AverageCost = 420.40m,
                     DefaultSellingPrice = 475m

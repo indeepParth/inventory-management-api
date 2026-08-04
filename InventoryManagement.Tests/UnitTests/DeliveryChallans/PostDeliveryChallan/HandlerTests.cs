@@ -12,13 +12,18 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.PostDeliveryChall
     public class HandlerTests
     {
         [Fact]
-        public async Task Handle_Should_Decrease_Stock_And_Create_Sale_Movement()
+        public async Task Handle_Should_Decrease_Stock_By_Converted_Base_Quantity()
         {
             var product = new Product
             {
-                Id = 2, Name = "Product", SKU = "SKU", Quantity = 10, AverageCost = 12.5m
+                Id = 2, Name = "Sand", SKU = "SAND", Quantity = 10, AverageCost = 12.5m
             };
-            var challan = Draft(product, 3);
+            var challan = Draft(
+                product,
+                unitId: 7,
+                unitName: "Tractor",
+                enteredQuantity: 2m,
+                convertedBaseQuantity: 8m);
             var repository = TransactionalRepository(challan);
             var movements = new Mock<IStockMovementRepository>();
             StockMovement? added = null;
@@ -33,13 +38,17 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.PostDeliveryChall
                 .Handle(new Command { Id = 1 }, CancellationToken.None);
 
             result.Status.Should().Be(DeliveryChallanStatus.Posted);
-            product.Quantity.Should().Be(7);
+            product.Quantity.Should().Be(2);
             added.Should().NotBeNull();
             added!.MovementType.Should().Be(StockMovementType.Sale);
-            added.QuantityChange.Should().Be(-3);
+            added.QuantityChange.Should().Be(-8);
             added.BalanceBefore.Should().Be(10);
-            added.BalanceAfter.Should().Be(7);
+            added.BalanceAfter.Should().Be(2);
             added.UnitCost.Should().Be(12.5m);
+            result.Items.Should().ContainSingle(x =>
+                x.EnteredQuantity == 2m &&
+                x.UnitName == "Tractor" &&
+                x.ConvertedBaseQuantity == 8m);
         }
 
         [Fact]
@@ -49,10 +58,20 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.PostDeliveryChall
             {
                 Id = 2, Name = "Product", SKU = "SKU", Quantity = 5
             };
-            var challan = Draft(product, 3);
+            var challan = Draft(
+                product,
+                unitId: 1,
+                unitName: "Ton",
+                enteredQuantity: 2m,
+                convertedBaseQuantity: 4m);
             challan.Items.Add(new DeliveryChallanItem
             {
-                ProductId = product.Id, Product = product, Quantity = 3
+                ProductId = product.Id,
+                Product = product,
+                EnteredQuantity = 0.5m,
+                UnitId = 7,
+                Unit = new Unit { Id = 7, Name = "Tractor", IsActive = true },
+                ConvertedBaseQuantity = 2
             });
             var repository = TransactionalRepository(challan);
             var movements = new Mock<IStockMovementRepository>();
@@ -69,10 +88,57 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.PostDeliveryChall
         }
 
         [Fact]
+        public async Task Handle_Should_Post_Repeated_Product_Lines_Using_Converted_Base_Quantities()
+        {
+            var product = new Product
+            {
+                Id = 2, Name = "Sand", SKU = "SAND", Quantity = 10, AverageCost = 12.5m
+            };
+            var challan = Draft(
+                product,
+                unitId: 7,
+                unitName: "Tractor",
+                enteredQuantity: 1m,
+                convertedBaseQuantity: 4m);
+            challan.Items.Add(new DeliveryChallanItem
+            {
+                ProductId = product.Id,
+                Product = product,
+                EnteredQuantity = 2,
+                UnitId = 1,
+                Unit = new Unit { Id = 1, Name = "Ton", IsActive = true },
+                ConvertedBaseQuantity = 2
+            });
+            var repository = TransactionalRepository(challan);
+            var movements = new Mock<IStockMovementRepository>();
+            var added = new List<StockMovement>();
+            movements.Setup(x => x.AddAsync(
+                    It.IsAny<StockMovement>(), It.IsAny<CancellationToken>()))
+                .Callback<StockMovement, CancellationToken>((x, _) => added.Add(x))
+                .Returns(Task.CompletedTask);
+
+            await new Handler(
+                    repository.Object,
+                    movements.Object,
+                    Mock.Of<ICurrentUserService>())
+                .Handle(new Command { Id = 1 }, CancellationToken.None);
+
+            product.Quantity.Should().Be(4);
+            added.Should().HaveCount(2);
+            added.Sum(x => x.QuantityChange).Should().Be(-6);
+            added.Select(x => x.QuantityChange).Should().Contain(new[] { -4m, -2m });
+        }
+
+        [Fact]
         public async Task Handle_Should_Reject_Already_Posted_Challan()
         {
             var product = new Product { Id = 2, Name = "Product", SKU = "SKU", Quantity = 10 };
-            var challan = Draft(product, 1);
+            var challan = Draft(
+                product,
+                unitId: 1,
+                unitName: "Ton",
+                enteredQuantity: 1m,
+                convertedBaseQuantity: 1m);
             challan.Status = DeliveryChallanStatus.Posted;
             var repository = TransactionalRepository(challan);
 
@@ -87,7 +153,12 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.PostDeliveryChall
             product.Quantity.Should().Be(10);
         }
 
-        private static DeliveryChallan Draft(Product product, decimal quantity) => new()
+        private static DeliveryChallan Draft(
+            Product product,
+            int unitId,
+            string unitName,
+            decimal enteredQuantity,
+            decimal convertedBaseQuantity) => new()
         {
             Id = 1,
             ChallanNumber = "DC-1",
@@ -97,7 +168,12 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.PostDeliveryChall
             {
                 new DeliveryChallanItem
                 {
-                    ProductId = product.Id, Product = product, Quantity = quantity
+                    ProductId = product.Id,
+                    Product = product,
+                    EnteredQuantity = enteredQuantity,
+                    UnitId = unitId,
+                    Unit = new Unit { Id = unitId, Name = unitName, IsActive = true },
+                    ConvertedBaseQuantity = convertedBaseQuantity
                 }
             }
         };

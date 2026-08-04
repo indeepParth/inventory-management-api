@@ -49,7 +49,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
                     Name = "Ledger product",
                     SKU = $"LED-{Guid.NewGuid():N}",
                     Category = category,
-                    BaseUnit = UnitOfMeasure.Piece
+                    BaseUnitId = 4
                 };
                 db.Products.Add(product);
                 db.StockMovements.AddRange(

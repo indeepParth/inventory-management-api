@@ -2,7 +2,6 @@ using FluentAssertions;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Application.Features.Products.GetProducts;
 using InventoryManagement.Domain.Entities;
-using InventoryManagement.Domain.Enums;
 using Moq;
 
 namespace InventoryManagement.Tests.UnitTests.Products.GetProducts
@@ -20,7 +19,8 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProducts
                     Name = "Test Product",
                     SKU = "TEST123",
                     Quantity = 10.125m,
-                    BaseUnit = UnitOfMeasure.CubicFoot,
+                    BaseUnitId = 5,
+                    BaseUnit = new Unit { Id = 5, Name = "Cubic foot", IsActive = true },
                     DefaultSellingPrice = 99.99m,
                     AverageCost = 70m,
                     CategoryId = 1,
@@ -48,7 +48,8 @@ namespace InventoryManagement.Tests.UnitTests.Products.GetProducts
             result.Items.First().CategoryId.Should().Be(1);
             result.Items.First().CategoryName.Should().Be("Dairy");
             result.Items.First().Quantity.Should().Be(10.125m);
-            result.Items.First().BaseUnit.Should().Be(UnitOfMeasure.CubicFoot.ToString());
+            result.Items.First().BaseUnitId.Should().Be(5);
+            result.Items.First().BaseUnitName.Should().Be("Cubic foot");
             result.Items.First().DefaultSellingPrice.Should().Be(99.99m);
             result.Items.First().AverageCost.Should().Be(70m);
             result.PageNumber.Should().Be(1);

@@ -11,6 +11,84 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.UpdateDeliveryCha
     public class HandlerTests
     {
         [Fact]
+        public async Task Handle_Should_Recalculate_Converted_Base_Quantity()
+        {
+            var product = new Product { Id = 2, Name = "Product", SKU = "SKU", BaseUnitId = 1 };
+            var challan = new DeliveryChallan
+            {
+                Id = 1,
+                Status = DeliveryChallanStatus.Draft,
+                Customer = new Customer { Id = 1, Name = "Customer" },
+                Items =
+                {
+                    new DeliveryChallanItem
+                    {
+                        DeliveryChallanId = 1,
+                        ProductId = product.Id,
+                        Product = product,
+                        EnteredQuantity = 1,
+                        UnitId = 1,
+                        Unit = new Unit { Id = 1, Name = "Ton", IsActive = true },
+                        ConvertedBaseQuantity = 1
+                    }
+                }
+            };
+            var repository = new Mock<IDeliveryChallanRepository>();
+            repository.Setup(x => x.GetForUpdateAsync(
+                    1, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(challan);
+            repository.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+            var customers = new Mock<ICustomerRepository>();
+            customers.Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Customer { Id = 1, Name = "Customer", IsActive = true });
+            var products = new Mock<IProductRepository>();
+            products.Setup(x => x.GetProductByIdAsync(2, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(product);
+            var units = new Mock<IUnitRepository>();
+            units.Setup(x => x.GetByIdAsync(3, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new Unit
+                {
+                    Id = 3,
+                    Name = "Bag",
+                    IsActive = true,
+                    BaseUnitId = 1,
+                    FactorToBaseUnit = 2,
+                });
+
+            var result = await new Handler(
+                repository.Object,
+                customers.Object,
+                Mock.Of<IDriverRepository>(),
+                products.Object,
+                units.Object)
+                .Handle(new Command(
+                    1,
+                    "DC-1",
+                    1,
+                    new DateTime(2026, 7, 1),
+                    null,
+                    null,
+                    null,
+                    "Warehouse",
+                    "Customer site",
+                    0,
+                    null,
+                    new List<DeliveryChallanItemInput>
+                    {
+                        new() { ProductId = 2, EnteredQuantity = 1.5m, UnitId = 3 }
+                    }), CancellationToken.None);
+
+            result.Items.Should().ContainSingle(x =>
+                x.EnteredQuantity == 1.5m &&
+                x.UnitId == 3 &&
+                x.UnitName == "Bag" &&
+                x.ConvertedBaseQuantity == 3m &&
+                x.Quantity == 3m);
+            repository.Verify(x => x.RemoveItems(It.IsAny<IEnumerable<DeliveryChallanItem>>()));
+        }
+
+        [Fact]
         public async Task Handle_Should_Reject_NonDraft_Challan()
         {
             var repository = new Mock<IDeliveryChallanRepository>();
@@ -25,13 +103,14 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.UpdateDeliveryCha
                 repository.Object,
                 Mock.Of<ICustomerRepository>(),
                 Mock.Of<IDriverRepository>(),
-                Mock.Of<IProductRepository>())
+                Mock.Of<IProductRepository>(),
+                Mock.Of<IUnitRepository>())
                 .Handle(new Command(
                     1, "DC-1", 1, DateTime.UtcNow, null, null, null,
                     "Warehouse", "Address", 0, null,
                     new List<DeliveryChallanItemInput>
                     {
-                        new() { ProductId = 1, Quantity = 1 }
+                        new() { ProductId = 1, EnteredQuantity = 1, UnitId = 1 }
                     }), CancellationToken.None);
 
             await action.Should().ThrowAsync<BadRequestException>()
@@ -59,7 +138,10 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.UpdateDeliveryCha
                             DeliveryChallanId = 1,
                             ProductId = product.Id,
                             Product = product,
-                            Quantity = 1
+                            EnteredQuantity = 1,
+                            UnitId = 1,
+                            Unit = new Unit { Id = 1, Name = "Ton", IsActive = true },
+                            ConvertedBaseQuantity = 1
                         }
                     }
                 });
@@ -74,7 +156,8 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.UpdateDeliveryCha
                 repository.Object,
                 customers.Object,
                 drivers.Object,
-                Mock.Of<IProductRepository>())
+                Mock.Of<IProductRepository>(),
+                Mock.Of<IUnitRepository>())
                 .Handle(new Command(
                     1,
                     "DC-1",
@@ -89,7 +172,7 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.UpdateDeliveryCha
                     null,
                     new List<DeliveryChallanItemInput>
                     {
-                        new() { ProductId = 2, Quantity = 1 }
+                        new() { ProductId = 2, EnteredQuantity = 1, UnitId = 1 }
                     }), CancellationToken.None);
 
             await action.Should().ThrowAsync<BadRequestException>()

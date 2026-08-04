@@ -345,6 +345,27 @@
   padding: 20px;
 }
 
+.conversion-section {
+  display: grid;
+  gap: 16px;
+  margin: 0 0 24px;
+  border-top: 1px solid #dbe3ef;
+  padding-top: 24px;
+}
+
+.conversion-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.section-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.25rem;
+}
+
 .profile-form {
   margin: 28px 0 0;
 }

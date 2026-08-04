@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Tests.IntegrationTests.Common;
-using InventoryManagement.Domain.Enums;
 using CreateCategoryCommand = InventoryManagement.Application.Features.Categories.CreateCategory.Command;
 using CategoryResponse = InventoryManagement.Application.Features.Categories.Response;
 using UpdateCategoryCommand = InventoryManagement.Application.Features.Categories.UpdateCategory.Command;
@@ -85,7 +84,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Categories
             {
                 Name = "Milk",
                 SKU = $"MILK-{Guid.NewGuid():N}",
-                BaseUnit = UnitOfMeasure.Piece,
+                BaseUnitId = 4,
                 DefaultSellingPrice = 50,
                 CategoryId = category.Id
             });

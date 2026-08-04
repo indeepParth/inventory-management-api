@@ -12,17 +12,20 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.UpdateDelive
         private readonly ICustomerRepository _customers;
         private readonly IDriverRepository _drivers;
         private readonly IProductRepository _products;
+        private readonly IUnitRepository _units;
 
         public Handler(
             IDeliveryChallanRepository challans,
             ICustomerRepository customers,
             IDriverRepository drivers,
-            IProductRepository products)
+            IProductRepository products,
+            IUnitRepository units)
         {
             _challans = challans;
             _customers = customers;
             _drivers = drivers;
             _products = products;
+            _units = units;
         }
 
         public async Task<DeliveryChallanResponse> Handle(
@@ -59,12 +62,25 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.UpdateDelive
                     input.ProductId, cancellationToken);
                 if (product is null)
                     throw new NotFoundException($"Product {input.ProductId} not found.");
+                var unit = await _units.GetByIdAsync(input.UnitId, cancellationToken);
+                if (unit is null)
+                    throw new NotFoundException($"Unit {input.UnitId} not found.");
+                if (!unit.IsActive || unit.BaseUnitId != product.BaseUnitId)
+                {
+                    throw new BadRequestException(
+                        $"Unit {input.UnitId} is not valid for product {input.ProductId}.");
+                }
+
                 replacementItems.Add(new DeliveryChallanItem
                 {
                     DeliveryChallanId = challan.Id,
                     ProductId = product.Id,
                     Product = product,
-                    Quantity = input.Quantity
+                    EnteredQuantity = input.EnteredQuantity,
+                    UnitId = unit.Id,
+                    Unit = unit,
+                    ConvertedBaseQuantity =
+                        input.EnteredQuantity * unit.FactorToBaseUnit
                 });
             }
 

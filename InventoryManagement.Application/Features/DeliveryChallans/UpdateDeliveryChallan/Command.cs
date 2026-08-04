@@ -19,6 +19,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.UpdateDelive
     public class DeliveryChallanItemInput
     {
         public int ProductId { get; set; }
-        public decimal Quantity { get; set; }
+        public decimal EnteredQuantity { get; set; }
+        public int UnitId { get; set; }
     }
 }

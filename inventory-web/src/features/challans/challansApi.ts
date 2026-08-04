@@ -18,6 +18,10 @@ export type DeliveryChallanItem = {
   productName: string
   productSku: string
   quantity: number
+  enteredQuantity: number
+  unitId: number
+  unitName: string
+  convertedBaseQuantity: number
 }
 
 export type DeliveryChallan = {
@@ -47,7 +51,8 @@ export type DeliveryChallan = {
 
 export type DeliveryChallanItemFormValues = {
   productId: number
-  quantity: number
+  enteredQuantity: number
+  unitId: number
 }
 
 export type DeliveryChallanFormValues = {

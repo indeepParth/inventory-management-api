@@ -40,7 +40,11 @@ namespace InventoryManagement.Application.Features.DeliveryChallans
                     ProductId = x.ProductId,
                     ProductName = x.Product.Name,
                     ProductSku = x.Product.SKU,
-                    Quantity = x.Quantity
+                    Quantity = x.ConvertedBaseQuantity,
+                    EnteredQuantity = x.EnteredQuantity,
+                    UnitId = x.UnitId,
+                    UnitName = x.Unit.Name,
+                    ConvertedBaseQuantity = x.ConvertedBaseQuantity
                 }).ToList()
             };
     }

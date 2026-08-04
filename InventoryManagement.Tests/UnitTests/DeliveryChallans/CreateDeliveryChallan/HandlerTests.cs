@@ -31,11 +31,14 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                 .ReturnsAsync(new Driver { Id = 3, Name = "Driver", IsActive = true });
             var product = new Product
             {
-                Id = 2, Name = "Product", SKU = "SKU-1", Quantity = 25
+                Id = 2, Name = "Product", SKU = "SKU-1", Quantity = 25, BaseUnitId = 1
             };
             var products = new Mock<IProductRepository>();
             products.Setup(x => x.GetProductByIdAsync(2, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(product);
+            var units = new Mock<IUnitRepository>();
+            units.Setup(x => x.GetByIdAsync(3, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Unit(factorToBaseUnit: 2m));
             var currentUser = new Mock<ICurrentUserService>();
             currentUser.SetupGet(x => x.Username).Returns("dispatcher");
             var documentNumbers = new Mock<IDocumentNumberService>();
@@ -52,6 +55,7 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                 customers.Object,
                 drivers.Object,
                 products.Object,
+                units.Object,
                 currentUser.Object,
                 documentNumbers.Object)
                 .Handle(new Command
@@ -64,7 +68,15 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                     DeliveryFromAddress = " Main warehouse ",
                     DeliveryAddress = " Customer site ",
                     DeliveryCharge = 75,
-                    Items = { new DeliveryChallanItemInput { ProductId = 2, Quantity = 1.5m } }
+                    Items =
+                    {
+                        new DeliveryChallanItemInput
+                        {
+                            ProductId = 2,
+                            EnteredQuantity = 1.5m,
+                            UnitId = 3
+                        }
+                    }
                 }, CancellationToken.None);
 
             added.Should().NotBeNull();
@@ -82,7 +94,12 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
             response.DeliveryFromAddress.Should().Be("Main warehouse");
             response.DeliveryCharge.Should().Be(75);
             response.IsDeliveryChargePaid.Should().BeFalse();
-            response.Items.Should().ContainSingle(x => x.Quantity == 1.5m);
+            response.Items.Should().ContainSingle(x =>
+                x.EnteredQuantity == 1.5m &&
+                x.UnitId == 3 &&
+                x.UnitName == "Bag" &&
+                x.ConvertedBaseQuantity == 3m &&
+                x.Quantity == 3m);
             product.Quantity.Should().Be(25);
         }
 
@@ -103,6 +120,7 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                 customers.Object,
                 drivers.Object,
                 Mock.Of<IProductRepository>(),
+                Mock.Of<IUnitRepository>(),
                 Mock.Of<ICurrentUserService>(),
                 CreateDocumentNumbers())
                 .Handle(new Command
@@ -113,7 +131,15 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                     DriverId = 3,
                     DeliveryFromAddress = "Warehouse",
                     DeliveryAddress = "Customer site",
-                    Items = { new DeliveryChallanItemInput { ProductId = 2, Quantity = 1 } }
+                    Items =
+                    {
+                        new DeliveryChallanItemInput
+                        {
+                            ProductId = 2,
+                            EnteredQuantity = 1,
+                            UnitId = 3
+                        }
+                    }
                 }, CancellationToken.None);
 
             await action.Should().ThrowAsync<BadRequestException>()
@@ -144,5 +170,14 @@ namespace InventoryManagement.Tests.UnitTests.DeliveryChallans.CreateDeliveryCha
                 .Returns<Func<CancellationToken, Task>, CancellationToken>(
                     (operation, token) => operation(token));
         }
+
+        private static Unit Unit(decimal factorToBaseUnit) => new()
+        {
+            Id = 3,
+            Name = "Bag",
+            IsActive = true,
+            BaseUnitId = 1,
+            FactorToBaseUnit = factorToBaseUnit,
+        };
     }
 }

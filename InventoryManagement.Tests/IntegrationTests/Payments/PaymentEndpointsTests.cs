@@ -165,17 +165,22 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
                 Amount = 25,
                 Method = PaymentMethod.Cheque
             })).EnsureSuccessStatusCode();
+            var created = (await Client.GetFromJsonAsync<PagedResponse<PaymentResponse>>(
+                $"/api/payments?pageNumber=1&pageSize=1&customerId={seed.CustomerId}" +
+                $"&salesInvoiceId={seed.InvoiceId}&method=Cheque" +
+                "&dateFrom=2026-07-01&dateTo=2026-07-31"))!
+                .Items.Single();
 
             var response = await Client.GetAsync(
                 $"/api/payments?pageNumber=1&pageSize=1&customerId={seed.CustomerId}" +
                 $"&salesInvoiceId={seed.InvoiceId}&method=Cheque" +
-                $"&dateFrom=2026-07-01&dateTo=2026-07-31&receiptNumber={receipt[..12]}");
+                $"&dateFrom=2026-07-01&dateTo=2026-07-31&receiptNumber={Uri.EscapeDataString(created.ReceiptNumber)}");
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
             var page = await response.Content
                 .ReadFromJsonAsync<PagedResponse<PaymentResponse>>();
             page.Should().NotBeNull();
-            page!.Items.Should().ContainSingle(x => x.ReceiptNumber == receipt);
+            page!.Items.Should().ContainSingle(x => x.Id == created.Id);
             page.TotalCount.Should().Be(1);
             page.PageNumber.Should().Be(1);
             page.PageSize.Should().Be(1);
@@ -241,7 +246,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
             var getResponse = await Client.GetAsync(
                 $"/api/payments?pageNumber=1&pageSize=1" +
                 $"&supplierId={seed.SupplierId}&purchaseId={seed.PurchaseId}" +
-                $"&method=BankTransfer&receiptNumber={firstNumber[..14]}");
+                $"&method=BankTransfer&receiptNumber={Uri.EscapeDataString(first.ReceiptNumber)}");
             getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             var page = await getResponse.Content
                 .ReadFromJsonAsync<PagedResponse<PaymentResponse>>();

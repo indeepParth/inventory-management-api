@@ -200,7 +200,7 @@ export function ChallanInvoiceForm({
       </div>
 
       <div className="form-actions">
-        <button className="primary-button" disabled={isSubmitting || availableItems.length === 0} type="submit">{isSubmitting ? 'Saving...' : 'Save challan draft'}</button>
+        <button className="primary-button" disabled={isSubmitting || availableItems.length === 0} type="submit">{isSubmitting ? 'Saving...' : 'Save'}</button>
         <button className="secondary-button" disabled={isSubmitting} onClick={onCancel} type="button">Cancel</button>
       </div>
     </form>

@@ -35,10 +35,12 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         }
 
         [Fact]
-        public async Task Create_Then_Get_Should_Return_Draft_Without_Changing_Stock()
+        public async Task Create_Then_Get_Should_Return_Posted_With_Stock_And_Debt_Effects()
         {
             await AuthenticateAsync();
             var seed = await SeedDependenciesAsync();
+            const decimal existingBalance = 40m;
+            await SetCustomerBalanceAsync(seed.CustomerId, existingBalance);
 
             var createResponse = await Client.PostAsJsonAsync(
                 "/api/sales-invoices",
@@ -66,7 +68,8 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             var created = await createResponse.Content
                 .ReadFromJsonAsync<SalesInvoiceResponse>();
             created.Should().NotBeNull();
-            created!.Status.Should().Be(SalesInvoiceStatus.Draft);
+            created!.Status.Should().Be(SalesInvoiceStatus.Posted);
+            created.PostedAtUtc.Should().NotBeNull();
             created.Subtotal.Should().Be(100);
             created.TaxAmount.Should().Be(18);
             created.GrandTotal.Should().Be(115);
@@ -75,7 +78,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             created.Notes.Should().Be("Draft invoice");
             created.Items.Should().ContainSingle();
             created.Items[0].LineTotal.Should().Be(118);
-            created.Items[0].CostAtSale.Should().BeNull();
+            created.Items[0].CostAtSale.Should().Be(25);
             created.Items[0].DeliveryChallanItemId.Should().BeNull();
 
             var getResponse = await Client.GetAsync(
@@ -89,9 +92,12 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var product = await db.Products.AsNoTracking()
                 .SingleAsync(x => x.Id == seed.ProductId);
-            product.Quantity.Should().Be(seed.StockQuantity);
+            product.Quantity.Should().Be(10m);
             (await db.StockMovements.CountAsync(x => x.ProductId == seed.ProductId))
-                .Should().Be(seed.StockMovementCount);
+                .Should().Be(seed.StockMovementCount + 1);
+            (await db.Customers.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.CustomerId))
+                .BalanceDue.Should().Be(existingBalance + created.GrandTotal);
         }
 
         [Fact]
@@ -131,7 +137,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
 
             var response = await Client.GetAsync(
                 $"/api/sales-invoices?pageNumber=1&pageSize=1" +
-                $"&customerId={seed.CustomerId}&status=Draft" +
+                $"&customerId={seed.CustomerId}&status=Posted" +
                 "&dateFrom=2026-07-01&dateTo=2026-07-31" +
                 $"&invoiceNumber={matching.InvoiceNumber[..12]}");
 
@@ -151,7 +157,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         {
             await AuthenticateAsync();
             var seed = await SeedDependenciesAsync();
-            var created = await CreateInvoiceAsync(
+            var created = await SeedDraftInvoiceAsync(
                 seed,
                 $"EDIT-{Guid.NewGuid():N}",
                 new DateTime(2026, 7, 1));
@@ -217,6 +223,8 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             await AuthenticateAsync();
             var first = await SeedDependenciesAsync();
             var second = await SeedAdditionalProductAsync(8, 11);
+            const decimal existingBalance = 25m;
+            await SetCustomerBalanceAsync(first.CustomerId, existingBalance);
             var createResponse = await Client.PostAsJsonAsync(
                 "/api/sales-invoices",
                 new Command
@@ -277,7 +285,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 firstProduct.Quantity.Should().Be(9.5m);
                 secondProduct.Quantity.Should().Be(5);
                 (await db.Customers.SingleAsync(x => x.Id == first.CustomerId))
-                    .BalanceDue.Should().Be(invoice.GrandTotal);
+                    .BalanceDue.Should().Be(existingBalance + invoice.GrandTotal);
 
                 var movements = await db.StockMovements.AsNoTracking()
                     .Where(x => x.SourceType == "SalesInvoice" &&
@@ -325,7 +333,35 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         }
 
         [Fact]
-        public async Task Post_Should_Reject_Aggregate_Insufficient_Stock_Atomically()
+        public async Task Post_Legacy_Draft_Should_Add_To_Existing_Customer_Balance()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            const decimal existingBalance = 30m;
+            await SetCustomerBalanceAsync(seed.CustomerId, existingBalance);
+            var invoice = await SeedDraftInvoiceAsync(
+                seed,
+                $"LEGACY-POST-{Guid.NewGuid():N}",
+                new DateTime(2026, 7, 1));
+
+            var response = await Client.PostAsync(
+                $"/api/sales-invoices/{invoice.Id}/post",
+                null);
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var posted = await response.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            posted.Should().NotBeNull();
+            posted!.Status.Should().Be(SalesInvoiceStatus.Posted);
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            (await db.Customers.AsNoTracking()
+                .SingleAsync(x => x.Id == seed.CustomerId))
+                .BalanceDue.Should().Be(existingBalance + posted.GrandTotal);
+        }
+
+        [Fact]
+        public async Task Create_Should_Reject_Aggregate_Insufficient_Stock_Atomically()
         {
             await AuthenticateAsync();
             var seed = await SeedDependenciesAsync();
@@ -352,16 +388,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                         }
                     }
                 });
-            createResponse.EnsureSuccessStatusCode();
-            var invoice = await createResponse.Content
-                .ReadFromJsonAsync<SalesInvoiceResponse>();
-            invoice.Should().NotBeNull();
-
-            var response = await Client.PostAsync(
-                $"/api/sales-invoices/{invoice!.Id}/post",
-                null);
-
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            createResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             (await db.Products.AsNoTracking()
@@ -370,15 +397,11 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             (await db.Customers.AsNoTracking()
                 .SingleAsync(x => x.Id == seed.CustomerId))
                 .BalanceDue.Should().Be(0);
-            var persisted = await db.SalesInvoices.AsNoTracking()
-                .Include(x => x.Items)
-                .SingleAsync(x => x.Id == invoice.Id);
-            persisted.Status.Should().Be(SalesInvoiceStatus.Draft);
-            persisted.PostedAtUtc.Should().BeNull();
-            persisted.Items.Should().OnlyContain(x => x.CostAtSale == null);
+            (await db.SalesInvoices.CountAsync(x =>
+                x.CustomerId == seed.CustomerId)).Should().Be(0);
             (await db.StockMovements.CountAsync(x =>
                 x.SourceType == "SalesInvoice" &&
-                x.SourceId == invoice.Id.ToString())).Should().Be(0);
+                x.ProductId == seed.ProductId)).Should().Be(0);
         }
 
         [Fact]
@@ -386,11 +409,6 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         {
             await AuthenticateAsync();
             var seed = await SeedDependenciesAsync();
-            var invoice = await CreateInvoiceAsync(
-                seed,
-                $"ROLLBACK-{Guid.NewGuid():N}",
-                new DateTime(2026, 7, 1));
-
             using (var scope = _factory.Services.CreateScope())
             {
                 var db = scope.ServiceProvider
@@ -407,9 +425,23 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
 
             try
             {
-                var response = await Client.PostAsync(
-                    $"/api/sales-invoices/{invoice.Id}/post",
-                    null);
+                var response = await Client.PostAsJsonAsync(
+                    "/api/sales-invoices",
+                    new Command
+                    {
+                        InvoiceNumber = $"ROLLBACK-{Guid.NewGuid():N}",
+                        CustomerId = seed.CustomerId,
+                        InvoiceDate = new DateTime(2026, 7, 1),
+                        Items =
+                        {
+                            new SalesInvoiceItemInput
+                            {
+                                ProductId = seed.ProductId,
+                                Quantity = 1,
+                                SellingUnitPrice = 10
+                            }
+                        }
+                    });
                 response.StatusCode.Should()
                     .Be(HttpStatusCode.InternalServerError);
 
@@ -422,14 +454,11 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 (await db.Customers.AsNoTracking()
                     .SingleAsync(x => x.Id == seed.CustomerId))
                     .BalanceDue.Should().Be(0);
-                var persisted = await db.SalesInvoices.AsNoTracking()
-                    .Include(x => x.Items)
-                    .SingleAsync(x => x.Id == invoice.Id);
-                persisted.Status.Should().Be(SalesInvoiceStatus.Draft);
-                persisted.Items.Should().OnlyContain(x => x.CostAtSale == null);
+                (await db.SalesInvoices.CountAsync(x =>
+                    x.CustomerId == seed.CustomerId)).Should().Be(0);
                 (await db.StockMovements.CountAsync(x =>
                     x.SourceType == "SalesInvoice" &&
-                    x.SourceId == invoice.Id.ToString())).Should().Be(0);
+                    x.ProductId == seed.ProductId)).Should().Be(0);
             }
             finally
             {
@@ -455,6 +484,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             int secondItemId;
             decimal stockAfterChallans;
             int movementCountAfterChallans;
+            const decimal existingBalance = 55m;
             using (var scope = _factory.Services.CreateScope())
             {
                 var db = scope.ServiceProvider
@@ -471,6 +501,9 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                     .SingleAsync(x => x.Id == seed.ProductId)).Quantity;
                 movementCountAfterChallans = await db.StockMovements.CountAsync(
                     x => x.ProductId == seed.ProductId);
+                (await db.Customers.SingleAsync(x => x.Id == seed.CustomerId))
+                    .BalanceDue = existingBalance;
+                await db.SaveChangesAsync();
             }
 
             var createResponse = await Client.PostAsJsonAsync(
@@ -501,9 +534,12 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             var draft = await createResponse.Content
                 .ReadFromJsonAsync<SalesInvoiceResponse>();
             draft.Should().NotBeNull();
-            draft!.Items.Select(x => x.Quantity).Should().Equal(2, 3);
+            draft!.Status.Should().Be(SalesInvoiceStatus.Posted);
+            draft.PostedAtUtc.Should().NotBeNull();
+            draft.Items.Select(x => x.Quantity).Should().Equal(2, 3);
             draft.Items.Select(x => x.DeliveryChallanItemId)
                 .Should().Equal(firstItemId, secondItemId);
+            draft.Items.Should().OnlyContain(x => x.CostAtSale == 25);
             draft.OtherCharges.Should().Be(70);
             draft.GrandTotal.Should().Be(319);
             draft.BalanceDue.Should().Be(319);
@@ -526,15 +562,6 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 });
             duplicateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-            var postResponse = await Client.PostAsync(
-                $"/api/sales-invoices/{draft.Id}/post",
-                null);
-            postResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-            var posted = await postResponse.Content
-                .ReadFromJsonAsync<SalesInvoiceResponse>();
-            posted.Should().NotBeNull();
-            posted!.Items.Should().OnlyContain(x => x.CostAtSale == 25);
-
             using var verificationScope = _factory.Services.CreateScope();
             var verificationDb = verificationScope.ServiceProvider
                 .GetRequiredService<ApplicationDbContext>();
@@ -546,7 +573,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 .Should().Be(movementCountAfterChallans);
             (await verificationDb.Customers.AsNoTracking()
                 .SingleAsync(x => x.Id == seed.CustomerId))
-                .BalanceDue.Should().Be(draft.GrandTotal);
+                .BalanceDue.Should().Be(existingBalance + draft.GrandTotal);
             var challans = await verificationDb.DeliveryChallans.AsNoTracking()
                 .Where(x => x.Id == firstChallan.Id || x.Id == secondChallan.Id)
                 .ToListAsync();
@@ -642,6 +669,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             invoiceCreate.StatusCode.Should().Be(HttpStatusCode.Created);
             var draft = (await invoiceCreate.Content
                 .ReadFromJsonAsync<SalesInvoiceResponse>())!;
+            draft.Status.Should().Be(SalesInvoiceStatus.Posted);
             draft.Items.Should().ContainSingle(x =>
                 x.Quantity == 2 &&
                 x.SellingUnitPrice == 100 &&
@@ -649,10 +677,6 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             draft.Subtotal.Should().Be(200);
             draft.GrandTotal.Should().Be(200);
 
-            var invoicePost = await Client.PostAsync(
-                $"/api/sales-invoices/{draft.Id}/post",
-                null);
-            invoicePost.StatusCode.Should().Be(HttpStatusCode.OK);
             using (var scope = _factory.Services.CreateScope())
             {
                 var db = scope.ServiceProvider
@@ -778,7 +802,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         {
             await AuthenticateAsync();
             var seed = await SeedDependenciesAsync();
-            var invoice = await CreateInvoiceAsync(
+            var invoice = await SeedDraftInvoiceAsync(
                 seed,
                 $"CANCEL-DRAFT-{Guid.NewGuid():N}",
                 new DateTime(2026, 7, 1));
@@ -895,9 +919,6 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             var draft = await CreateChallanInvoiceAsync(
                 challanItemId,
                 $"DC-CANCEL-INV-{Guid.NewGuid():N}");
-            (await Client.PostAsync(
-                $"/api/sales-invoices/{draft.Id}/post",
-                null)).EnsureSuccessStatusCode();
 
             var response = await Client.PostAsync(
                 $"/api/sales-invoices/{draft.Id}/cancel",
@@ -1062,6 +1083,64 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             response.EnsureSuccessStatusCode();
             return (await response.Content
                 .ReadFromJsonAsync<SalesInvoiceResponse>())!;
+        }
+
+        private async Task SetCustomerBalanceAsync(
+            int customerId,
+            decimal balanceDue)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var customer = await db.Customers.SingleAsync(x => x.Id == customerId);
+            customer.BalanceDue = balanceDue;
+            await db.SaveChangesAsync();
+        }
+
+        private async Task<SalesInvoiceResponse> SeedDraftInvoiceAsync(
+            SeedResult seed,
+            string invoiceNumber,
+            DateTime invoiceDate)
+        {
+            int invoiceId;
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var customer = await db.Customers.SingleAsync(x => x.Id == seed.CustomerId);
+                var product = await db.Products.SingleAsync(x => x.Id == seed.ProductId);
+                var now = DateTime.UtcNow;
+                var invoice = new SalesInvoice
+                {
+                    InvoiceNumber = invoiceNumber,
+                    CustomerId = customer.Id,
+                    Customer = customer,
+                    InvoiceDate = invoiceDate,
+                    Status = SalesInvoiceStatus.Draft,
+                    Subtotal = 10,
+                    GrandTotal = 10,
+                    BalanceDue = 10,
+                    AmountPaid = 0,
+                    CreatedAtUtc = now,
+                    UpdatedAtUtc = now,
+                    CreatedBy = "test",
+                    Items =
+                    {
+                        new SalesInvoiceItem
+                        {
+                            ProductId = product.Id,
+                            Product = product,
+                            Quantity = 1,
+                            SellingUnitPrice = 10,
+                            LineTotal = 10
+                        }
+                    }
+                };
+                db.SalesInvoices.Add(invoice);
+                await db.SaveChangesAsync();
+                invoiceId = invoice.Id;
+            }
+
+            return (await Client.GetFromJsonAsync<SalesInvoiceResponse>(
+                $"/api/sales-invoices/{invoiceId}"))!;
         }
 
         private async Task<ProductSeedResult> SeedAdditionalProductAsync(

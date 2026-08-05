@@ -1,6 +1,7 @@
 using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Features.Products;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using MediatR;
@@ -10,15 +11,18 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
     public class Handler : IRequestHandler<Command, SalesInvoiceResponse>
     {
         private readonly ISalesInvoiceRepository _invoices;
+        private readonly IStockMovementRepository _stockMovements;
         private readonly ICurrentUserService _currentUser;
         private readonly IDocumentNumberService _documentNumbers;
 
         public Handler(
             ISalesInvoiceRepository invoices,
+            IStockMovementRepository stockMovements,
             ICurrentUserService currentUser,
             IDocumentNumberService documentNumbers)
         {
             _invoices = invoices;
+            _stockMovements = stockMovements;
             _currentUser = currentUser;
             _documentNumbers = documentNumbers;
         }
@@ -104,6 +108,21 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
                     var lineSubtotal = RoundMoney(
                         source.EnteredQuantity * input.SellingUnitPrice);
                     var tax = RoundMoney(lineSubtotal * input.TaxRate / 100m);
+                    var stockProduct = ProductStock.GetStockProduct(source.Product);
+                    var cost = await _stockMovements.GetDeliveryChallanItemCostAsync(
+                        source.DeliveryChallanId,
+                        stockProduct.Id,
+                        transactionToken);
+                    if (!cost.HasValue)
+                    {
+                        throw new BadRequestException(
+                            $"Original stock movement was not found for delivery challan item {source.Id}.");
+                    }
+
+                    var factor = ProductStock.IsSubProduct(source.Product)
+                        ? source.Product.FactorToBaseProduct!.Value
+                        : 1m;
+
                     invoice.Items.Add(new SalesInvoiceItem
                     {
                         ProductId = source.ProductId,
@@ -113,6 +132,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
                         TaxRate = input.TaxRate,
                         TaxAmount = tax,
                         LineTotal = lineSubtotal + tax,
+                        CostAtSale = cost.Value * factor,
                         DeliveryChallanItemId = source.Id,
                         DeliveryChallanItem = source,
                         IsChallanAllocationActive = true
@@ -127,7 +147,30 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
                 if (invoice.GrandTotal < 0)
                     throw new BadRequestException("Grand total cannot be negative.");
                 invoice.BalanceDue = invoice.GrandTotal;
+                invoice.AmountPaid = 0;
                 await _invoices.AddAsync(invoice, transactionToken);
+                await _invoices.SaveChangesAsync(transactionToken);
+
+                var postedAtUtc = DateTime.UtcNow;
+                var challans = await _invoices.GetLinkedChallansForUpdateAsync(
+                    invoice.Id,
+                    transactionToken);
+                foreach (var challan in challans.Where(x =>
+                    x.Items.All(item => item.SalesInvoiceItems.Any(link =>
+                        link.IsChallanAllocationActive &&
+                        (link.SalesInvoiceId == invoice.Id ||
+                         link.SalesInvoice.Status == SalesInvoiceStatus.Posted)))))
+                {
+                    challan.Status = DeliveryChallanStatus.Invoiced;
+                    challan.InvoicedAtUtc = postedAtUtc;
+                    challan.UpdatedAtUtc = postedAtUtc;
+                }
+
+                invoice.Customer.BalanceDue += invoice.GrandTotal;
+                invoice.Customer.UpdatedAtUtc = postedAtUtc;
+                invoice.Status = SalesInvoiceStatus.Posted;
+                invoice.PostedAtUtc = postedAtUtc;
+                invoice.UpdatedAtUtc = postedAtUtc;
                 await _invoices.SaveChangesAsync(transactionToken);
                 created = invoice;
             }, cancellationToken);

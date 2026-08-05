@@ -148,7 +148,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.PostSalesInvoic
                         }
                     }
 
-                    invoice.Customer.BalanceDue = invoice.GrandTotal;
+                    invoice.Customer.BalanceDue += invoice.GrandTotal;
                     invoice.Customer.UpdatedAtUtc = postedAtUtc;
                     invoice.Status = SalesInvoiceStatus.Posted;
                     invoice.PostedAtUtc = postedAtUtc;

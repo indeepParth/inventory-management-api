@@ -148,7 +148,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
             var seed = await SeedAsync();
             var invoice = await CreateInvoiceAsync(seed);
 
-            var response = await Client.PostAsJsonAsync(
+            var wrongItemResponse = await Client.PostAsJsonAsync(
                 "/api/customer-returns",
                 new Command
                 {
@@ -165,8 +165,39 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
                     }
                 });
 
-            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-            (await response.Content.ReadAsStringAsync())
+            wrongItemResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await wrongItemResponse.Content.ReadAsStringAsync())
+                .Should().Contain("referenced invoice");
+
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+                var persisted = await db.SalesInvoices
+                    .SingleAsync(x => x.Id == invoice.Id);
+                persisted.Status = SalesInvoiceStatus.Draft;
+                await db.SaveChangesAsync();
+            }
+
+            var nonPostedResponse = await Client.PostAsJsonAsync(
+                "/api/customer-returns",
+                new Command
+                {
+                    ReturnNumber = $"RET-{Guid.NewGuid():N}",
+                    SalesInvoiceId = invoice.Id,
+                    ReturnDate = new DateTime(2026, 7, 2),
+                    Items =
+                    {
+                        new CustomerReturnItemInput
+                        {
+                            SalesInvoiceItemId = invoice.Items[0].Id,
+                            Quantity = 1
+                        }
+                    }
+                });
+
+            nonPostedResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await nonPostedResponse.Content.ReadAsStringAsync())
                 .Should().Contain("posted sales invoices");
         }
 
@@ -283,6 +314,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
                 Name = $"Return product {suffix}",
                 SKU = $"RET-{suffix}",
                 Quantity = 10,
+                BaseUnitId = 1,
                 AverageCost = 25,
                 Category = new Category
                 {
@@ -292,6 +324,13 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
                     CreatedAt = DateTime.UtcNow
                 }
             };
+            db.ProductUnitConversions.Add(new ProductUnitConversion
+            {
+                Product = product,
+                UnitId = 1,
+                FactorToBaseUnit = 1,
+                IsActive = true
+            });
             db.AddRange(customer, product);
             await db.SaveChangesAsync();
             return new SeedResult(customer.Id, product.Id);

@@ -60,7 +60,8 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             IQueryable<Product> query = _context.Products
                 .Include(x => x.Category)
-                .Include(x => x.BaseUnit);
+                .Include(x => x.BaseUnit)
+                .Include(x => x.BaseProduct);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -78,7 +79,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             IQueryable<Product> query = _context.Products
                 .AsNoTracking()
                 .Include(x => x.Category)
-                .Include(x => x.BaseUnit);
+                .Include(x => x.BaseUnit)
+                .Include(x => x.BaseProduct);
 
             if (categoryId.HasValue)
                 query = query.Where(x => x.CategoryId == categoryId.Value);
@@ -87,9 +89,15 @@ namespace InventoryManagement.Infrastructure.Repositories
                 query = query.Where(x => x.Name.Contains(search) || x.SKU.Contains(search));
 
             if (stock == StockQuantityFilter.Positive)
-                query = query.Where(x => x.Quantity > 0);
+                query = query.Where(x =>
+                    x.BaseProductId.HasValue
+                        ? x.BaseProduct!.Quantity > 0
+                        : x.Quantity > 0);
             else if (stock == StockQuantityFilter.Zero)
-                query = query.Where(x => x.Quantity == 0);
+                query = query.Where(x =>
+                    x.BaseProductId.HasValue
+                        ? x.BaseProduct!.Quantity == 0
+                        : x.Quantity == 0);
 
             return query;
         }
@@ -99,6 +107,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             return await _context.Products
                 .Include(x => x.Category)
                 .Include(x => x.BaseUnit)
+                .Include(x => x.BaseProduct)
+                .Include(x => x.SubProducts)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 

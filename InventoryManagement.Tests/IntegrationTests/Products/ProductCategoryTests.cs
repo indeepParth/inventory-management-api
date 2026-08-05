@@ -93,6 +93,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
                     product.Name,
                     product.SKU,
                     product.BaseUnitId,
+                    null,
+                    null,
                     product.DefaultSellingPrice,
                     int.MaxValue));
 

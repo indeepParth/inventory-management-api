@@ -1,6 +1,7 @@
 using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Features.Products;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using MediatR;
@@ -61,13 +62,16 @@ namespace InventoryManagement.Application.Features.SalesInvoices.PostSalesInvoic
 
                     if (!hasChallanItems)
                     {
-                        foreach (var group in invoice.Items.GroupBy(x => x.ProductId))
+                        foreach (var group in invoice.Items.GroupBy(x =>
+                            ProductStock.GetStockProduct(x.Product).Id))
                         {
-                            var requiredQuantity = group.Sum(x => x.Quantity);
-                            if (group.First().Product.Quantity < requiredQuantity)
+                            var stockProduct = ProductStock.GetStockProduct(group.First().Product);
+                            var requiredQuantity = group.Sum(x =>
+                                ProductStock.GetStockQuantity(x.Product, x.Quantity));
+                            if (stockProduct.Quantity < requiredQuantity)
                             {
                                 throw new BadRequestException(
-                                    $"Insufficient stock for product {group.Key}.");
+                                    $"Insufficient stock for product {stockProduct.Id}.");
                             }
                         }
                     }
@@ -78,17 +82,21 @@ namespace InventoryManagement.Application.Features.SalesInvoices.PostSalesInvoic
                         foreach (var item in invoice.Items)
                         {
                             var source = item.DeliveryChallanItem!;
+                            var stockProduct = ProductStock.GetStockProduct(item.Product);
                             var cost = await _stockMovementRepository
                                 .GetDeliveryChallanItemCostAsync(
                                     source.DeliveryChallanId,
-                                    item.ProductId,
+                                    stockProduct.Id,
                                     transactionToken);
                             if (!cost.HasValue)
                             {
                                 throw new BadRequestException(
                                     $"Original stock movement was not found for delivery challan item {source.Id}.");
                             }
-                            item.CostAtSale = cost.Value;
+                            var factor = ProductStock.IsSubProduct(item.Product)
+                                ? item.Product.FactorToBaseProduct!.Value
+                                : 1m;
+                            item.CostAtSale = cost.Value * factor;
                         }
 
                         var challans = await _invoiceRepository
@@ -111,10 +119,13 @@ namespace InventoryManagement.Application.Features.SalesInvoices.PostSalesInvoic
                     {
                         foreach (var item in invoice.Items)
                         {
-                            var product = item.Product;
+                            var product = ProductStock.GetStockProduct(item.Product);
+                            var stockQuantity = ProductStock.GetStockQuantity(
+                                item.Product,
+                                item.Quantity);
                             var balanceBefore = product.Quantity;
-                            var costAtSale = product.AverageCost;
-                            product.Quantity -= item.Quantity;
+                            var costAtSale = ProductStock.GetCostAtSale(item.Product);
+                            product.Quantity -= stockQuantity;
                             item.CostAtSale = costAtSale;
 
                             await _stockMovementRepository.AddAsync(
@@ -123,10 +134,10 @@ namespace InventoryManagement.Application.Features.SalesInvoices.PostSalesInvoic
                                     ProductId = product.Id,
                                     Product = product,
                                     MovementType = StockMovementType.Sale,
-                                    QuantityChange = -item.Quantity,
+                                    QuantityChange = -stockQuantity,
                                     BalanceBefore = balanceBefore,
                                     BalanceAfter = product.Quantity,
-                                    UnitCost = costAtSale,
+                                    UnitCost = product.AverageCost,
                                     SourceType = "SalesInvoice",
                                     SourceId = invoice.Id.ToString(),
                                     Reference = invoice.InvoiceNumber,

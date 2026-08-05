@@ -22,6 +22,14 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
             RuleFor(x => x.BaseUnitId)
                 .GreaterThan(0);
 
+            RuleFor(x => x.FactorToBaseProduct)
+                .GreaterThan(0)
+                .When(x => x.BaseProductId.HasValue);
+
+            RuleFor(x => x.FactorToBaseProduct)
+                .Null()
+                .When(x => !x.BaseProductId.HasValue);
+
             RuleFor(x => x.CategoryId)
                 .GreaterThan(0);
         }

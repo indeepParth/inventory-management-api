@@ -1,6 +1,7 @@
 using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Features.Products;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using MediatR;
@@ -36,18 +37,20 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.PostDelivery
                     throw new BadRequestException(
                         "Only Draft delivery challans may be posted.");
 
-                foreach (var group in challan.Items.GroupBy(x => x.ProductId))
+                foreach (var group in challan.Items.GroupBy(x =>
+                    ProductStock.GetStockProduct(x.Product).Id))
                 {
                     var required = group.Sum(x => x.ConvertedBaseQuantity);
-                    if (group.First().Product.Quantity < required)
+                    var stockProduct = ProductStock.GetStockProduct(group.First().Product);
+                    if (stockProduct.Quantity < required)
                         throw new BadRequestException(
-                            $"Insufficient stock for product {group.Key}.");
+                            $"Insufficient stock for product {stockProduct.Id}.");
                 }
 
                 var postedAtUtc = DateTime.UtcNow;
                 foreach (var item in challan.Items)
                 {
-                    var product = item.Product;
+                    var product = ProductStock.GetStockProduct(item.Product);
                     var before = product.Quantity;
                     product.Quantity -= item.ConvertedBaseQuantity;
                     await _movements.AddAsync(new StockMovement

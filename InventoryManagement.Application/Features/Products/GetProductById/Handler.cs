@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Features.Products;
 using MediatR;
 
 namespace InventoryManagement.Application.Features.Products.GetProductById
@@ -32,8 +33,13 @@ namespace InventoryManagement.Application.Features.Products.GetProductById
                 Name = product.Name,
                 SKU = product.SKU,
                 Quantity = product.Quantity,
+                AvailableQuantity = ProductStock.GetAvailableQuantity(product),
                 BaseUnitId = product.BaseUnitId,
                 BaseUnitName = product.BaseUnit.Name,
+                BaseProductId = product.BaseProductId,
+                BaseProductName = product.BaseProduct?.Name,
+                FactorToBaseProduct = product.FactorToBaseProduct,
+                IsSubProduct = ProductStock.IsSubProduct(product),
                 DefaultSellingPrice = product.DefaultSellingPrice,
                 AverageCost = product.AverageCost,
                 CategoryId = product.CategoryId,

@@ -216,7 +216,9 @@ export function DeliveryChallanForm({
         {items.map((item, index) => {
           const selectedProduct = products.find((product) => product.id === item.productId)
           const availableUnits = selectedProduct
-            ? units.filter((unit) => unit.baseUnitId === selectedProduct.baseUnitId)
+            ? selectedProduct.isSubProduct
+              ? units.filter((unit) => unit.id === selectedProduct.baseUnitId)
+              : units.filter((unit) => unit.baseUnitId === selectedProduct.baseUnitId)
             : []
           return (
             <div className="line-item-row compact-line-item-row" key={index}>
@@ -235,7 +237,13 @@ export function DeliveryChallanForm({
                   required
                   value={item.productId}
                 >
-                  {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+                  {products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.isSubProduct && product.baseProductName
+                        ? `${product.name} (${product.baseProductName})`
+                        : product.name}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="form-field">
@@ -245,7 +253,7 @@ export function DeliveryChallanForm({
               <label className="form-field">
                 <span>Unit</span>
                 <select
-                  disabled={isSubmitting || availableUnits.length === 0}
+                  disabled={isSubmitting || availableUnits.length === 0 || selectedProduct?.isSubProduct}
                   onChange={(event) => updateItem(index, { unitId: Number(event.target.value) })}
                   required
                   value={item.unitId || selectedProduct?.baseUnitId || 0}

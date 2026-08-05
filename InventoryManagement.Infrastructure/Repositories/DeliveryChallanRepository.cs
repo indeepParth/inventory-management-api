@@ -22,6 +22,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Driver)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
+                        .ThenInclude(x => x.BaseProduct)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Unit)
                 .Include(x => x.Items)
@@ -71,6 +72,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Driver)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
+                        .ThenInclude(x => x.BaseProduct)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Unit)
                 .Include(x => x.Items)
@@ -83,6 +85,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Customer)
                 .Include(x => x.Driver)
                 .Include(x => x.Items).ThenInclude(x => x.Product)
+                    .ThenInclude(x => x.BaseProduct)
                 .Include(x => x.Items).ThenInclude(x => x.Unit)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 

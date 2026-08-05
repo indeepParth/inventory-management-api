@@ -269,11 +269,19 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.AverageCost)
                       .HasPrecision(18, 2);
 
+                entity.Property(x => x.FactorToBaseProduct)
+                      .HasPrecision(18, 6);
+
                 entity.HasOne(x => x.BaseUnit)
                       .WithMany()
                       .HasForeignKey(x => x.BaseUnitId)
                       .OnDelete(DeleteBehavior.Restrict)
                       .IsRequired();
+
+                entity.HasOne(x => x.BaseProduct)
+                      .WithMany(x => x.SubProducts)
+                      .HasForeignKey(x => x.BaseProductId)
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(x => x.Category)
                       .WithMany(x => x.Products)

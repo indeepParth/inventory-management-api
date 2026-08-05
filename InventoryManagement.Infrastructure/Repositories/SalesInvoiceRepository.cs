@@ -35,6 +35,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Customer)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
+                        .ThenInclude(x => x.BaseProduct)
                 .OrderByDescending(x => x.InvoiceDate)
                 .ThenByDescending(x => x.Id)
                 .Skip((pageNumber - 1) * pageSize)
@@ -71,6 +72,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .AsNoTracking()
                 .Include(x => x.Customer)
                 .Include(x => x.Items).ThenInclude(x => x.Product)
+                    .ThenInclude(x => x.BaseProduct)
                 .OrderByDescending(x => x.InvoiceDate).ThenByDescending(x => x.Id)
                 .Skip((pageNumber - 1) * pageSize).Take(pageSize)
                 .ToListAsync(cancellationToken);
@@ -109,6 +111,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Customer)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
+                        .ThenInclude(x => x.BaseProduct)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.DeliveryChallanItem!)
                         .ThenInclude(x => x.DeliveryChallan)
@@ -123,6 +126,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Customer)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
+                        .ThenInclude(x => x.BaseProduct)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.DeliveryChallanItem)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
@@ -162,6 +166,7 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             return _context.DeliveryChallanItems
                 .Include(x => x.Product)
+                    .ThenInclude(x => x.BaseProduct)
                 .Include(x => x.DeliveryChallan)
                     .ThenInclude(x => x.Customer)
                 .Include(x => x.SalesInvoiceItems)

@@ -493,6 +493,10 @@
   color: #166534;
 }
 
+.muted-text {
+  color: #64748b;
+}
+
 .form-actions,
 .table-actions,
 .pagination {

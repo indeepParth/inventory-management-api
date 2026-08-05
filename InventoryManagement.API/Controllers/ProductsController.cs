@@ -69,6 +69,8 @@ namespace InventoryManagement.API.Controllers
                 command.Name,
                 command.SKU,
                 command.BaseUnitId,
+                command.BaseProductId,
+                command.FactorToBaseProduct,
                 command.DefaultSellingPrice,
                 command.CategoryId
             );

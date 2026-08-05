@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Features.Products;
+using InventoryManagement.Domain.Entities;
 using MediatR;
 
 namespace InventoryManagement.Application.Features.Products.UpdateProduct
@@ -57,9 +59,50 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
                 throw new BadRequestException("Product base unit must be a base unit.");
             }
 
+            Product? baseProduct = null;
+            if (request.BaseProductId.HasValue)
+            {
+                if (request.BaseProductId.Value == product.Id)
+                {
+                    throw new BadRequestException("Product cannot be its own base product.");
+                }
+
+                if (product.SubProducts.Any())
+                {
+                    throw new BadRequestException("Product with sub-products cannot be converted to a sub-product.");
+                }
+
+                baseProduct = await _repository.GetProductByIdAsync(
+                    request.BaseProductId.Value,
+                    cancellationToken);
+                if (baseProduct is null)
+                {
+                    throw new NotFoundException("Base product not found.");
+                }
+
+                if (baseProduct.BaseProductId.HasValue)
+                {
+                    throw new BadRequestException("Base product cannot be a sub-product.");
+                }
+
+                if (baseProduct.BaseUnitId != request.BaseUnitId)
+                {
+                    throw new BadRequestException("Sub-product must use the same base unit as its base product.");
+                }
+            }
+            else if (product.SubProducts.Any() && request.BaseUnitId != product.BaseUnitId)
+            {
+                throw new BadRequestException("Product base unit cannot be changed while sub-products exist.");
+            }
+
             product.Name = request.Name;
             product.SKU = request.SKU;
             product.BaseUnitId = request.BaseUnitId;
+            product.BaseProductId = baseProduct?.Id;
+            product.BaseProduct = baseProduct;
+            product.FactorToBaseProduct = baseProduct is null
+                ? null
+                : request.FactorToBaseProduct;
             product.DefaultSellingPrice = request.DefaultSellingPrice;
             product.CategoryId = request.CategoryId;
 
@@ -71,8 +114,13 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
                 Name = product.Name,
                 SKU = product.SKU,
                 Quantity = product.Quantity,
+                AvailableQuantity = ProductStock.GetAvailableQuantity(product),
                 BaseUnitId = unit.Id,
                 BaseUnitName = unit.Name,
+                BaseProductId = product.BaseProductId,
+                BaseProductName = product.BaseProduct?.Name,
+                FactorToBaseProduct = product.FactorToBaseProduct,
+                IsSubProduct = ProductStock.IsSubProduct(product),
                 DefaultSellingPrice = product.DefaultSellingPrice,
                 AverageCost = product.AverageCost,
                 CategoryId = category.Id,

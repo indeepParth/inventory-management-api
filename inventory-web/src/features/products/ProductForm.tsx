@@ -5,6 +5,7 @@ import type { Category, Product, ProductFormValues, Unit } from './productsApi'
 type ProductFormProps = {
   categories: Category[]
   units: Unit[]
+  products: Product[]
   initialValue?: Product
   errors: FieldErrors
   isSubmitting: boolean
@@ -15,6 +16,7 @@ type ProductFormProps = {
 export function ProductForm({
   categories,
   units,
+  products,
   initialValue,
   errors,
   isSubmitting,
@@ -26,18 +28,35 @@ export function ProductForm({
   const [name, setName] = useState(initialValue?.name ?? '')
   const [sku, setSku] = useState(initialValue?.sku ?? '')
   const [baseUnitId, setBaseUnitId] = useState(initialValue?.baseUnitId ?? firstUnitId)
+  const [baseProductId, setBaseProductId] = useState(initialValue?.baseProductId ?? 0)
+  const [factorToBaseProduct, setFactorToBaseProduct] = useState(
+    initialValue?.factorToBaseProduct?.toString() ?? '',
+  )
   const [defaultSellingPrice, setDefaultSellingPrice] = useState(
     initialValue?.defaultSellingPrice.toString() ?? '',
   )
   const [categoryId, setCategoryId] = useState(initialValue?.categoryId ?? firstCategoryId)
+  const selectedBaseProduct = products.find((product) => product.id === baseProductId)
+  const baseProductOptions = products.filter(
+    (product) => !product.isSubProduct && product.id !== initialValue?.id,
+  )
+  const isSubProduct = Boolean(selectedBaseProduct)
 
   useEffect(() => {
     setName(initialValue?.name ?? '')
     setSku(initialValue?.sku ?? '')
     setBaseUnitId(initialValue?.baseUnitId ?? firstUnitId)
+    setBaseProductId(initialValue?.baseProductId ?? 0)
+    setFactorToBaseProduct(initialValue?.factorToBaseProduct?.toString() ?? '')
     setDefaultSellingPrice(initialValue?.defaultSellingPrice.toString() ?? '')
     setCategoryId(initialValue?.categoryId ?? firstCategoryId)
   }, [firstCategoryId, firstUnitId, initialValue])
+
+  useEffect(() => {
+    if (selectedBaseProduct && baseUnitId !== selectedBaseProduct.baseUnitId) {
+      setBaseUnitId(selectedBaseProduct.baseUnitId)
+    }
+  }, [baseUnitId, selectedBaseProduct])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
@@ -45,6 +64,8 @@ export function ProductForm({
       name,
       sku,
       baseUnitId,
+      baseProductId: selectedBaseProduct?.id ?? null,
+      factorToBaseProduct: selectedBaseProduct ? Number(factorToBaseProduct) : null,
       defaultSellingPrice: Number(defaultSellingPrice),
       categoryId,
     })
@@ -100,9 +121,37 @@ export function ProductForm({
       </label>
 
       <label className="form-field">
-        <span>Base unit</span>
+        <span>Base product</span>
         <select
           disabled={isSubmitting}
+          onChange={(event) => {
+            const productId = Number(event.target.value)
+            const product = products.find((candidate) => candidate.id === productId)
+            setBaseProductId(productId)
+            if (product) {
+              setBaseUnitId(product.baseUnitId)
+            } else {
+              setFactorToBaseProduct('')
+            }
+          }}
+          value={baseProductId}
+        >
+          <option value={0}>None</option>
+          {baseProductOptions.map((product) => (
+            <option key={product.id} value={product.id}>
+              {product.name}
+            </option>
+          ))}
+        </select>
+        {getFieldError(errors, 'BaseProductId') ? (
+          <span className="field-error">{getFieldError(errors, 'BaseProductId')}</span>
+        ) : null}
+      </label>
+
+      <label className="form-field">
+        <span>Base unit</span>
+        <select
+          disabled={isSubmitting || isSubProduct}
           onChange={(event) => setBaseUnitId(Number(event.target.value))}
           required
           value={baseUnitId}
@@ -117,6 +166,24 @@ export function ProductForm({
           <span className="field-error">{getFieldError(errors, 'BaseUnitId')}</span>
         ) : null}
       </label>
+
+      {isSubProduct ? (
+        <label className="form-field">
+          <span>Factor to base product</span>
+          <input
+            disabled={isSubmitting}
+            min="0.000001"
+            onChange={(event) => setFactorToBaseProduct(event.target.value)}
+            required
+            step="0.000001"
+            type="number"
+            value={factorToBaseProduct}
+          />
+          {getFieldError(errors, 'FactorToBaseProduct') ? (
+            <span className="field-error">{getFieldError(errors, 'FactorToBaseProduct')}</span>
+          ) : null}
+        </label>
+      ) : null}
 
       <label className="form-field">
         <span>Default selling price</span>

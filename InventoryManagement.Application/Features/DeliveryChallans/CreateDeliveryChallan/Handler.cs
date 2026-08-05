@@ -1,6 +1,7 @@
 using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Features.Products;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using MediatR;
@@ -102,6 +103,16 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
                             $"Unit {input.UnitId} is not valid for product {input.ProductId}.");
                     }
 
+                    if (ProductStock.IsSubProduct(product) && unit.Id != product.BaseUnitId)
+                    {
+                        throw new BadRequestException(
+                            $"Sub-product {input.ProductId} must use its base unit.");
+                    }
+
+                    var convertedBaseQuantity = ProductStock.IsSubProduct(product)
+                        ? ProductStock.GetStockQuantity(product, input.EnteredQuantity)
+                        : input.EnteredQuantity * unit.FactorToBaseUnit;
+
                     challan.Items.Add(new DeliveryChallanItem
                     {
                         ProductId = product.Id,
@@ -109,8 +120,7 @@ namespace InventoryManagement.Application.Features.DeliveryChallans.CreateDelive
                         EnteredQuantity = input.EnteredQuantity,
                         UnitId = unit.Id,
                         Unit = unit,
-                        ConvertedBaseQuantity =
-                            input.EnteredQuantity * unit.FactorToBaseUnit
+                        ConvertedBaseQuantity = convertedBaseQuantity
                     });
                 }
 

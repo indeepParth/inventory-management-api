@@ -72,6 +72,8 @@ namespace InventoryManagement.Tests.UnitTests.Products.UpdateProduct
                 "Updated Product",
                 "NEW123",
                 2,
+                null,
+                null,
                 150,
                 2
             );

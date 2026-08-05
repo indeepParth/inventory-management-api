@@ -25,11 +25,28 @@ import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feed
 import { formatCurrency, formatQuantity } from '../shared/utils/formatters'
 
 const pageSize = 10
+const productOptionsPageSize = 100
+
+async function getProductOptions(): Promise<Product[]> {
+  const allProducts: Product[] = []
+  let currentPage = 1
+  let hasNextPage = true
+
+  while (hasNextPage) {
+    const response = await getProducts(currentPage, productOptionsPageSize)
+    allProducts.push(...response.items)
+    hasNextPage = response.hasNextPage
+    currentPage += 1
+  }
+
+  return allProducts
+}
 
 export function ProductsPage() {
   const { currentUser } = useAuth()
   const canManageProducts = hasRouteAccess(currentUser?.roles ?? [], 'manageProducts')
   const [productsResponse, setProductsResponse] = useState<PagedResponse<Product> | null>(null)
+  const [productOptions, setProductOptions] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [units, setUnits] = useState<Unit[]>([])
   const [editingProduct, setEditingProduct] = useState<Product | undefined>()
@@ -48,12 +65,14 @@ export function ProductsPage() {
     setErrorMessage(null)
 
     try {
-      const [productPage, categoryItems, unitItems] = await Promise.all([
+      const [productPage, productOptionPage, categoryItems, unitItems] = await Promise.all([
         getProducts(pageNumber, pageSize, search),
+        getProductOptions(),
         getCategories(),
         getUnits(),
       ])
       setProductsResponse(productPage)
+      setProductOptions(productOptionPage)
       setCategories(categoryItems)
       setUnits(unitItems.filter((unit) => unit.isActive))
     } catch (error) {
@@ -186,6 +205,7 @@ export function ProductsPage() {
         <>
           <ProductForm
             categories={categories}
+            products={productOptions}
             units={baseUnits}
             errors={fieldErrors}
             initialValue={editingProduct}
@@ -225,7 +245,10 @@ export function ProductsPage() {
                     <td>{product.sku}</td>
                     <td>{product.categoryName}</td>
                     <td>
-                      {formatQuantity(product.quantity)} {product.baseUnitName}
+                      {formatQuantity(product.availableQuantity)} {product.baseUnitName}
+                      {product.isSubProduct && product.baseProductName ? (
+                        <span className="muted-text"> from {product.baseProductName}</span>
+                      ) : null}
                     </td>
                     <td>{formatCurrency(product.defaultSellingPrice)}</td>
                     {canManageProducts ? (

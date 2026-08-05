@@ -1,5 +1,6 @@
 using InventoryManagement.Application.Common.Models;
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Features.Products;
 using MediatR;
 
 namespace InventoryManagement.Application.Features.InventoryReports.GetCurrentStock;
@@ -32,17 +33,26 @@ public class Handler : IRequestHandler<Query, PagedResponse<Response>>
 
         return new PagedResponse<Response>
         {
-            Items = products.Select(x => new Response
+            Items = products.Select(x =>
             {
-                ProductId = x.Id,
-                ProductName = x.Name,
-                Category = x.Category.Name,
-                UnitId = x.BaseUnitId,
-                UnitName = x.BaseUnit.Name,
-                Quantity = x.Quantity,
-                AverageCost = x.AverageCost,
-                StockValue = x.Quantity * x.AverageCost,
-                DefaultSellingPrice = x.DefaultSellingPrice
+                var availableQuantity = ProductStock.GetAvailableQuantity(x);
+                return new Response
+                {
+                    ProductId = x.Id,
+                    ProductName = x.Name,
+                    Category = x.Category.Name,
+                    UnitId = x.BaseUnitId,
+                    UnitName = x.BaseUnit.Name,
+                    Quantity = availableQuantity,
+                    AvailableQuantity = availableQuantity,
+                    BaseProductId = x.BaseProductId,
+                    BaseProductName = x.BaseProduct?.Name,
+                    FactorToBaseProduct = x.FactorToBaseProduct,
+                    IsSubProduct = ProductStock.IsSubProduct(x),
+                    AverageCost = x.AverageCost,
+                    StockValue = availableQuantity * x.AverageCost,
+                    DefaultSellingPrice = x.DefaultSellingPrice
+                };
             }).ToList(),
             PageNumber = request.PageNumber,
             PageSize = request.PageSize,

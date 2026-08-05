@@ -11,6 +11,8 @@ namespace InventoryManagement.Application.Features.Products.UpdateProduct
         string Name,
         string SKU,
         int BaseUnitId,
+        int? BaseProductId,
+        decimal? FactorToBaseProduct,
         decimal DefaultSellingPrice,
         int CategoryId
     ) : IRequest<Response>;

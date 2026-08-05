@@ -35,7 +35,7 @@ public class ProductBaseUnitMigrationTests
                     ('Migration product', 'MIG-UNIT-1', 7.500, 3, 12.50, 8.25, 1);
                 """);
 
-            await migrator.MigrateAsync("20260731063905_ReplaceProductBaseUnitWithUnitReference");
+            await migrator.MigrateAsync("20260805044320_AddProductSubProducts");
 
             var product = await db.Products
                 .AsNoTracking()

@@ -158,7 +158,13 @@ export function DirectInvoiceForm({
             <label className="form-field">
               <span>Product</span>
               <select disabled={isSubmitting} onChange={(event) => updateItem(index, { productId: Number(event.target.value) })} required value={item.productId}>
-                {products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}
+                {products.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.isSubProduct && product.baseProductName
+                      ? `${product.name} (${product.baseProductName})`
+                      : product.name}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="form-field">

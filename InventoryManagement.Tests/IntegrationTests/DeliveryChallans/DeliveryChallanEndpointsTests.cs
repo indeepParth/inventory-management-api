@@ -41,7 +41,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
                         {
                             ProductId = seed.ProductId,
                             EnteredQuantity = 1.5m,
-                            UnitId = 3
+                            UnitId = seed.ConvertedUnitId
                         }
                     }
                 });
@@ -52,8 +52,8 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
             draft.Should().NotBeNull();
             draft!.Items.Should().ContainSingle(x =>
                 x.EnteredQuantity == 1.5m &&
-                x.UnitId == 3 &&
-                x.UnitName == "Bag" &&
+                x.UnitId == seed.ConvertedUnitId &&
+                x.UnitName.StartsWith("Conversion bag") &&
                 x.ConvertedBaseQuantity == 3m &&
                 x.Quantity == 3m);
 
@@ -247,28 +247,22 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow
                 },
-                UnitConversions =
-                {
-                    new ProductUnitConversion
-                    {
-                        UnitId = 1,
-                        FactorToBaseUnit = 1,
-                        IsActive = true
-                    },
-                    new ProductUnitConversion
-                    {
-                        UnitId = 3,
-                        FactorToBaseUnit = 2,
-                        IsActive = true
-                    }
-                }
             };
-            db.AddRange(customer, product);
+            var convertedUnit = new Unit
+            {
+                Name = $"Conversion bag {suffix}",
+                ShortName = "bag",
+                BaseUnitId = 1,
+                FactorToBaseUnit = 2,
+                IsActive = true,
+                CreatedAtUtc = DateTime.UtcNow
+            };
+            db.AddRange(customer, product, convertedUnit);
             await db.SaveChangesAsync();
 
-            return new ConversionSeed(customer.Id, product.Id);
+            return new ConversionSeed(customer.Id, product.Id, convertedUnit.Id);
         }
 
-        private sealed record ConversionSeed(int CustomerId, int ProductId);
+        private sealed record ConversionSeed(int CustomerId, int ProductId, int ConvertedUnitId);
     }
 }

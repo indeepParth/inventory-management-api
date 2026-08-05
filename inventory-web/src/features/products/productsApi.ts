@@ -34,8 +34,13 @@ export type Product = {
   name: string
   sku: string
   quantity: number
+  availableQuantity: number
   baseUnitId: number
   baseUnitName: string
+  baseProductId: number | null
+  baseProductName: string | null
+  factorToBaseProduct: number | null
+  isSubProduct: boolean
   defaultSellingPrice: number
   averageCost: number
   categoryId: number
@@ -70,6 +75,8 @@ export type ProductFormValues = {
   name: string
   sku: string
   baseUnitId: number
+  baseProductId: number | null
+  factorToBaseProduct: number | null
   defaultSellingPrice: number
   categoryId: number
 }

@@ -560,6 +560,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         {
             await AuthenticateAsync();
             var seed = await SeedDependenciesAsync();
+            int convertedUnitId;
             using (var scope = _factory.Services.CreateScope())
             {
                 var db = scope.ServiceProvider
@@ -567,14 +568,18 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 var product = await db.Products
                     .SingleAsync(x => x.Id == seed.ProductId);
                 product.Quantity = 20;
-                db.ProductUnitConversions.Add(new ProductUnitConversion
+                var convertedUnit = new Unit
                 {
-                    ProductId = seed.ProductId,
-                    UnitId = 3,
+                    Name = $"Invoice conversion bag {Guid.NewGuid():N}",
+                    ShortName = "bag",
+                    BaseUnitId = 1,
                     FactorToBaseUnit = 4,
-                    IsActive = true
-                });
+                    IsActive = true,
+                    CreatedAtUtc = DateTime.UtcNow
+                };
+                db.Units.Add(convertedUnit);
                 await db.SaveChangesAsync();
+                convertedUnitId = convertedUnit.Id;
             }
 
             var challanCreate = await Client.PostAsJsonAsync(
@@ -591,7 +596,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                         {
                             ProductId = seed.ProductId,
                             EnteredQuantity = 2,
-                            UnitId = 3
+                            UnitId = convertedUnitId
                         }
                     }
                 });

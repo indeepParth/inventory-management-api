@@ -1,6 +1,7 @@
 using AutoMapper;
 using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Features.Products;
 using InventoryManagement.Domain.Entities;
 using MediatR;
 
@@ -48,12 +49,39 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
                 throw new BadRequestException("Product base unit must be a base unit.");
             }
 
+            Product? baseProduct = null;
+            if (request.BaseProductId.HasValue)
+            {
+                baseProduct = await _repository.GetProductByIdAsync(
+                    request.BaseProductId.Value,
+                    cancellationToken);
+                if (baseProduct is null)
+                {
+                    throw new NotFoundException("Base product not found.");
+                }
+
+                if (baseProduct.BaseProductId.HasValue)
+                {
+                    throw new BadRequestException("Base product cannot be a sub-product.");
+                }
+
+                if (baseProduct.BaseUnitId != request.BaseUnitId)
+                {
+                    throw new BadRequestException("Sub-product must use the same base unit as its base product.");
+                }
+            }
+
             var product = new Product
             {
                 Name = request.Name,
                 SKU = request.SKU,
                 Quantity = 0m,
                 BaseUnitId = request.BaseUnitId,
+                BaseProductId = baseProduct?.Id,
+                BaseProduct = baseProduct,
+                FactorToBaseProduct = baseProduct is null
+                    ? null
+                    : request.FactorToBaseProduct,
                 DefaultSellingPrice = request.DefaultSellingPrice,
                 AverageCost = 0m,
                 CategoryId = request.CategoryId
@@ -68,8 +96,13 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
                 Name = product.Name,
                 SKU = product.SKU,
                 Quantity = product.Quantity,
+                AvailableQuantity = ProductStock.GetAvailableQuantity(product),
                 BaseUnitId = unit.Id,
                 BaseUnitName = unit.Name,
+                BaseProductId = product.BaseProductId,
+                BaseProductName = product.BaseProduct?.Name,
+                FactorToBaseProduct = product.FactorToBaseProduct,
+                IsSubProduct = ProductStock.IsSubProduct(product),
                 DefaultSellingPrice = product.DefaultSellingPrice,
                 AverageCost = product.AverageCost,
                 CategoryId = category.Id,

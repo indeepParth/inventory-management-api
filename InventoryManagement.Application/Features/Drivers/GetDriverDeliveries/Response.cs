@@ -3,6 +3,12 @@ using InventoryManagement.Domain.Enums;
 
 namespace InventoryManagement.Application.Features.Drivers.GetDriverDeliveries
 {
+    public enum DriverDeliverySourceType
+    {
+        Challan,
+        Invoice
+    }
+
     public class DriverDeliveriesResponse
     {
         public int Id { get; set; }
@@ -15,6 +21,10 @@ namespace InventoryManagement.Application.Features.Drivers.GetDriverDeliveries
 
     public class DriverDeliveryRowResponse
     {
+        public DriverDeliverySourceType SourceType { get; set; }
+        public int DocumentId { get; set; }
+        public string DocumentNumber { get; set; } = string.Empty;
+        public DateTime DocumentDate { get; set; }
         public int ChallanId { get; set; }
         public string ChallanNumber { get; set; } = string.Empty;
         public DateTime ChallanDate { get; set; }
@@ -24,6 +34,7 @@ namespace InventoryManagement.Application.Features.Drivers.GetDriverDeliveries
         public string DeliveryToAddress { get; set; } = string.Empty;
         public string? VehicleNumber { get; set; }
         public decimal DeliveryCharge { get; set; }
+        public decimal LaborCharge { get; set; }
         public bool IsDeliveryChargePaid { get; set; }
         public int ItemCount { get; set; }
     }

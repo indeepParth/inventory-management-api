@@ -402,8 +402,10 @@ export function CustomerDetailPage() {
           {isDirectInvoiceFormOpen ? (
             <DirectInvoiceForm
               customers={[customer]}
+              drivers={drivers}
               errors={fieldErrors}
               initialCustomerId={customer.id}
+              initialDeliveryAddress={customer.deliveryAddress}
               isSubmitting={isSavingDirectInvoice}
               lockCustomer
               onCancel={closeDirectInvoiceForm}

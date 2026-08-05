@@ -8,9 +8,15 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
         {
             RuleFor(x => x.Id).GreaterThan(0);
             RuleFor(x => x.CustomerId).GreaterThan(0);
+            RuleFor(x => x.DriverId).GreaterThan(0).When(x => x.DriverId.HasValue);
             RuleFor(x => x.InvoiceDate).NotEmpty();
             RuleFor(x => x.Discount).GreaterThanOrEqualTo(0);
             RuleFor(x => x.OtherCharges).GreaterThanOrEqualTo(0);
+            RuleFor(x => x.LaborCharge).GreaterThanOrEqualTo(0);
+            RuleFor(x => x.DeliveryAddress).MaximumLength(500);
+            RuleFor(x => x.DeliveryAddress)
+                .NotEmpty()
+                .When(x => x.DriverId.HasValue);
             RuleFor(x => x.Items).NotEmpty();
             RuleForEach(x => x.Items).SetValidator(new SalesInvoiceItemValidator());
         }

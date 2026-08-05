@@ -6,9 +6,12 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
         int Id,
         string? InvoiceNumber,
         int CustomerId,
+        int? DriverId,
         DateTime InvoiceDate,
         decimal Discount,
         decimal OtherCharges,
+        decimal LaborCharge,
+        string? DeliveryAddress,
         string? Notes,
         List<SalesInvoiceItemInput> Items) : IRequest<SalesInvoiceResponse>;
 

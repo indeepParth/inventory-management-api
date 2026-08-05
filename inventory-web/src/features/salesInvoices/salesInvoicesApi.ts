@@ -33,12 +33,17 @@ export type SalesInvoice = {
   invoiceNumber: string
   customerId: number
   customerName: string
+  driverId?: number | null
+  driverName?: string | null
   invoiceDate: string
   status: SalesInvoiceStatus
   subtotal: number
   discount: number
   taxAmount: number
   otherCharges: number
+  laborCharge: number
+  deliveryAddress?: string | null
+  isDeliveryChargePaid: boolean
   grandTotal: number
   amountPaid: number
   balanceDue: number
@@ -100,9 +105,12 @@ export type DirectInvoiceItemFormValues = {
 
 export type DirectInvoiceFormValues = {
   customerId: number
+  driverId: number | null
   invoiceDate: string
   discount: number
   otherCharges: number
+  laborCharge: number
+  deliveryAddress: string
   notes: string
   items: DirectInvoiceItemFormValues[]
 }
@@ -209,6 +217,12 @@ export function postSalesInvoice(id: number): Promise<SalesInvoice> {
 
 export function cancelSalesInvoice(id: number): Promise<SalesInvoice> {
   return apiRequest<SalesInvoice>(`/api/sales-invoices/${id}/cancel`, {
+    method: 'POST',
+  })
+}
+
+export function markSalesInvoiceDeliveryChargePaid(id: number): Promise<SalesInvoice> {
+  return apiRequest<SalesInvoice>(`/api/sales-invoices/${id}/delivery-charge/mark-paid`, {
     method: 'POST',
   })
 }

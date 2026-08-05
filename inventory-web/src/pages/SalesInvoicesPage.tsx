@@ -6,6 +6,7 @@ import {
   getDeliveryChallans,
   type DeliveryChallan,
 } from '../features/challans/challansApi'
+import { getDrivers, type Driver } from '../features/drivers/driversApi'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getCustomers, type Customer } from '../features/parties/partiesApi'
 import { getProducts, type Product } from '../features/products/productsApi'
@@ -50,6 +51,7 @@ export function SalesInvoicesPage() {
   const canCancelInvoices = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
   const [response, setResponse] = useState<PagedResponse<SalesInvoice> | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [drivers, setDrivers] = useState<Driver[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [postedChallans, setPostedChallans] = useState<DeliveryChallan[]>([])
   const [editingInvoice, setEditingInvoice] = useState<SalesInvoice | undefined>()
@@ -71,7 +73,7 @@ export function SalesInvoicesPage() {
     setErrorMessage(null)
 
     try {
-      const [invoicePage, customerPage, productPage, challanPage] = await Promise.all([
+      const [invoicePage, customerPage, driverPage, productPage, challanPage] = await Promise.all([
         getSalesInvoices({
           pageNumber,
           pageSize,
@@ -80,6 +82,7 @@ export function SalesInvoicesPage() {
           invoiceNumber,
         }),
         getCustomers(1, 100, '', 'true'),
+        getDrivers(1, 100, '', 'true'),
         getProducts(1, 100),
         getDeliveryChallans({
           pageNumber: 1,
@@ -91,6 +94,7 @@ export function SalesInvoicesPage() {
       ])
       setResponse(invoicePage)
       setCustomers(customerPage.items)
+      setDrivers(driverPage.items)
       setProducts(productPage.items)
       setPostedChallans(challanPage.items.filter(canCreateInvoiceFromChallan))
     } catch (error) {
@@ -300,6 +304,7 @@ export function SalesInvoicesPage() {
       {formMode === 'direct' ? (
         <DirectInvoiceForm
           customers={customers}
+          drivers={drivers}
           errors={fieldErrors}
           initialValue={editingInvoice}
           isSubmitting={isSaving}

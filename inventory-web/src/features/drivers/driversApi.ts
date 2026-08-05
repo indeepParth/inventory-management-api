@@ -29,8 +29,13 @@ export type DriverFormValues = {
 }
 
 export type DriverDeliveryPaymentStatus = 'all' | 'paid' | 'unpaid'
+export type DriverDeliverySourceType = 0 | 1
 
 export type DriverDeliveryRow = {
+  sourceType: DriverDeliverySourceType
+  documentId: number
+  documentNumber: string
+  documentDate: string
   challanId: number
   challanNumber: string
   challanDate: string
@@ -40,6 +45,7 @@ export type DriverDeliveryRow = {
   deliveryToAddress: string
   vehicleNumber?: string
   deliveryCharge: number
+  laborCharge: number
   isDeliveryChargePaid: boolean
   itemCount: number
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { getFieldError, type FieldErrors } from '../../shared/api/apiErrorMessages'
 import { formatCurrency } from '../../shared/utils/formatters'
+import type { Driver } from '../drivers/driversApi'
 import type { Customer } from '../parties/partiesApi'
 import type { Product } from '../products/productsApi'
 import type {
@@ -11,9 +12,11 @@ import type {
 
 type DirectInvoiceFormProps = {
   customers: Customer[]
+  drivers: Driver[]
   products: Product[]
   initialValue?: SalesInvoice
   initialCustomerId?: number
+  initialDeliveryAddress?: string
   lockCustomer?: boolean
   errors: FieldErrors
   isSubmitting: boolean
@@ -34,11 +37,17 @@ function createBlankItem(productId: number): DirectInvoiceItemFormValues {
   }
 }
 
+function getLineSubtotal(item: DirectInvoiceItemFormValues): number {
+  return item.quantity * item.sellingUnitPrice
+}
+
 export function DirectInvoiceForm({
   customers,
+  drivers,
   products,
   initialValue,
   initialCustomerId,
+  initialDeliveryAddress,
   lockCustomer = false,
   errors,
   isSubmitting,
@@ -47,11 +56,14 @@ export function DirectInvoiceForm({
 }: DirectInvoiceFormProps) {
   const firstCustomerId = customers[0]?.id ?? 0
   const defaultCustomerId = initialCustomerId ?? firstCustomerId
+  const defaultDeliveryAddress = initialValue?.deliveryAddress ?? initialDeliveryAddress ?? ''
   const firstProductId = products[0]?.id ?? 0
   const [customerId, setCustomerId] = useState(initialValue?.customerId ?? defaultCustomerId)
+  const [driverId, setDriverId] = useState(initialValue?.driverId ?? 0)
   const [invoiceDate, setInvoiceDate] = useState(toDateInputValue(initialValue?.invoiceDate))
-  const [discount, setDiscount] = useState(initialValue?.discount.toString() ?? '0')
-  const [otherCharges, setOtherCharges] = useState(initialValue?.otherCharges.toString() ?? '0')
+  const [driverCharge, setDriverCharge] = useState(initialValue?.otherCharges.toString() ?? '0')
+  const [laborCharge, setLaborCharge] = useState(initialValue?.laborCharge.toString() ?? '0')
+  const [deliveryAddress, setDeliveryAddress] = useState(defaultDeliveryAddress)
   const [notes, setNotes] = useState(initialValue?.notes ?? '')
   const [items, setItems] = useState<DirectInvoiceItemFormValues[]>(
     initialValue?.items.map((item) => ({
@@ -64,9 +76,11 @@ export function DirectInvoiceForm({
 
   useEffect(() => {
     setCustomerId(initialValue?.customerId ?? defaultCustomerId)
+    setDriverId(initialValue?.driverId ?? 0)
     setInvoiceDate(toDateInputValue(initialValue?.invoiceDate))
-    setDiscount(initialValue?.discount.toString() ?? '0')
-    setOtherCharges(initialValue?.otherCharges.toString() ?? '0')
+    setDriverCharge(initialValue?.otherCharges.toString() ?? '0')
+    setLaborCharge(initialValue?.laborCharge.toString() ?? '0')
+    setDeliveryAddress(defaultDeliveryAddress)
     setNotes(initialValue?.notes ?? '')
     setItems(
       initialValue?.items.map((item) => ({
@@ -76,12 +90,25 @@ export function DirectInvoiceForm({
         taxRate: item.taxRate,
       })) ?? [createBlankItem(firstProductId)],
     )
-  }, [defaultCustomerId, firstProductId, initialValue])
+  }, [defaultCustomerId, defaultDeliveryAddress, firstProductId, initialValue])
 
   function updateItem(index: number, values: Partial<DirectInvoiceItemFormValues>): void {
     setItems((currentItems) =>
       currentItems.map((item, itemIndex) =>
         itemIndex === index ? { ...item, ...values } : item,
+      ),
+    )
+  }
+
+  function updateItemSubtotal(index: number, subtotal: number): void {
+    setItems((currentItems) =>
+      currentItems.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              sellingUnitPrice: item.quantity > 0 ? subtotal / item.quantity : 0,
+            }
+          : item,
       ),
     )
   }
@@ -94,23 +121,28 @@ export function DirectInvoiceForm({
     event.preventDefault()
     await onSubmit({
       customerId,
+      driverId: driverId > 0 ? driverId : null,
       invoiceDate,
-      discount: Number(discount),
-      otherCharges: Number(otherCharges),
+      discount: 0,
+      otherCharges: driverId > 0 ? Number(driverCharge) : 0,
+      laborCharge: driverId > 0 ? Number(laborCharge) : 0,
+      deliveryAddress: driverId > 0 ? deliveryAddress : '',
       notes,
       items,
     })
   }
 
   const subtotal = items.reduce(
-    (total, item) => total + item.quantity * item.sellingUnitPrice,
+    (total, item) => total + getLineSubtotal(item),
     0,
   )
   const taxAmount = items.reduce(
     (total, item) => total + (item.quantity * item.sellingUnitPrice * item.taxRate) / 100,
     0,
   )
-  const total = subtotal - Number(discount || 0) + taxAmount + Number(otherCharges || 0)
+  const total = subtotal + taxAmount + (
+    driverId > 0 ? Number(driverCharge || 0) + Number(laborCharge || 0) : 0
+  )
 
   return (
     <form className="entity-form" onSubmit={handleSubmit}>
@@ -123,7 +155,19 @@ export function DirectInvoiceForm({
         ) : null}
         <label className="form-field">
           <span>Customer</span>
-          <select disabled={isSubmitting || lockCustomer} onChange={(event) => setCustomerId(Number(event.target.value))} required value={customerId}>
+          <select
+            disabled={isSubmitting || lockCustomer}
+            onChange={(event) => {
+              const nextCustomerId = Number(event.target.value)
+              setCustomerId(nextCustomerId)
+              if (driverId > 0) {
+                const customer = customers.find((candidate) => candidate.id === nextCustomerId)
+                setDeliveryAddress(customer?.deliveryAddress ?? '')
+              }
+            }}
+            required
+            value={customerId}
+          >
             {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}
           </select>
           {getFieldError(errors, 'CustomerId') ? <span className="field-error">{getFieldError(errors, 'CustomerId')}</span> : null}
@@ -133,13 +177,47 @@ export function DirectInvoiceForm({
           <input disabled={isSubmitting} onChange={(event) => setInvoiceDate(event.target.value)} required type="date" value={invoiceDate} />
         </label>
         <label className="form-field">
-          <span>Discount</span>
-          <input disabled={isSubmitting} min="0" onChange={(event) => setDiscount(event.target.value)} step="0.01" type="number" value={discount} />
+          <span>Driver</span>
+          <select
+            disabled={isSubmitting}
+            onChange={(event) => {
+              const nextDriverId = Number(event.target.value)
+              setDriverId(nextDriverId)
+              if (nextDriverId > 0) {
+                const customer = customers.find((candidate) => candidate.id === customerId)
+                setDeliveryAddress(deliveryAddress || customer?.deliveryAddress || '')
+              } else {
+                setDriverCharge('0')
+                setLaborCharge('0')
+                setDeliveryAddress('')
+              }
+            }}
+            value={driverId}
+          >
+            <option value={0}>No driver selected</option>
+            {drivers.map((driver) => <option key={driver.id} value={driver.id}>{driver.name}</option>)}
+          </select>
+          {getFieldError(errors, 'DriverId') ? <span className="field-error">{getFieldError(errors, 'DriverId')}</span> : null}
         </label>
-        <label className="form-field">
-          <span>Other charges</span>
-          <input disabled={isSubmitting} min="0" onChange={(event) => setOtherCharges(event.target.value)} step="0.01" type="number" value={otherCharges} />
-        </label>
+        {driverId > 0 ? (
+          <>
+            <label className="form-field">
+              <span>Driver charge</span>
+              <input disabled={isSubmitting} min="0" onChange={(event) => setDriverCharge(event.target.value)} required step="0.01" type="number" value={driverCharge} />
+              {getFieldError(errors, 'OtherCharges') ? <span className="field-error">{getFieldError(errors, 'OtherCharges')}</span> : null}
+            </label>
+            <label className="form-field">
+              <span>Laber charge</span>
+              <input disabled={isSubmitting} min="0" onChange={(event) => setLaborCharge(event.target.value)} required step="0.01" type="number" value={laborCharge} />
+              {getFieldError(errors, 'LaborCharge') ? <span className="field-error">{getFieldError(errors, 'LaborCharge')}</span> : null}
+            </label>
+            <label className="form-field">
+              <span>Delivery address</span>
+              <input disabled={isSubmitting} maxLength={500} onChange={(event) => setDeliveryAddress(event.target.value)} required type="text" value={deliveryAddress} />
+              {getFieldError(errors, 'DeliveryAddress') ? <span className="field-error">{getFieldError(errors, 'DeliveryAddress')}</span> : null}
+            </label>
+          </>
+        ) : null}
       </div>
 
       <label className="form-field">
@@ -172,8 +250,12 @@ export function DirectInvoiceForm({
               <input disabled={isSubmitting} min="0.001" onChange={(event) => updateItem(index, { quantity: Number(event.target.value) })} required step="0.001" type="number" value={item.quantity} />
             </label>
             <label className="form-field">
-              <span>Selling price</span>
+              <span>Unit price</span>
               <input disabled={isSubmitting} min="0" onChange={(event) => updateItem(index, { sellingUnitPrice: Number(event.target.value) })} required step="0.01" type="number" value={item.sellingUnitPrice} />
+            </label>
+            <label className="form-field">
+              <span>Subtotal</span>
+              <input disabled={isSubmitting} min="0" onChange={(event) => updateItemSubtotal(index, Number(event.target.value))} required step="0.01" type="number" value={getLineSubtotal(item)} />
             </label>
             <label className="form-field">
               <span>Tax %</span>

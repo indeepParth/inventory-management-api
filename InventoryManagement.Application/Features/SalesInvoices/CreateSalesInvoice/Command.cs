@@ -6,9 +6,12 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
     {
         public string? InvoiceNumber { get; set; }
         public int CustomerId { get; set; }
+        public int? DriverId { get; set; }
         public DateTime InvoiceDate { get; set; }
         public decimal Discount { get; set; }
         public decimal OtherCharges { get; set; }
+        public decimal LaborCharge { get; set; }
+        public string? DeliveryAddress { get; set; }
         public string? Notes { get; set; }
         public List<SalesInvoiceItemInput> Items { get; set; } = new();
     }

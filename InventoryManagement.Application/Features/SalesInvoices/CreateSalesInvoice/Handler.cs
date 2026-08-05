@@ -12,6 +12,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
     {
         private readonly ISalesInvoiceRepository _invoiceRepository;
         private readonly ICustomerRepository _customerRepository;
+        private readonly IDriverRepository _driverRepository;
         private readonly IProductRepository _productRepository;
         private readonly IStockMovementRepository _stockMovementRepository;
         private readonly ICurrentUserService _currentUserService;
@@ -20,6 +21,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
         public Handler(
             ISalesInvoiceRepository invoiceRepository,
             ICustomerRepository customerRepository,
+            IDriverRepository driverRepository,
             IProductRepository productRepository,
             IStockMovementRepository stockMovementRepository,
             ICurrentUserService currentUserService,
@@ -27,6 +29,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
         {
             _invoiceRepository = invoiceRepository;
             _customerRepository = customerRepository;
+            _driverRepository = driverRepository;
             _productRepository = productRepository;
             _stockMovementRepository = stockMovementRepository;
             _currentUserService = currentUserService;
@@ -65,16 +68,42 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
                     throw new BadRequestException("Customer is inactive.");
                 }
 
+                Driver? driver = null;
+                if (request.DriverId.HasValue)
+                {
+                    driver = await _driverRepository.GetByIdAsync(
+                        request.DriverId.Value,
+                        transactionToken);
+                    if (driver is null)
+                    {
+                        throw new NotFoundException("Driver not found.");
+                    }
+
+                    if (!driver.IsActive)
+                    {
+                        throw new BadRequestException("Driver is inactive.");
+                    }
+                }
+
+                var otherCharges = driver is null ? 0 : request.OtherCharges;
+                var laborCharge = driver is null ? 0 : request.LaborCharge;
                 var now = DateTime.UtcNow;
                 var invoice = new SalesInvoice
                 {
                     InvoiceNumber = invoiceNumber,
                     CustomerId = customer.Id,
                     Customer = customer,
+                    DriverId = driver?.Id,
+                    Driver = driver,
                     InvoiceDate = request.InvoiceDate,
                     Status = SalesInvoiceStatus.Draft,
                     Discount = request.Discount,
-                    OtherCharges = request.OtherCharges,
+                    OtherCharges = otherCharges,
+                    LaborCharge = laborCharge,
+                    DeliveryAddress = driver is null
+                        ? null
+                        : NormalizeOptional(request.DeliveryAddress),
+                    IsDeliveryChargePaid = false,
                     AmountPaid = 0,
                     Notes = NormalizeOptional(request.Notes),
                     CreatedAtUtc = now,
@@ -113,7 +142,8 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
                     invoice.Subtotal -
                     invoice.Discount +
                     invoice.TaxAmount +
-                    invoice.OtherCharges);
+                    invoice.OtherCharges +
+                    invoice.LaborCharge);
                 if (invoice.GrandTotal < 0)
                 {
                     throw new BadRequestException("Grand total cannot be negative.");

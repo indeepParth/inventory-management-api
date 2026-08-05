@@ -83,9 +83,12 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
                     0,
                     "MANUAL-CHANGE-SHOULD-BE-IGNORED",
                     seed.CustomerId,
+                    null,
                     new DateTime(2026, 7, 5),
                     0,
                     0,
+                    0,
+                    null,
                     "Updated",
                     new List<UpdateDirectInvoiceItemInput>
                     {

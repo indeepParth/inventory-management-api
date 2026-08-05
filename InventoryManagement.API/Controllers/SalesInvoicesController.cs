@@ -84,5 +84,16 @@ namespace InventoryManagement.API.Controllers
                     Id = id
                 }));
         }
+
+        [HttpPost("{id}/delivery-charge/mark-paid")]
+        [Authorize(Policy = AuthorizationPolicies.ManageDeliveryChallans)]
+        public async Task<IActionResult> MarkDeliveryChargePaid(int id)
+        {
+            return Ok(await _sender.Send(
+                new Application.Features.SalesInvoices.MarkDeliveryChargePaid.Command
+                {
+                    Id = id
+                }));
+        }
     }
 }

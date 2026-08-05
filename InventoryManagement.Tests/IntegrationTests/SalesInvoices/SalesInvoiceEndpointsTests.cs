@@ -72,9 +72,13 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             created.PostedAtUtc.Should().NotBeNull();
             created.Subtotal.Should().Be(100);
             created.TaxAmount.Should().Be(18);
-            created.GrandTotal.Should().Be(115);
+            created.OtherCharges.Should().Be(0);
+            created.LaborCharge.Should().Be(0);
+            created.DriverId.Should().BeNull();
+            created.DeliveryAddress.Should().BeNull();
+            created.GrandTotal.Should().Be(113);
             created.AmountPaid.Should().Be(0);
-            created.BalanceDue.Should().Be(115);
+            created.BalanceDue.Should().Be(113);
             created.Notes.Should().Be("Draft invoice");
             created.Items.Should().ContainSingle();
             created.Items[0].LineTotal.Should().Be(118);
@@ -98,6 +102,64 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             (await db.Customers.AsNoTracking()
                 .SingleAsync(x => x.Id == seed.CustomerId))
                 .BalanceDue.Should().Be(existingBalance + created.GrandTotal);
+        }
+
+        [Fact]
+        public async Task Create_With_Driver_Should_Include_Driver_And_Labor_Charges()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            int driverId;
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var driver = new Driver
+                {
+                    Name = $"Invoice driver {Guid.NewGuid():N}",
+                    IsActive = true,
+                    CreatedAtUtc = DateTime.UtcNow,
+                    UpdatedAtUtc = DateTime.UtcNow
+                };
+                db.Drivers.Add(driver);
+                await db.SaveChangesAsync();
+                driverId = driver.Id;
+            }
+
+            var response = await Client.PostAsJsonAsync(
+                "/api/sales-invoices",
+                new Command
+                {
+                    InvoiceNumber = $"INV-DRIVER-{Guid.NewGuid():N}",
+                    CustomerId = seed.CustomerId,
+                    DriverId = driverId,
+                    InvoiceDate = new DateTime(2026, 7, 1),
+                    OtherCharges = 30,
+                    LaborCharge = 12,
+                    DeliveryAddress = "Driver delivery site",
+                    Items =
+                    {
+                        new SalesInvoiceItemInput
+                        {
+                            ProductId = seed.ProductId,
+                            Quantity = 2,
+                            SellingUnitPrice = 50,
+                            TaxRate = 18
+                        }
+                    }
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            var created = await response.Content
+                .ReadFromJsonAsync<SalesInvoiceResponse>();
+            created.Should().NotBeNull();
+            created!.DriverId.Should().Be(driverId);
+            created.DeliveryAddress.Should().Be("Driver delivery site");
+            created.Subtotal.Should().Be(100);
+            created.TaxAmount.Should().Be(18);
+            created.OtherCharges.Should().Be(30);
+            created.LaborCharge.Should().Be(12);
+            created.GrandTotal.Should().Be(160);
+            created.BalanceDue.Should().Be(160);
         }
 
         [Fact]
@@ -165,9 +227,12 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 0,
                 $"EDITED-{Guid.NewGuid():N}",
                 seed.CustomerId,
+                null,
                 new DateTime(2026, 7, 2),
                 4,
                 2,
+                0,
+                null,
                 " Edited draft ",
                 new List<UpdateSalesInvoiceItemInput>
                 {
@@ -191,8 +256,12 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             updated!.Status.Should().Be(SalesInvoiceStatus.Draft);
             updated.Subtotal.Should().Be(60);
             updated.TaxAmount.Should().Be(3);
-            updated.GrandTotal.Should().Be(61);
-            updated.BalanceDue.Should().Be(61);
+            updated.OtherCharges.Should().Be(0);
+            updated.LaborCharge.Should().Be(0);
+            updated.DriverId.Should().BeNull();
+            updated.DeliveryAddress.Should().BeNull();
+            updated.GrandTotal.Should().Be(59);
+            updated.BalanceDue.Should().Be(59);
             updated.AmountPaid.Should().Be(0);
             updated.Notes.Should().Be("Edited draft");
             updated.Items.Should().ContainSingle();

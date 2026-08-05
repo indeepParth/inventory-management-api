@@ -761,7 +761,7 @@
   display: grid;
   align-items: end;
   gap: 12px;
-  grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(100px, 1fr)) auto;
+  grid-template-columns: minmax(180px, 2fr) repeat(4, minmax(100px, 1fr)) auto;
 }
 
 .compact-line-item-row {

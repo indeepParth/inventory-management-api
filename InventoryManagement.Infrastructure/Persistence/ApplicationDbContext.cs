@@ -426,6 +426,8 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.Discount).HasPrecision(18, 2);
                 entity.Property(x => x.TaxAmount).HasPrecision(18, 2);
                 entity.Property(x => x.OtherCharges).HasPrecision(18, 2);
+                entity.Property(x => x.LaborCharge).HasPrecision(18, 2);
+                entity.Property(x => x.DeliveryAddress).HasMaxLength(500);
                 entity.Property(x => x.GrandTotal).HasPrecision(18, 2);
                 entity.Property(x => x.AmountPaid).HasPrecision(18, 2);
                 entity.Property(x => x.BalanceDue).HasPrecision(18, 2);
@@ -434,6 +436,9 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.HasOne(x => x.Customer).WithMany()
                     .HasForeignKey(x => x.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict).IsRequired();
+                entity.HasOne(x => x.Driver).WithMany()
+                    .HasForeignKey(x => x.DriverId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SalesInvoiceItem>(entity =>

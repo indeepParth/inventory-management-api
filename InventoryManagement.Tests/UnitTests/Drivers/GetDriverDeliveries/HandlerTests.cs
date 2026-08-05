@@ -32,25 +32,26 @@ namespace InventoryManagement.Tests.UnitTests.Drivers.GetDriverDeliveries
                     dateFrom,
                     dateTo,
                     null,
-                    2,
-                    5,
+                    1,
+                    int.MaxValue,
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<DeliveryChallan> { Challan(true) });
-            challans.Setup(x => x.GetDriverDeliveriesCountAsync(
+            var invoices = new Mock<ISalesInvoiceRepository>();
+            invoices.Setup(x => x.GetDriverDeliveriesAsync(
                     1,
                     dateFrom,
                     dateTo,
                     null,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(1);
+                .ReturnsAsync(new List<SalesInvoice> { Invoice(false) });
 
-            var result = await new Handler(drivers.Object, challans.Object)
+            var result = await new Handler(drivers.Object, challans.Object, invoices.Object)
                 .Handle(new Query
                 {
                     DriverId = 1,
                     DateFrom = dateFrom,
                     DateTo = dateTo,
-                    PageNumber = 2,
+                    PageNumber = 1,
                     PageSize = 5
                 }, CancellationToken.None);
 
@@ -58,14 +59,22 @@ namespace InventoryManagement.Tests.UnitTests.Drivers.GetDriverDeliveries
             result.Name.Should().Be("Driver");
             result.Phone.Should().Be("999");
             result.LicenseNumber.Should().Be("LIC-1");
-            result.Deliveries.PageNumber.Should().Be(2);
+            result.Deliveries.PageNumber.Should().Be(1);
             result.Deliveries.PageSize.Should().Be(5);
-            result.Deliveries.TotalCount.Should().Be(1);
-            result.Deliveries.Items.Should().ContainSingle(x =>
+            result.Deliveries.TotalCount.Should().Be(2);
+            result.Deliveries.Items.Should().Contain(x =>
+                x.SourceType == DriverDeliverySourceType.Challan &&
                 x.CustomerName == "Customer" &&
                 x.DeliveryFromAddress == "Warehouse" &&
                 x.DeliveryToAddress == "Customer site" &&
+                x.LaborCharge == 0 &&
                 x.ItemCount == 2);
+            result.Deliveries.Items.Should().Contain(x =>
+                x.SourceType == DriverDeliverySourceType.Invoice &&
+                x.DocumentNumber == "IN-1" &&
+                x.DeliveryToAddress == "Invoice site" &&
+                x.LaborCharge == 35 &&
+                !x.IsDeliveryChargePaid);
         }
 
         [Theory]
@@ -85,18 +94,19 @@ namespace InventoryManagement.Tests.UnitTests.Drivers.GetDriverDeliveries
                     null,
                     expectedPaidFilter,
                     1,
-                    10,
+                    int.MaxValue,
                     It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<DeliveryChallan> { Challan(expectedPaidFilter) });
-            challans.Setup(x => x.GetDriverDeliveriesCountAsync(
+            var invoices = new Mock<ISalesInvoiceRepository>();
+            invoices.Setup(x => x.GetDriverDeliveriesAsync(
                     1,
                     null,
                     null,
                     expectedPaidFilter,
                     It.IsAny<CancellationToken>()))
-                .ReturnsAsync(1);
+                .ReturnsAsync(new List<SalesInvoice>());
 
-            var result = await new Handler(drivers.Object, challans.Object)
+            var result = await new Handler(drivers.Object, challans.Object, invoices.Object)
                 .Handle(new Query
                 {
                     DriverId = 1,
@@ -114,8 +124,9 @@ namespace InventoryManagement.Tests.UnitTests.Drivers.GetDriverDeliveries
             drivers.Setup(x => x.GetByIdAsync(404, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((Driver?)null);
             var challans = new Mock<IDeliveryChallanRepository>();
+            var invoices = new Mock<ISalesInvoiceRepository>();
 
-            var action = () => new Handler(drivers.Object, challans.Object)
+            var action = () => new Handler(drivers.Object, challans.Object, invoices.Object)
                 .Handle(new Query { DriverId = 404 }, CancellationToken.None);
 
             await action.Should().ThrowAsync<NotFoundException>()
@@ -127,6 +138,12 @@ namespace InventoryManagement.Tests.UnitTests.Drivers.GetDriverDeliveries
                 It.IsAny<bool?>(),
                 It.IsAny<int>(),
                 It.IsAny<int>(),
+                It.IsAny<CancellationToken>()), Times.Never);
+            invoices.Verify(x => x.GetDriverDeliveriesAsync(
+                It.IsAny<int>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<DateTime?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<CancellationToken>()), Times.Never);
         }
 
@@ -146,6 +163,23 @@ namespace InventoryManagement.Tests.UnitTests.Drivers.GetDriverDeliveries
             {
                 new DeliveryChallanItem { Id = 1 },
                 new DeliveryChallanItem { Id = 2 }
+            }
+        };
+
+        private static SalesInvoice Invoice(bool isPaid) => new()
+        {
+            Id = 20,
+            InvoiceNumber = "IN-1",
+            InvoiceDate = new DateTime(2026, 7, 11),
+            Status = SalesInvoiceStatus.Posted,
+            Customer = new Customer { Id = 2, Name = "Customer" },
+            DeliveryAddress = "Invoice site",
+            OtherCharges = 75,
+            LaborCharge = 35,
+            IsDeliveryChargePaid = isPaid,
+            Items =
+            {
+                new SalesInvoiceItem { Id = 1 }
             }
         };
     }

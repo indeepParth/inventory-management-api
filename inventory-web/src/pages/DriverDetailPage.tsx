@@ -9,6 +9,7 @@ import {
   type DriverDeliveryPaymentStatus,
   type DriverDeliveryRow,
 } from '../features/drivers/driversApi'
+import { markSalesInvoiceDeliveryChargePaid } from '../features/salesInvoices/salesInvoicesApi'
 import { getErrorMessage } from '../shared/api/apiErrorMessages'
 import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
 import { formatCurrency, formatDate } from '../shared/utils/formatters'
@@ -28,6 +29,7 @@ export function DriverDetailPage() {
   const { currentUser } = useAuth()
   const driverId = Number(id)
   const canManageChallans = hasRouteAccess(currentUser?.roles ?? [], 'manageDeliveryChallans')
+  const canManageInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
   const [response, setResponse] = useState<DriverDeliveriesResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [pageNumber, setPageNumber] = useState(1)
@@ -38,7 +40,7 @@ export function DriverDetailPage() {
   const [paymentStatus, setPaymentStatus] = useState<DriverDeliveryPaymentStatus>('all')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [markingChallanId, setMarkingChallanId] = useState<number | null>(null)
+  const [markingDocumentKey, setMarkingDocumentKey] = useState<string | null>(null)
 
   const loadDriverDeliveries = useCallback(async (): Promise<void> => {
     if (!driverId) {
@@ -87,15 +89,20 @@ export function DriverDetailPage() {
 
   async function handleMarkPaid(delivery: DriverDeliveryRow): Promise<void> {
     setActionError(null)
-    setMarkingChallanId(delivery.challanId)
+    const documentKey = `${delivery.sourceType}-${delivery.documentId}`
+    setMarkingDocumentKey(documentKey)
 
     try {
-      await markDeliveryChargePaid(delivery.challanId)
+      if (delivery.sourceType === 1) {
+        await markSalesInvoiceDeliveryChargePaid(delivery.documentId)
+      } else {
+        await markDeliveryChargePaid(delivery.documentId)
+      }
       await loadDriverDeliveries()
     } catch (error) {
       setActionError(getErrorMessage(error))
     } finally {
-      setMarkingChallanId(null)
+      setMarkingDocumentKey(null)
     }
   }
 
@@ -146,32 +153,39 @@ export function DriverDetailPage() {
                   <thead>
                     <tr>
                       <th>Date</th>
-                      <th>Challan number</th>
+                      <th>Document</th>
                       <th>Customer</th>
-                      <th>From address</th>
                       <th>To address</th>
-                      <th>Vehicle</th>
                       <th>Charge</th>
+                      <th>Laber charge</th>
                       <th>Paid status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {deliveries.map((delivery) => (
-                      <tr key={delivery.challanId}>
-                        <td>{formatDate(delivery.challanDate)}</td>
+                    {deliveries.map((delivery) => {
+                      const documentKey = `${delivery.sourceType}-${delivery.documentId}`
+                      const documentLink = delivery.sourceType === 1
+                        ? `/app/sales-invoices/${delivery.documentId}`
+                        : `/app/challans/${delivery.documentId}`
+                      const canViewDocument = delivery.sourceType === 1
+                        ? canManageInvoices
+                        : canManageChallans
+
+                      return (
+                      <tr key={documentKey}>
+                        <td>{formatDate(delivery.documentDate)}</td>
                         <td>
-                          {canManageChallans ? (
-                            <Link className="text-link" to={`/app/challans/${delivery.challanId}`}>{delivery.challanNumber}</Link>
+                          {canViewDocument ? (
+                            <Link className="text-link" to={documentLink}>{delivery.documentNumber}</Link>
                           ) : (
-                            delivery.challanNumber
+                            delivery.documentNumber
                           )}
                         </td>
                         <td>{delivery.customerName}</td>
-                        <td>{delivery.deliveryFromAddress || '-'}</td>
                         <td>{delivery.deliveryToAddress || '-'}</td>
-                        <td>{delivery.vehicleNumber || '-'}</td>
                         <td>{formatCurrency(delivery.deliveryCharge)}</td>
+                        <td>{formatCurrency(delivery.laborCharge)}</td>
                         <td>
                           {delivery.deliveryCharge > 0
                             ? delivery.isDeliveryChargePaid ? 'Paid' : 'Unpaid'
@@ -182,11 +196,11 @@ export function DriverDetailPage() {
                             {canMarkDeliveryChargePaid(delivery) ? (
                               <button
                                 className="text-button"
-                                disabled={markingChallanId === delivery.challanId}
+                                disabled={markingDocumentKey === documentKey}
                                 onClick={() => void handleMarkPaid(delivery)}
                                 type="button"
                               >
-                                {markingChallanId === delivery.challanId ? 'Saving...' : 'Mark paid'}
+                                {markingDocumentKey === documentKey ? 'Saving...' : 'Mark paid'}
                               </button>
                             ) : (
                               <span>-</span>
@@ -194,7 +208,8 @@ export function DriverDetailPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

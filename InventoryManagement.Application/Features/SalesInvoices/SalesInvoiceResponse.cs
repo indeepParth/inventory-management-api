@@ -15,12 +15,17 @@ namespace InventoryManagement.Application.Features.SalesInvoices
         public string InvoiceNumber { get; set; } = string.Empty;
         public int CustomerId { get; set; }
         public string CustomerName { get; set; } = string.Empty;
+        public int? DriverId { get; set; }
+        public string? DriverName { get; set; }
         public DateTime InvoiceDate { get; set; }
         public SalesInvoiceStatus Status { get; set; }
         public decimal Subtotal { get; set; }
         public decimal Discount { get; set; }
         public decimal TaxAmount { get; set; }
         public decimal OtherCharges { get; set; }
+        public decimal LaborCharge { get; set; }
+        public string? DeliveryAddress { get; set; }
+        public bool IsDeliveryChargePaid { get; set; }
         public decimal GrandTotal { get; set; }
         public decimal AmountPaid { get; set; }
         public decimal BalanceDue { get; set; }

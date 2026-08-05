@@ -10,15 +10,18 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
     {
         private readonly ISalesInvoiceRepository _invoiceRepository;
         private readonly ICustomerRepository _customerRepository;
+        private readonly IDriverRepository _driverRepository;
         private readonly IProductRepository _productRepository;
 
         public Handler(
             ISalesInvoiceRepository invoiceRepository,
             ICustomerRepository customerRepository,
+            IDriverRepository driverRepository,
             IProductRepository productRepository)
         {
             _invoiceRepository = invoiceRepository;
             _customerRepository = customerRepository;
+            _driverRepository = driverRepository;
             _productRepository = productRepository;
         }
 
@@ -54,6 +57,23 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
             if (!customer.IsActive)
             {
                 throw new BadRequestException("Customer is inactive.");
+            }
+
+            Driver? driver = null;
+            if (request.DriverId.HasValue)
+            {
+                driver = await _driverRepository.GetByIdAsync(
+                    request.DriverId.Value,
+                    cancellationToken);
+                if (driver is null)
+                {
+                    throw new NotFoundException("Driver not found.");
+                }
+
+                if (!driver.IsActive)
+                {
+                    throw new BadRequestException("Driver is inactive.");
+                }
             }
 
             var replacementItems = new List<SalesInvoiceItem>();
@@ -92,7 +112,8 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
                 subtotal -
                 request.Discount +
                 taxAmountTotal +
-                request.OtherCharges);
+                (driver is null ? 0 : request.OtherCharges) +
+                (driver is null ? 0 : request.LaborCharge));
             if (grandTotal < 0)
             {
                 throw new BadRequestException("Grand total cannot be negative.");
@@ -100,9 +121,16 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
 
             invoice.CustomerId = customer.Id;
             invoice.Customer = customer;
+            invoice.DriverId = driver?.Id;
+            invoice.Driver = driver;
             invoice.InvoiceDate = request.InvoiceDate;
             invoice.Discount = request.Discount;
-            invoice.OtherCharges = request.OtherCharges;
+            invoice.OtherCharges = driver is null ? 0 : request.OtherCharges;
+            invoice.LaborCharge = driver is null ? 0 : request.LaborCharge;
+            invoice.DeliveryAddress = driver is null
+                ? null
+                : NormalizeOptional(request.DeliveryAddress);
+            invoice.IsDeliveryChargePaid = false;
             invoice.Notes = NormalizeOptional(request.Notes);
             invoice.Subtotal = subtotal;
             invoice.TaxAmount = taxAmountTotal;

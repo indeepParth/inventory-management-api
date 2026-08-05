@@ -8,12 +8,17 @@ namespace InventoryManagement.Domain.Entities
         public string InvoiceNumber { get; set; } = string.Empty;
         public int CustomerId { get; set; }
         public Customer Customer { get; set; } = null!;
+        public int? DriverId { get; set; }
+        public Driver? Driver { get; set; }
         public DateTime InvoiceDate { get; set; }
         public SalesInvoiceStatus Status { get; set; }
         public decimal Subtotal { get; set; }
         public decimal Discount { get; set; }
         public decimal TaxAmount { get; set; }
         public decimal OtherCharges { get; set; }
+        public decimal LaborCharge { get; set; }
+        public string? DeliveryAddress { get; set; }
+        public bool IsDeliveryChargePaid { get; set; }
         public decimal GrandTotal { get; set; }
         public decimal AmountPaid { get; set; }
         public decimal BalanceDue { get; set; }

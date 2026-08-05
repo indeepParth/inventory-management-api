@@ -47,6 +47,15 @@ namespace InventoryManagement.Application.Common.Persistence
             DateTime? dateFrom,
             DateTime? dateTo,
             CancellationToken cancellationToken = default);
+        Task<List<SalesInvoice>> GetDriverDeliveriesAsync(
+            int driverId,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            bool? isDeliveryChargePaid,
+            CancellationToken cancellationToken = default);
+        Task<SalesInvoice?> GetForDeliveryChargeUpdateAsync(
+            int id,
+            CancellationToken cancellationToken = default);
         Task<SalesInvoice?> GetByIdAsync(
             int id,
             CancellationToken cancellationToken = default);

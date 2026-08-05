@@ -23,9 +23,11 @@ function getInvoiceSourceType(invoice: SalesInvoiceDetail): string {
 }
 
 function getOtherChargesLabel(invoice: SalesInvoiceDetail): string {
-  return invoice.items.some((item) => item.deliveryChallanItemId)
-    ? 'Delivery / other charges'
-    : 'Other charges'
+  if (invoice.items.some((item) => item.deliveryChallanItemId)) {
+    return 'Delivery / other charges'
+  }
+
+  return invoice.driverId ? 'Driver charge' : 'Other charges'
 }
 
 function getPaymentState(payment: SalesInvoicePayment): string {
@@ -91,11 +93,15 @@ export function SalesInvoiceDetailPage() {
             <span>Invoice date</span><strong>{formatDate(invoice.invoiceDate)}</strong>
             <span>Customer</span><strong>{invoice.customerName}</strong>
             <span>Source type</span><strong>{getInvoiceSourceType(invoice)}</strong>
+            <span>Driver</span><strong>{invoice.driverName || '-'}</strong>
+            <span>Delivery address</span><strong>{invoice.deliveryAddress || '-'}</strong>
+            <span>Driver charge status</span><strong>{invoice.otherCharges > 0 ? invoice.isDeliveryChargePaid ? 'Paid' : 'Unpaid' : '-'}</strong>
             <span>Created by</span><strong>{invoice.createdBy || '-'}</strong>
             <span>Subtotal</span><strong>{formatCurrency(invoice.subtotal)}</strong>
             <span>Discount</span><strong>{formatCurrency(invoice.discount)}</strong>
             <span>Tax amount</span><strong>{formatCurrency(invoice.taxAmount)}</strong>
             <span>{getOtherChargesLabel(invoice)}</span><strong>{formatCurrency(invoice.otherCharges)}</strong>
+            <span>Laber charge</span><strong>{formatCurrency(invoice.laborCharge)}</strong>
             <span>Grand total</span><strong>{formatCurrency(invoice.grandTotal)}</strong>
             <span>Amount paid</span><strong>{formatCurrency(invoice.amountPaid)}</strong>
             <span>Balance due</span><strong>{formatCurrency(invoice.balanceDue)}</strong>

@@ -33,6 +33,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                     invoiceNumber)
                 .AsNoTracking()
                 .Include(x => x.Customer)
+                .Include(x => x.Driver)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
                         .ThenInclude(x => x.BaseProduct)
@@ -71,6 +72,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                     dateFrom, dateTo)
                 .AsNoTracking()
                 .Include(x => x.Customer)
+                .Include(x => x.Driver)
                 .Include(x => x.Items).ThenInclude(x => x.Product)
                     .ThenInclude(x => x.BaseProduct)
                 .OrderByDescending(x => x.InvoiceDate).ThenByDescending(x => x.Id)
@@ -109,6 +111,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             return _context.SalesInvoices
                 .AsNoTracking()
                 .Include(x => x.Customer)
+                .Include(x => x.Driver)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
                         .ThenInclude(x => x.BaseProduct)
@@ -124,11 +127,45 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             return _context.SalesInvoices
                 .Include(x => x.Customer)
+                .Include(x => x.Driver)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
                         .ThenInclude(x => x.BaseProduct)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.DeliveryChallanItem)
+                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+        }
+
+        public Task<List<SalesInvoice>> GetDriverDeliveriesAsync(
+            int driverId,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            bool? isDeliveryChargePaid,
+            CancellationToken cancellationToken = default)
+        {
+            return DriverDeliveriesQuery(
+                    driverId,
+                    dateFrom,
+                    dateTo,
+                    isDeliveryChargePaid)
+                .AsNoTracking()
+                .Include(x => x.Customer)
+                .Include(x => x.Items)
+                .OrderByDescending(x => x.InvoiceDate)
+                .ThenByDescending(x => x.Id)
+                .ToListAsync(cancellationToken);
+        }
+
+        public Task<SalesInvoice?> GetForDeliveryChargeUpdateAsync(
+            int id,
+            CancellationToken cancellationToken = default)
+        {
+            return _context.SalesInvoices
+                .Include(x => x.Customer)
+                .Include(x => x.Driver)
+                .Include(x => x.Items)
+                    .ThenInclude(x => x.Product)
+                        .ThenInclude(x => x.BaseProduct)
                 .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
         }
 
@@ -282,6 +319,31 @@ namespace InventoryManagement.Infrastructure.Repositories
                         x.Items.Any(item => item.DeliveryChallanItemId.HasValue))
                     : query.Where(x =>
                         x.Items.All(item => !item.DeliveryChallanItemId.HasValue));
+            }
+
+            return query;
+        }
+
+        private IQueryable<SalesInvoice> DriverDeliveriesQuery(
+            int driverId,
+            DateTime? dateFrom,
+            DateTime? dateTo,
+            bool? isDeliveryChargePaid)
+        {
+            IQueryable<SalesInvoice> query = _context.SalesInvoices
+                .Where(x => x.DriverId == driverId)
+                .Where(x => x.Items.All(item => !item.DeliveryChallanItemId.HasValue))
+                .Where(x =>
+                    x.Status == SalesInvoiceStatus.Posted ||
+                    x.Status == SalesInvoiceStatus.PartiallyPaid ||
+                    x.Status == SalesInvoiceStatus.Paid);
+
+            if (dateFrom.HasValue) query = query.Where(x => x.InvoiceDate >= dateFrom);
+            if (dateTo.HasValue) query = query.Where(x => x.InvoiceDate <= dateTo);
+            if (isDeliveryChargePaid.HasValue)
+            {
+                query = query.Where(
+                    x => x.IsDeliveryChargePaid == isDeliveryChargePaid.Value);
             }
 
             return query;

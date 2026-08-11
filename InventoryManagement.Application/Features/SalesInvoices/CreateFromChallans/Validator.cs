@@ -6,6 +6,10 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
     {
         public Validator()
         {
+            RuleFor(x => x.InvoiceNumber)
+                .Must(value => !string.IsNullOrWhiteSpace(value))
+                .WithMessage("'Invoice Number' must not be empty.")
+                .MaximumLength(50);
             RuleFor(x => x.InvoiceDate).NotEmpty();
             RuleFor(x => x.Discount).GreaterThanOrEqualTo(0);
             RuleFor(x => x.OtherCharges).GreaterThanOrEqualTo(0);

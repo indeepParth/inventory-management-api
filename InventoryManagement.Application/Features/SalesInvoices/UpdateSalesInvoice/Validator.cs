@@ -7,6 +7,10 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
         public Validator()
         {
             RuleFor(x => x.Id).GreaterThan(0);
+            RuleFor(x => x.InvoiceNumber)
+                .Must(value => !string.IsNullOrWhiteSpace(value))
+                .WithMessage("'Invoice Number' must not be empty.")
+                .MaximumLength(50);
             RuleFor(x => x.CustomerId).GreaterThan(0);
             RuleFor(x => x.DriverId).GreaterThan(0).When(x => x.DriverId.HasValue);
             RuleFor(x => x.InvoiceDate).NotEmpty();
@@ -14,9 +18,6 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
             RuleFor(x => x.OtherCharges).GreaterThanOrEqualTo(0);
             RuleFor(x => x.LaborCharge).GreaterThanOrEqualTo(0);
             RuleFor(x => x.DeliveryAddress).MaximumLength(500);
-            RuleFor(x => x.DeliveryAddress)
-                .NotEmpty()
-                .When(x => x.DriverId.HasValue);
             RuleFor(x => x.Items).NotEmpty();
             RuleForEach(x => x.Items).SetValidator(new SalesInvoiceItemValidator());
         }

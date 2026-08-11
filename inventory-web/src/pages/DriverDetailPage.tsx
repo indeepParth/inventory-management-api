@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { hasRouteAccess } from '../features/auth/roleAccess'
 import { useAuth } from '../features/auth/AuthContext'
-import { markDeliveryChargePaid } from '../features/challans/challansApi'
 import {
   getDriverDeliveries,
   type DriverDeliveriesResponse,
@@ -18,7 +17,8 @@ const pageSize = 10
 
 function canMarkDeliveryChargePaid(delivery: DriverDeliveryRow): boolean {
   return (
-    delivery.deliveryCharge > 0 &&
+    delivery.sourceType === 1 &&
+    (delivery.deliveryCharge > 0 || delivery.laborCharge > 0) &&
     !delivery.isDeliveryChargePaid &&
     (delivery.status === 1 || delivery.status === 3)
   )
@@ -28,7 +28,6 @@ export function DriverDetailPage() {
   const { id } = useParams()
   const { currentUser } = useAuth()
   const driverId = Number(id)
-  const canManageChallans = hasRouteAccess(currentUser?.roles ?? [], 'manageDeliveryChallans')
   const canManageInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
   const [response, setResponse] = useState<DriverDeliveriesResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -95,8 +94,6 @@ export function DriverDetailPage() {
     try {
       if (delivery.sourceType === 1) {
         await markSalesInvoiceDeliveryChargePaid(delivery.documentId)
-      } else {
-        await markDeliveryChargePaid(delivery.documentId)
       }
       await loadDriverDeliveries()
     } catch (error) {
@@ -106,7 +103,7 @@ export function DriverDetailPage() {
     }
   }
 
-  const deliveries = response?.deliveries.items ?? []
+  const deliveries = response?.deliveries.items.filter((delivery) => delivery.sourceType === 1) ?? []
 
   return (
     <section className="content-panel wide-panel" aria-labelledby="driver-detail-title">
@@ -134,7 +131,7 @@ export function DriverDetailPage() {
           <form className="toolbar customer-account-filters" onSubmit={handleFilters}>
             <input aria-label="From date" onChange={(event) => setDateFromInput(event.target.value)} type="date" value={dateFromInput} />
             <input aria-label="To date" onChange={(event) => setDateToInput(event.target.value)} type="date" value={dateToInput} />
-            <select aria-label="Delivery charge payment status" onChange={(event) => { setPageNumber(1); setPaymentStatus(event.target.value as DriverDeliveryPaymentStatus) }} value={paymentStatus}>
+            <select aria-label="Driver charge payment status" onChange={(event) => { setPageNumber(1); setPaymentStatus(event.target.value as DriverDeliveryPaymentStatus) }} value={paymentStatus}>
               <option value="all">All</option>
               <option value="paid">Paid</option>
               <option value="unpaid">Unpaid</option>
@@ -165,12 +162,8 @@ export function DriverDetailPage() {
                   <tbody>
                     {deliveries.map((delivery) => {
                       const documentKey = `${delivery.sourceType}-${delivery.documentId}`
-                      const documentLink = delivery.sourceType === 1
-                        ? `/app/sales-invoices/${delivery.documentId}`
-                        : `/app/challans/${delivery.documentId}`
-                      const canViewDocument = delivery.sourceType === 1
-                        ? canManageInvoices
-                        : canManageChallans
+                      const documentLink = `/app/sales-invoices/${delivery.documentId}`
+                      const canViewDocument = delivery.sourceType === 1 && canManageInvoices
 
                       return (
                       <tr key={documentKey}>
@@ -187,7 +180,7 @@ export function DriverDetailPage() {
                         <td>{formatCurrency(delivery.deliveryCharge)}</td>
                         <td>{formatCurrency(delivery.laborCharge)}</td>
                         <td>
-                          {delivery.deliveryCharge > 0
+                          {delivery.deliveryCharge > 0 || delivery.laborCharge > 0
                             ? delivery.isDeliveryChargePaid ? 'Paid' : 'Unpaid'
                             : '-'}
                         </td>

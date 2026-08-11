@@ -13,18 +13,15 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
         private readonly ISalesInvoiceRepository _invoices;
         private readonly IStockMovementRepository _stockMovements;
         private readonly ICurrentUserService _currentUser;
-        private readonly IDocumentNumberService _documentNumbers;
 
         public Handler(
             ISalesInvoiceRepository invoices,
             IStockMovementRepository stockMovements,
-            ICurrentUserService currentUser,
-            IDocumentNumberService documentNumbers)
+            ICurrentUserService currentUser)
         {
             _invoices = invoices;
             _stockMovements = stockMovements;
             _currentUser = currentUser;
-            _documentNumbers = documentNumbers;
         }
 
         public async Task<SalesInvoiceResponse> Handle(
@@ -34,10 +31,13 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
             SalesInvoice? created = null;
             await _invoices.ExecuteInTransactionAsync(async transactionToken =>
             {
-                var invoiceNumber = await _documentNumbers.GenerateAsync(
-                    DocumentNumberType.SalesInvoice,
-                    request.InvoiceDate,
-                    cancellationToken: transactionToken);
+                var invoiceNumber = NormalizeRequired(request.InvoiceNumber);
+                if (await _invoices.InvoiceNumberExistsAsync(
+                    invoiceNumber,
+                    transactionToken))
+                {
+                    throw new BadRequestException("Invoice number already exists.");
+                }
 
                 var ids = request.Items.Select(x => x.DeliveryChallanItemId).ToList();
                 if (ids.Distinct().Count() != ids.Count)
@@ -180,5 +180,8 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateFromChall
 
         private static decimal RoundMoney(decimal value) =>
             decimal.Round(value, 2, MidpointRounding.AwayFromZero);
+
+        private static string NormalizeRequired(string? value) =>
+            value?.Trim() ?? string.Empty;
     }
 }

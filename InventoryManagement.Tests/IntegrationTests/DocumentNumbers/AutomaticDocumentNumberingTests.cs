@@ -30,10 +30,6 @@ using CreatePurchaseItemInput =
     InventoryManagement.Application.Features.Purchases.CreatePurchase.PurchaseItemInput;
 using ReversePaymentCommand =
     InventoryManagement.Application.Features.Payments.ReversePayment.Command;
-using UpdateDirectInvoiceCommand =
-    InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvoice.Command;
-using UpdateDirectInvoiceItemInput =
-    InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvoice.SalesInvoiceItemInput;
 
 namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
 {
@@ -70,40 +66,14 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
             var challan = await CreateAndPostChallanAsync(seed);
             challan.ChallanNumber.Should().Be("CH_2026_0001");
 
+            const string manualChallanInvoiceNumber = "MANUAL-CHALLAN-INVOICE";
             var challanInvoice = await CreateChallanInvoiceAsync(
                 challan.Items.Single().Id);
-            challanInvoice.InvoiceNumber.Should().Be("IN_2026_0001");
+            challanInvoice.InvoiceNumber.Should().Be(manualChallanInvoiceNumber);
 
+            const string manualDirectInvoiceNumber = "MANUAL-DIRECT-INVOICE";
             var directInvoice = await CreateDirectInvoiceAsync(seed);
-            directInvoice.InvoiceNumber.Should().Be("IN_2026_0002_D");
-
-            var updateResponse = await Client.PutAsJsonAsync(
-                $"/api/sales-invoices/{directInvoice.Id}",
-                new UpdateDirectInvoiceCommand(
-                    0,
-                    "MANUAL-CHANGE-SHOULD-BE-IGNORED",
-                    seed.CustomerId,
-                    null,
-                    new DateTime(2026, 7, 5),
-                    0,
-                    0,
-                    0,
-                    null,
-                    "Updated",
-                    new List<UpdateDirectInvoiceItemInput>
-                    {
-                        new()
-                        {
-                            ProductId = seed.ProductId,
-                            Quantity = 1,
-                            SellingUnitPrice = 30
-                        }
-                    }));
-            updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-            var updatedInvoice = await updateResponse.Content
-                .ReadFromJsonAsync<SalesInvoiceResponse>();
-            updatedInvoice.Should().NotBeNull();
-            updatedInvoice!.InvoiceNumber.Should().Be("IN_2026_0002_D");
+            directInvoice.InvoiceNumber.Should().Be(manualDirectInvoiceNumber);
 
             (await Client.PostAsync(
                 $"/api/sales-invoices/{directInvoice.Id}/post",
@@ -250,7 +220,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
                 "/api/sales-invoices/from-challans",
                 new CreateChallanInvoiceCommand
                 {
-                    InvoiceNumber = "MANUAL-CHALLAN-INVOICE-IGNORED",
+                    InvoiceNumber = "MANUAL-CHALLAN-INVOICE",
                     InvoiceDate = new DateTime(2026, 7, 4),
                     Items =
                     {
@@ -272,7 +242,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
                 "/api/sales-invoices",
                 new CreateDirectInvoiceCommand
                 {
-                    InvoiceNumber = "MANUAL-DIRECT-INVOICE-IGNORED",
+                    InvoiceNumber = "MANUAL-DIRECT-INVOICE",
                     CustomerId = seed.CustomerId,
                     InvoiceDate = new DateTime(2026, 7, 4),
                     Items =

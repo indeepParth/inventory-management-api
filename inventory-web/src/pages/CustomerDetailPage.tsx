@@ -1,18 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { hasRouteAccess } from '../features/auth/roleAccess'
 import { useAuth } from '../features/auth/AuthContext'
-import { DeliveryChallanForm } from '../features/challans/DeliveryChallanForm'
-import {
-  createDeliveryChallan,
-  getDeliveryChallans,
-  getDeliveryChallanStatusLabel,
-  postDeliveryChallan,
-  updateDeliveryChallan,
-  type DeliveryChallan,
-  type DeliveryChallanFormValues,
-} from '../features/challans/challansApi'
 import { getDrivers, type Driver } from '../features/drivers/driversApi'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { getCustomer, type Customer } from '../features/parties/partiesApi'
 import { PaymentForm } from '../features/payments/PaymentForm'
 import { createPayment, type PaymentFormValues } from '../features/payments/paymentsApi'
@@ -73,10 +63,6 @@ function getInvoiceOutstandingTotal(invoices: SalesInvoice[]): number {
     .reduce((total, invoice) => total + invoice.balanceDue, 0)
 }
 
-function canCreateInvoiceFromChallan(challan: DeliveryChallan): boolean {
-  return challan.isAvailableForInvoicing
-}
-
 function canReceivePaymentForInvoice(invoice: SalesInvoice): boolean {
   return (invoice.status === 1 || invoice.status === 2) && invoice.balanceDue > 0
 }
@@ -84,22 +70,16 @@ function canReceivePaymentForInvoice(invoice: SalesInvoice): boolean {
 export function CustomerDetailPage() {
   const { id } = useParams()
   const { currentUser } = useAuth()
-  const navigate = useNavigate()
-  const canManageChallans = hasRouteAccess(currentUser?.roles ?? [], 'manageDeliveryChallans')
   const canCreateInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
   const canReceivePayments = hasRouteAccess(currentUser?.roles ?? [], 'viewPayments')
   const canViewLedger = hasRouteAccess(currentUser?.roles ?? [], 'viewCustomerStatements')
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [invoices, setInvoices] = useState<SalesInvoice[]>([])
-  const [customerChallans, setCustomerChallans] = useState<DeliveryChallan[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [products, setProducts] = useState<Product[]>([])
-  const [editingChallan, setEditingChallan] = useState<DeliveryChallan | undefined>()
   const [paymentInvoice, setPaymentInvoice] = useState<SalesInvoice | undefined>()
-  const [isChallanFormOpen, setIsChallanFormOpen] = useState(false)
   const [isDirectInvoiceFormOpen, setIsDirectInvoiceFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [isSavingChallan, setIsSavingChallan] = useState(false)
   const [isSavingDirectInvoice, setIsSavingDirectInvoice] = useState(false)
   const [isSavingPayment, setIsSavingPayment] = useState(false)
   const [fromDateInput, setFromDateInput] = useState('')
@@ -122,7 +102,7 @@ export function CustomerDetailPage() {
     setErrorMessage(null)
 
     try {
-      const [customerResponse, invoiceResponse, challanResponse, driverResponse, productResponse] = await Promise.all([
+      const [customerResponse, invoiceResponse, driverResponse, productResponse] = await Promise.all([
         getCustomer(customerId),
         getSalesInvoices({
           pageNumber: 1,
@@ -133,22 +113,12 @@ export function CustomerDetailPage() {
           dateFrom: fromDate,
           dateTo: toDate,
         }),
-        getDeliveryChallans({
-          pageNumber: 1,
-          pageSize: detailPageSize,
-          customerId: customerId.toString(),
-          status: '',
-          challanNumber: '',
-          dateFrom: fromDate,
-          dateTo: toDate,
-        }),
         getDrivers(1, 100, '', 'true'),
         getProducts(1, 100),
       ])
 
       setCustomer(customerResponse)
       setInvoices(invoiceResponse.items.filter(isCollectionInvoice))
-      setCustomerChallans(challanResponse.items)
       setDrivers(driverResponse.items)
       setProducts(productResponse.items)
     } catch (error) {
@@ -176,37 +146,10 @@ export function CustomerDetailPage() {
     setPaymentFilter('outstanding')
   }
 
-  function openNewChallanForm(): void {
-    setEditingChallan(undefined)
-    setFieldErrors({})
-    setActionError(null)
-    setPaymentInvoice(undefined)
-    setIsDirectInvoiceFormOpen(false)
-    setIsChallanFormOpen(true)
-  }
-
-  function openEditChallanForm(challan: DeliveryChallan): void {
-    setEditingChallan(challan)
-    setFieldErrors({})
-    setActionError(null)
-    setPaymentInvoice(undefined)
-    setIsDirectInvoiceFormOpen(false)
-    setIsChallanFormOpen(true)
-  }
-
-  function closeChallanForm(): void {
-    setEditingChallan(undefined)
-    setFieldErrors({})
-    setActionError(null)
-    setIsChallanFormOpen(false)
-  }
-
   function openNewDirectInvoiceForm(): void {
     setFieldErrors({})
     setActionError(null)
-    setEditingChallan(undefined)
     setPaymentInvoice(undefined)
-    setIsChallanFormOpen(false)
     setIsDirectInvoiceFormOpen(true)
   }
 
@@ -219,8 +162,6 @@ export function CustomerDetailPage() {
   function openPaymentForm(invoice: SalesInvoice): void {
     setFieldErrors({})
     setActionError(null)
-    setEditingChallan(undefined)
-    setIsChallanFormOpen(false)
     setIsDirectInvoiceFormOpen(false)
     setPaymentInvoice(invoice)
   }
@@ -229,28 +170,6 @@ export function CustomerDetailPage() {
     setFieldErrors({})
     setActionError(null)
     setPaymentInvoice(undefined)
-  }
-
-  async function handleChallanSubmit(values: DeliveryChallanFormValues): Promise<void> {
-    setIsSavingChallan(true)
-    setFieldErrors({})
-    setActionError(null)
-
-    try {
-      if (editingChallan) {
-        await updateDeliveryChallan(editingChallan.id, values)
-      } else {
-        await createDeliveryChallan(values)
-      }
-
-      closeChallanForm()
-      await loadCustomerDetail()
-    } catch (error) {
-      setFieldErrors(getFieldErrors(error))
-      setActionError(getErrorMessage(error))
-    } finally {
-      setIsSavingChallan(false)
-    }
   }
 
   async function handleDirectInvoiceSubmit(values: DirectInvoiceFormValues): Promise<void> {
@@ -287,23 +206,6 @@ export function CustomerDetailPage() {
     }
   }
 
-  async function handlePostChallan(challan: DeliveryChallan): Promise<void> {
-    const confirmed = window.confirm(`Post challan "${challan.challanNumber}"?`)
-
-    if (!confirmed) {
-      return
-    }
-
-    setActionError(null)
-
-    try {
-      await postDeliveryChallan(challan.id)
-      await loadCustomerDetail()
-    } catch (error) {
-      setActionError(getErrorMessage(error))
-    }
-  }
-
   async function handlePostInvoice(invoice: SalesInvoice): Promise<void> {
     const confirmed = window.confirm(`Post invoice "${invoice.invoiceNumber}"?`)
 
@@ -321,10 +223,6 @@ export function CustomerDetailPage() {
     }
   }
 
-  function handleCreateInvoice(challan: DeliveryChallan): void {
-    navigate(`/app/sales-invoices?mode=challans&challanId=${challan.id}`)
-  }
-
   const visibleInvoices = invoices.filter((invoice) =>
     matchesPaymentFilter(invoice, paymentFilter),
   )
@@ -332,10 +230,6 @@ export function CustomerDetailPage() {
   const outstandingInvoiceCount = invoices.filter((invoice) =>
     invoice.status === 1 || invoice.status === 2,
   ).length
-  const availableChallanCount = customerChallans.filter((challan) =>
-    challan.isAvailableForInvoicing,
-  ).length
-
   return (
     <section className="content-panel wide-panel" aria-labelledby="customer-detail-title">
       <div className="page-header">
@@ -343,14 +237,9 @@ export function CustomerDetailPage() {
           <p className="page-kicker">Customer account</p>
           <h1 id="customer-detail-title" className="page-title">{customer?.name ?? 'Customer detail'}</h1>
         </div>
-        {canCreateInvoices || canManageChallans ? (
+        {canCreateInvoices ? (
           <div className="form-actions">
-            {canCreateInvoices ? (
-              <button className="primary-button" disabled={products.length === 0} onClick={openNewDirectInvoiceForm} type="button">New direct invoice</button>
-            ) : null}
-            {canManageChallans ? (
-              <button className="secondary-button" disabled={products.length === 0} onClick={openNewChallanForm} type="button">New draft challan</button>
-            ) : null}
+            <button className="primary-button" disabled={products.length === 0} onClick={openNewDirectInvoiceForm} type="button">New direct invoice</button>
           </div>
         ) : null}
       </div>
@@ -371,32 +260,12 @@ export function CustomerDetailPage() {
               <strong>{outstandingInvoiceCount}</strong>
               <small>{formatCurrency(outstandingInvoiceTotal)}</small>
             </article>
-            <article className="summary-card">
-              <span>Available challans</span>
-              <strong>{availableChallanCount}</strong>
-            </article>
           </div>
 
           {canViewLedger ? (
             <p className="page-action">
               <Link className="text-link" to={`/app/customers/${customer.id}/ledger`}>View ledger</Link>
             </p>
-          ) : null}
-
-          {isChallanFormOpen ? (
-            <DeliveryChallanForm
-              customers={[customer]}
-              drivers={drivers}
-              errors={fieldErrors}
-              initialCustomerId={customer.id}
-              initialDeliveryAddress={customer.deliveryAddress}
-              initialValue={editingChallan}
-              isSubmitting={isSavingChallan}
-              lockCustomer
-              onCancel={closeChallanForm}
-              onSubmit={handleChallanSubmit}
-              products={products}
-            />
           ) : null}
 
           {isDirectInvoiceFormOpen ? (
@@ -433,8 +302,8 @@ export function CustomerDetailPage() {
             />
           ) : null}
 
-          {products.length === 0 && (canCreateInvoices || canManageChallans) && !isLoading ? (
-            <p className="state-message">Create at least one product before adding invoices or challans for this customer.</p>
+          {products.length === 0 && canCreateInvoices && !isLoading ? (
+            <p className="state-message">Create at least one product before adding invoices for this customer.</p>
           ) : null}
 
           <div className="detail-grid">
@@ -501,55 +370,6 @@ export function CustomerDetailPage() {
                           ) : null}
                           {canReceivePayments && canReceivePaymentForInvoice(invoice) ? (
                             <button className="text-button" onClick={() => openPaymentForm(invoice)} type="button">Receive payment</button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
-          <h2>Customer challans</h2>
-          {customerChallans.length === 0 ? <EmptyState>No customer challans found.</EmptyState> : null}
-          {customerChallans.length > 0 ? (
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Challan</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                    <th>Items</th>
-                    <th>Delivery address</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {customerChallans.map((challan) => (
-                    <tr key={challan.id}>
-                      <td>
-                        {canManageChallans ? (
-                          <Link className="text-link" to={`/app/challans/${challan.id}`}>{challan.challanNumber}</Link>
-                        ) : (
-                          challan.challanNumber
-                        )}
-                      </td>
-                      <td>{formatDate(challan.challanDate)}</td>
-                      <td>{getDeliveryChallanStatusLabel(challan.status)}</td>
-                      <td>{challan.items.length}</td>
-                      <td>{challan.deliveryAddress || '-'}</td>
-                      <td>
-                        <div className="table-actions">
-                          {canManageChallans && challan.status === 0 ? (
-                            <>
-                              <button className="text-button" onClick={() => openEditChallanForm(challan)} type="button">Edit</button>
-                              <button className="text-button" onClick={() => void handlePostChallan(challan)} type="button">Post</button>
-                            </>
-                          ) : null}
-                          {canCreateInvoices && canCreateInvoiceFromChallan(challan) ? (
-                            <button className="text-button" onClick={() => handleCreateInvoice(challan)} type="button">Create invoice</button>
                           ) : null}
                         </div>
                       </td>

@@ -35,7 +35,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
             result.Should().NotBeNull();
             result!.Id.Should().Be(seed.DriverId);
             result.Name.Should().Be(seed.DriverName);
-            result.Deliveries.TotalCount.Should().Be(2);
+            result.Deliveries.TotalCount.Should().Be(3);
             result.Deliveries.Items.Should().OnlyContain(x =>
                 x.Status == DeliveryChallanStatus.Posted ||
                 x.Status == DeliveryChallanStatus.Invoiced);
@@ -48,6 +48,12 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 x.DeliveryCharge == 100 &&
                 x.IsDeliveryChargePaid &&
                 x.ItemCount == 2);
+            result.Deliveries.Items.Should().ContainSingle(x =>
+                x.DocumentId == seed.LaborOnlyInvoiceId &&
+                x.DocumentNumber == seed.LaborOnlyInvoiceNumber &&
+                x.DeliveryCharge == 0 &&
+                x.LaborCharge == 90 &&
+                !x.IsDeliveryChargePaid);
         }
 
         [Fact]
@@ -85,8 +91,34 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
             var result = await response.Content
                 .ReadFromJsonAsync<DriverDeliveriesResponse>();
             result.Should().NotBeNull();
-            result!.Deliveries.Items.Should().ContainSingle(x =>
-                x.IsDeliveryChargePaid == isPaid);
+            result!.Deliveries.Items.Should().OnlyContain(x =>
+                x.IsDeliveryChargePaid == isPaid &&
+                (x.DeliveryCharge > 0 || x.LaborCharge > 0));
+        }
+
+        [Fact]
+        public async Task MarkPaid_Should_Work_For_Labor_Only_Invoice()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDriverDeliveriesAsync();
+
+            var markResponse = await Client.PostAsync(
+                $"/api/sales-invoices/{seed.LaborOnlyInvoiceId}/delivery-charge/mark-paid",
+                null);
+
+            markResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var paidResponse = await Client.GetAsync(
+                $"/api/drivers/{seed.DriverId}/deliveries?paymentStatus=paid");
+            paidResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            var paidResult = await paidResponse.Content
+                .ReadFromJsonAsync<DriverDeliveriesResponse>();
+            paidResult.Should().NotBeNull();
+            paidResult!.Deliveries.Items.Should().ContainSingle(x =>
+                x.DocumentId == seed.LaborOnlyInvoiceId &&
+                x.DeliveryCharge == 0 &&
+                x.LaborCharge == 90 &&
+                x.IsDeliveryChargePaid);
         }
 
         private async Task<SeedResult> SeedDriverDeliveriesAsync()
@@ -182,6 +214,37 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 isPaid: false,
                 firstProduct);
             db.DeliveryChallans.AddRange(postedPaid, invoicedUnpaid, draft, cancelled);
+            var laborOnlyInvoice = new SalesInvoice
+            {
+                InvoiceNumber = $"LABER-INV-{suffix}",
+                Customer = customer,
+                Driver = driver,
+                InvoiceDate = new DateTime(2026, 7, 21),
+                Status = SalesInvoiceStatus.Posted,
+                DeliveryAddress = "Labor invoice site",
+                OtherCharges = 0,
+                LaborCharge = 90,
+                Subtotal = 100,
+                GrandTotal = 190,
+                BalanceDue = 190,
+                AmountPaid = 0,
+                IsDeliveryChargePaid = false,
+                CreatedAtUtc = DateTime.UtcNow,
+                UpdatedAtUtc = DateTime.UtcNow,
+                PostedAtUtc = DateTime.UtcNow,
+                CreatedBy = "test",
+                Items =
+                {
+                    new SalesInvoiceItem
+                    {
+                        Product = firstProduct,
+                        Quantity = 1,
+                        SellingUnitPrice = 100,
+                        LineTotal = 100
+                    }
+                }
+            };
+            db.SalesInvoices.Add(laborOnlyInvoice);
             await db.SaveChangesAsync();
 
             return new SeedResult(
@@ -189,7 +252,9 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 driver.Name,
                 customer.Name,
                 postedPaid.Id,
-                invoicedUnpaid.Id);
+                invoicedUnpaid.Id,
+                laborOnlyInvoice.Id,
+                laborOnlyInvoice.InvoiceNumber);
         }
 
         private static DeliveryChallan Challan(
@@ -240,6 +305,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
             string DriverName,
             string CustomerName,
             int PostedPaidChallanId,
-            int InvoicedUnpaidChallanId);
+            int InvoicedUnpaidChallanId,
+            int LaborOnlyInvoiceId,
+            string LaborOnlyInvoiceNumber);
     }
 }

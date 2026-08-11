@@ -343,7 +343,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             if (isDeliveryChargePaid.HasValue)
             {
                 query = query.Where(
-                    x => x.IsDeliveryChargePaid == isDeliveryChargePaid.Value);
+                    x => (x.OtherCharges > 0 || x.LaborCharge > 0) &&
+                         x.IsDeliveryChargePaid == isDeliveryChargePaid.Value);
             }
 
             return query;

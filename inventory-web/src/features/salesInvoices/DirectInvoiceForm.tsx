@@ -58,6 +58,7 @@ export function DirectInvoiceForm({
   const defaultCustomerId = initialCustomerId ?? firstCustomerId
   const defaultDeliveryAddress = initialValue?.deliveryAddress ?? initialDeliveryAddress ?? ''
   const firstProductId = products[0]?.id ?? 0
+  const [invoiceNumber, setInvoiceNumber] = useState(initialValue?.invoiceNumber ?? '')
   const [customerId, setCustomerId] = useState(initialValue?.customerId ?? defaultCustomerId)
   const [driverId, setDriverId] = useState(initialValue?.driverId ?? 0)
   const [invoiceDate, setInvoiceDate] = useState(toDateInputValue(initialValue?.invoiceDate))
@@ -75,6 +76,7 @@ export function DirectInvoiceForm({
   )
 
   useEffect(() => {
+    setInvoiceNumber(initialValue?.invoiceNumber ?? '')
     setCustomerId(initialValue?.customerId ?? defaultCustomerId)
     setDriverId(initialValue?.driverId ?? 0)
     setInvoiceDate(toDateInputValue(initialValue?.invoiceDate))
@@ -120,13 +122,14 @@ export function DirectInvoiceForm({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     await onSubmit({
+      invoiceNumber: invoiceNumber.trim(),
       customerId,
       driverId: driverId > 0 ? driverId : null,
       invoiceDate,
       discount: 0,
       otherCharges: driverId > 0 ? Number(driverCharge) : 0,
       laborCharge: driverId > 0 ? Number(laborCharge) : 0,
-      deliveryAddress: driverId > 0 ? deliveryAddress : '',
+      deliveryAddress,
       notes,
       items,
     })
@@ -147,12 +150,11 @@ export function DirectInvoiceForm({
   return (
     <form className="entity-form" onSubmit={handleSubmit}>
       <div className="form-grid">
-        {initialValue ? (
-          <div className="form-field">
-            <span>Invoice number</span>
-            <strong>{initialValue.invoiceNumber}</strong>
-          </div>
-        ) : null}
+        <label className="form-field">
+          <span>Invoice number</span>
+          <input disabled={isSubmitting} maxLength={50} onChange={(event) => setInvoiceNumber(event.target.value)} required type="text" value={invoiceNumber} />
+          {getFieldError(errors, 'InvoiceNumber') ? <span className="field-error">{getFieldError(errors, 'InvoiceNumber')}</span> : null}
+        </label>
         <label className="form-field">
           <span>Customer</span>
           <select
@@ -160,10 +162,8 @@ export function DirectInvoiceForm({
             onChange={(event) => {
               const nextCustomerId = Number(event.target.value)
               setCustomerId(nextCustomerId)
-              if (driverId > 0) {
-                const customer = customers.find((candidate) => candidate.id === nextCustomerId)
-                setDeliveryAddress(customer?.deliveryAddress ?? '')
-              }
+              const customer = customers.find((candidate) => candidate.id === nextCustomerId)
+              setDeliveryAddress(customer?.deliveryAddress ?? '')
             }}
             required
             value={customerId}
@@ -189,7 +189,6 @@ export function DirectInvoiceForm({
               } else {
                 setDriverCharge('0')
                 setLaborCharge('0')
-                setDeliveryAddress('')
               }
             }}
             value={driverId}
@@ -211,19 +210,22 @@ export function DirectInvoiceForm({
               <input disabled={isSubmitting} min="0" onChange={(event) => setLaborCharge(event.target.value)} required step="0.01" type="number" value={laborCharge} />
               {getFieldError(errors, 'LaborCharge') ? <span className="field-error">{getFieldError(errors, 'LaborCharge')}</span> : null}
             </label>
-            <label className="form-field">
-              <span>Delivery address</span>
-              <input disabled={isSubmitting} maxLength={500} onChange={(event) => setDeliveryAddress(event.target.value)} required type="text" value={deliveryAddress} />
-              {getFieldError(errors, 'DeliveryAddress') ? <span className="field-error">{getFieldError(errors, 'DeliveryAddress')}</span> : null}
-            </label>
           </>
         ) : null}
       </div>
 
-      <label className="form-field">
-        <span>Notes</span>
-        <textarea disabled={isSubmitting} onChange={(event) => setNotes(event.target.value)} rows={2} value={notes} />
-      </label>
+      <div className="form-grid">
+        <label className="form-field">
+          <span>Delivery address</span>
+          <textarea disabled={isSubmitting} maxLength={500} onChange={(event) => setDeliveryAddress(event.target.value)} rows={2} value={deliveryAddress} />
+          {getFieldError(errors, 'DeliveryAddress') ? <span className="field-error">{getFieldError(errors, 'DeliveryAddress')}</span> : null}
+        </label>
+
+        <label className="form-field">
+          <span>Notes</span>
+          <textarea disabled={isSubmitting} onChange={(event) => setNotes(event.target.value)} rows={2} value={notes} />
+        </label>
+      </div>
 
       <div className="line-items">
         <div className="line-items-header">

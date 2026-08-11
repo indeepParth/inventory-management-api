@@ -41,16 +41,18 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             var seed = await SeedDependenciesAsync();
             const decimal existingBalance = 40m;
             await SetCustomerBalanceAsync(seed.CustomerId, existingBalance);
+            var invoiceNumber = $"INV-{Guid.NewGuid():N}";
 
             var createResponse = await Client.PostAsJsonAsync(
                 "/api/sales-invoices",
                 new Command
                 {
-                    InvoiceNumber = $"INV-{Guid.NewGuid():N}",
+                    InvoiceNumber = invoiceNumber,
                     CustomerId = seed.CustomerId,
                     InvoiceDate = new DateTime(2026, 7, 1),
                     Discount = 5,
                     OtherCharges = 2,
+                    DeliveryAddress = " Customer delivery site ",
                     Notes = " Draft invoice ",
                     Items =
                     {
@@ -69,13 +71,14 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 .ReadFromJsonAsync<SalesInvoiceResponse>();
             created.Should().NotBeNull();
             created!.Status.Should().Be(SalesInvoiceStatus.Posted);
+            created.InvoiceNumber.Should().Be(invoiceNumber);
             created.PostedAtUtc.Should().NotBeNull();
             created.Subtotal.Should().Be(100);
             created.TaxAmount.Should().Be(18);
             created.OtherCharges.Should().Be(0);
             created.LaborCharge.Should().Be(0);
             created.DriverId.Should().BeNull();
-            created.DeliveryAddress.Should().BeNull();
+            created.DeliveryAddress.Should().Be("Customer delivery site");
             created.GrandTotal.Should().Be(113);
             created.AmountPaid.Should().Be(0);
             created.BalanceDue.Should().Be(113);
@@ -125,11 +128,12 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 driverId = driver.Id;
             }
 
+            var invoiceNumber = $"INV-DRIVER-{Guid.NewGuid():N}";
             var response = await Client.PostAsJsonAsync(
                 "/api/sales-invoices",
                 new Command
                 {
-                    InvoiceNumber = $"INV-DRIVER-{Guid.NewGuid():N}",
+                    InvoiceNumber = invoiceNumber,
                     CustomerId = seed.CustomerId,
                     DriverId = driverId,
                     InvoiceDate = new DateTime(2026, 7, 1),
@@ -153,6 +157,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 .ReadFromJsonAsync<SalesInvoiceResponse>();
             created.Should().NotBeNull();
             created!.DriverId.Should().Be(driverId);
+            created.InvoiceNumber.Should().Be(invoiceNumber);
             created.DeliveryAddress.Should().Be("Driver delivery site");
             created.Subtotal.Should().Be(100);
             created.TaxAmount.Should().Be(18);
@@ -180,7 +185,42 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
             var body = await response.Content.ReadAsStringAsync();
             body.Should().Contain("errors");
+            body.Should().Contain("InvoiceNumber");
             body.Should().Contain("traceId");
+        }
+
+        [Fact]
+        public async Task Create_Should_Reject_Duplicate_Invoice_Number()
+        {
+            await AuthenticateAsync();
+            var seed = await SeedDependenciesAsync();
+            var invoiceNumber = $"DUPLICATE-{Guid.NewGuid():N}";
+            await CreateInvoiceAsync(
+                seed,
+                invoiceNumber,
+                new DateTime(2026, 7, 1));
+
+            var response = await Client.PostAsJsonAsync(
+                "/api/sales-invoices",
+                new Command
+                {
+                    InvoiceNumber = invoiceNumber,
+                    CustomerId = seed.CustomerId,
+                    InvoiceDate = new DateTime(2026, 7, 2),
+                    Items =
+                    {
+                        new SalesInvoiceItemInput
+                        {
+                            ProductId = seed.ProductId,
+                            Quantity = 1,
+                            SellingUnitPrice = 20
+                        }
+                    }
+                });
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var body = await response.Content.ReadAsStringAsync();
+            body.Should().Contain("Invoice number already exists.");
         }
 
         [Fact]
@@ -223,16 +263,17 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 seed,
                 $"EDIT-{Guid.NewGuid():N}",
                 new DateTime(2026, 7, 1));
+            var editedInvoiceNumber = $"EDITED-{Guid.NewGuid():N}";
             var update = new UpdateSalesInvoiceCommand(
                 0,
-                $"EDITED-{Guid.NewGuid():N}",
+                editedInvoiceNumber,
                 seed.CustomerId,
                 null,
                 new DateTime(2026, 7, 2),
                 4,
                 2,
                 0,
-                null,
+                " Edited delivery site ",
                 " Edited draft ",
                 new List<UpdateSalesInvoiceItemInput>
                 {
@@ -254,12 +295,13 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 .ReadFromJsonAsync<SalesInvoiceResponse>();
             updated.Should().NotBeNull();
             updated!.Status.Should().Be(SalesInvoiceStatus.Draft);
+            updated.InvoiceNumber.Should().Be(editedInvoiceNumber);
             updated.Subtotal.Should().Be(60);
             updated.TaxAmount.Should().Be(3);
             updated.OtherCharges.Should().Be(0);
             updated.LaborCharge.Should().Be(0);
             updated.DriverId.Should().BeNull();
-            updated.DeliveryAddress.Should().BeNull();
+            updated.DeliveryAddress.Should().Be("Edited delivery site");
             updated.GrandTotal.Should().Be(59);
             updated.BalanceDue.Should().Be(59);
             updated.AmountPaid.Should().Be(0);
@@ -269,6 +311,21 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             updated.CreatedAtUtc.Should().Be(created.CreatedAtUtc);
             updated.CreatedBy.Should().Be(created.CreatedBy);
             updated.UpdatedAtUtc.Should().BeAfter(created.UpdatedAtUtc);
+
+            var duplicate = await SeedDraftInvoiceAsync(
+                seed,
+                $"EDIT-DUPLICATE-{Guid.NewGuid():N}",
+                new DateTime(2026, 7, 3));
+            var duplicateUpdate = update with
+            {
+                InvoiceNumber = duplicate.InvoiceNumber
+            };
+            var duplicateResponse = await Client.PutAsJsonAsync(
+                $"/api/sales-invoices/{created.Id}",
+                duplicateUpdate);
+            duplicateResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var duplicateBody = await duplicateResponse.Content.ReadAsStringAsync();
+            duplicateBody.Should().Contain("Invoice number already exists.");
 
             using (var scope = _factory.Services.CreateScope())
             {
@@ -575,12 +632,13 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 await db.SaveChangesAsync();
             }
 
+            var invoiceNumber = $"DC-INV-{Guid.NewGuid():N}";
             var createResponse = await Client.PostAsJsonAsync(
                 "/api/sales-invoices/from-challans",
                 new InventoryManagement.Application.Features.SalesInvoices
                     .CreateFromChallans.Command
                 {
-                    InvoiceNumber = $"DC-INV-{Guid.NewGuid():N}",
+                    InvoiceNumber = invoiceNumber,
                     InvoiceDate = new DateTime(2026, 7, 2),
                     Items =
                     {
@@ -604,6 +662,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 .ReadFromJsonAsync<SalesInvoiceResponse>();
             draft.Should().NotBeNull();
             draft!.Status.Should().Be(SalesInvoiceStatus.Posted);
+            draft.InvoiceNumber.Should().Be(invoiceNumber);
             draft.PostedAtUtc.Should().NotBeNull();
             draft.Items.Select(x => x.Quantity).Should().Equal(2, 3);
             draft.Items.Select(x => x.DeliveryChallanItemId)
@@ -723,6 +782,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 new InventoryManagement.Application.Features.SalesInvoices
                     .CreateFromChallans.Command
                 {
+                    InvoiceNumber = $"ENTERED-QTY-{Guid.NewGuid():N}",
                     InvoiceDate = new DateTime(2026, 7, 2),
                     Items =
                     {
@@ -739,6 +799,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             var draft = (await invoiceCreate.Content
                 .ReadFromJsonAsync<SalesInvoiceResponse>())!;
             draft.Status.Should().Be(SalesInvoiceStatus.Posted);
+            draft.InvoiceNumber.Should().StartWith("ENTERED-QTY-");
             draft.Items.Should().ContainSingle(x =>
                 x.Quantity == 2 &&
                 x.SellingUnitPrice == 100 &&

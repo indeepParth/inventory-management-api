@@ -39,7 +39,6 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Customers', to: '/app/customers', policy: 'readCustomers' },
       { label: 'Invoices', to: '/app/sales-invoices', policy: 'manageSalesInvoices' },
-      { label: 'Delivery Challans', to: '/app/challans', policy: 'manageDeliveryChallans' },
       { label: 'Payments', to: '/app/payments', policy: 'viewPayments' },
       { label: 'Customer Returns', to: '/app/customer-returns', policy: 'manageCustomerReturns' },
       { label: 'Drivers', to: '/app/drivers', policy: 'readDrivers' },

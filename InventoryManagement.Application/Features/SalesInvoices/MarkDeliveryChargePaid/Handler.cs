@@ -27,7 +27,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.MarkDeliveryCha
                 not SalesInvoiceStatus.Paid)
             {
                 throw new BadRequestException(
-                    "Only Posted, Partially paid, or Paid sales invoices may have driver charge marked paid.");
+                    "Only Posted, Partially paid, or Paid sales invoices may have driver charges marked paid.");
             }
 
             if (!invoice.DriverId.HasValue)
@@ -35,9 +35,9 @@ namespace InventoryManagement.Application.Features.SalesInvoices.MarkDeliveryCha
                 throw new BadRequestException("Sales invoice does not have a driver.");
             }
 
-            if (invoice.OtherCharges <= 0)
+            if (invoice.OtherCharges <= 0 && invoice.LaborCharge <= 0)
             {
-                throw new BadRequestException("Driver charge must be greater than zero.");
+                throw new BadRequestException("Driver charges must be greater than zero.");
             }
 
             if (invoice.IsDeliveryChargePaid)

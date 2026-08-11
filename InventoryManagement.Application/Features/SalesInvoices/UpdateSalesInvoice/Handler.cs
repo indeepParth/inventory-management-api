@@ -46,6 +46,15 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
                     "Only Draft sales invoices may be edited.");
             }
 
+            var invoiceNumber = NormalizeRequired(request.InvoiceNumber);
+            if (await _invoiceRepository.InvoiceNumberExistsForOtherAsync(
+                invoiceNumber,
+                invoice.Id,
+                cancellationToken))
+            {
+                throw new BadRequestException("Invoice number already exists.");
+            }
+
             var customer = await _customerRepository.GetByIdAsync(
                 request.CustomerId,
                 cancellationToken);
@@ -119,6 +128,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
                 throw new BadRequestException("Grand total cannot be negative.");
             }
 
+            invoice.InvoiceNumber = invoiceNumber;
             invoice.CustomerId = customer.Id;
             invoice.Customer = customer;
             invoice.DriverId = driver?.Id;
@@ -127,9 +137,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
             invoice.Discount = request.Discount;
             invoice.OtherCharges = driver is null ? 0 : request.OtherCharges;
             invoice.LaborCharge = driver is null ? 0 : request.LaborCharge;
-            invoice.DeliveryAddress = driver is null
-                ? null
-                : NormalizeOptional(request.DeliveryAddress);
+            invoice.DeliveryAddress = NormalizeOptional(request.DeliveryAddress);
             invoice.IsDeliveryChargePaid = false;
             invoice.Notes = NormalizeOptional(request.Notes);
             invoice.Subtotal = subtotal;
@@ -154,5 +162,8 @@ namespace InventoryManagement.Application.Features.SalesInvoices.UpdateSalesInvo
 
         private static string? NormalizeOptional(string? value) =>
             string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static string NormalizeRequired(string? value) =>
+            value?.Trim() ?? string.Empty;
     }
 }

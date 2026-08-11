@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  getDeliveryChallans,
-  type DeliveryChallan,
-} from '../features/challans/challansApi'
 import { useAuth } from '../features/auth/AuthContext'
 import { hasRouteAccess } from '../features/auth/roleAccess'
 import { getCustomers, type Customer } from '../features/parties/partiesApi'
@@ -25,10 +21,6 @@ import { formatCurrency, formatDate } from '../shared/utils/formatters'
 const dashboardRowLimit = 5
 const pageSize = 100
 
-type ChallanActionRow = DeliveryChallan & {
-  actionLabel: 'Not posted' | 'Not invoiced'
-}
-
 async function getAllCustomers(): Promise<Customer[]> {
   const customers: Customer[] = []
   let pageNumber = 1
@@ -42,27 +34,6 @@ async function getAllCustomers(): Promise<Customer[]> {
   }
 
   return customers
-}
-
-async function getAllPostedAvailableChallans(): Promise<DeliveryChallan[]> {
-  const challans: DeliveryChallan[] = []
-  let pageNumber = 1
-  let hasNextPage = true
-
-  while (hasNextPage) {
-    const response = await getDeliveryChallans({
-      pageNumber,
-      pageSize,
-      customerId: '',
-      status: '1',
-      challanNumber: '',
-    })
-    challans.push(...response.items.filter((challan) => challan.isAvailableForInvoicing))
-    hasNextPage = response.hasNextPage
-    pageNumber += 1
-  }
-
-  return challans
 }
 
 function emptySummary(): RegisterSummary {
@@ -86,7 +57,6 @@ export function DashboardPage() {
   const [salesSummary, setSalesSummary] = useState<RegisterSummary>(emptySummary)
   const [unpaidCustomers, setUnpaidCustomers] = useState<Customer[]>([])
   const [draftInvoices, setDraftInvoices] = useState<SalesInvoice[]>([])
-  const [challansNeedingAction, setChallansNeedingAction] = useState<ChallanActionRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -98,10 +68,9 @@ export function DashboardPage() {
       const roles = currentUser?.roles ?? []
       const canReadCustomers = hasRouteAccess(roles, 'readCustomers')
       const canManageSalesInvoices = hasRouteAccess(roles, 'manageSalesInvoices')
-      const canManageDeliveryChallans = hasRouteAccess(roles, 'manageDeliveryChallans')
       const canViewReports = hasRouteAccess(roles, 'viewReports')
 
-      const [reportData, customers, invoices, draftChallans, postedChallans] =
+      const [reportData, customers, invoices] =
         await Promise.all([
           canViewReports
             ? Promise.all([
@@ -120,16 +89,6 @@ export function DashboardPage() {
                 invoiceNumber: '',
               })
             : Promise.resolve(null),
-          canManageDeliveryChallans
-            ? getDeliveryChallans({
-                pageNumber: 1,
-                pageSize,
-                customerId: '',
-                status: '0',
-                challanNumber: '',
-              })
-            : Promise.resolve(null),
-          canManageDeliveryChallans ? getAllPostedAvailableChallans() : Promise.resolve(null),
         ])
 
       if (reportData) {
@@ -150,25 +109,6 @@ export function DashboardPage() {
           .slice(0, dashboardRowLimit) ?? [],
       )
       setDraftInvoices(invoices?.items ?? [])
-      setChallansNeedingAction(
-        [
-          ...(draftChallans?.items.map((challan) => ({
-            ...challan,
-            actionLabel: 'Not posted' as const,
-          })) ?? []),
-          ...(postedChallans?.map((challan) => ({
-            ...challan,
-            actionLabel: 'Not invoiced' as const,
-          })) ?? []),
-        ]
-          .sort((first, second) => {
-            const dateDifference =
-              new Date(second.challanDate).getTime() - new Date(first.challanDate).getTime()
-
-            return dateDifference === 0 ? second.id - first.id : dateDifference
-          })
-          .slice(0, dashboardRowLimit),
-      )
     } catch (error) {
       setErrorMessage(getErrorMessage(error))
     } finally {
@@ -183,7 +123,6 @@ export function DashboardPage() {
   const roles = currentUser?.roles ?? []
   const canReadCustomers = hasRouteAccess(roles, 'readCustomers')
   const canManageSalesInvoices = hasRouteAccess(roles, 'manageSalesInvoices')
-  const canManageDeliveryChallans = hasRouteAccess(roles, 'manageDeliveryChallans')
   const canViewReports = hasRouteAccess(roles, 'viewReports')
   const stockValue = stockItems.reduce((total, item) => total + item.stockValue, 0)
   const positiveStockCount = stockItems.filter((item) => item.quantity > 0).length
@@ -292,43 +231,6 @@ export function DashboardPage() {
                             </td>
                             <td>{invoice.invoiceNumber}</td>
                             <td>{formatDate(invoice.invoiceDate)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
-
-            {canManageDeliveryChallans ? (
-              <section className="dashboard-table-section" aria-labelledby="challans-action-title">
-                <div className="dashboard-table-header">
-                  <h2 id="challans-action-title">Challans needing action</h2>
-                </div>
-                {challansNeedingAction.length === 0 ? <EmptyState>No challans need action.</EmptyState> : null}
-                {challansNeedingAction.length > 0 ? (
-                  <div className="table-wrap">
-                    <table className="data-table dashboard-data-table">
-                      <thead>
-                        <tr>
-                          <th>Party</th>
-                          <th>Challan</th>
-                          <th>Date</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {challansNeedingAction.map((challan) => (
-                          <tr key={`${challan.actionLabel}-${challan.id}`}>
-                            <td>
-                              <Link className="text-link" to={`/app/customers/${challan.customerId}`}>
-                                {challan.customerName}
-                              </Link>
-                            </td>
-                            <td>{challan.challanNumber}</td>
-                            <td>{formatDate(challan.challanDate)}</td>
-                            <td><span className="status-pill">{challan.actionLabel}</span></td>
                           </tr>
                         ))}
                       </tbody>

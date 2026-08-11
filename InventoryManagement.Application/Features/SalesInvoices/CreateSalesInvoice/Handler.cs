@@ -16,7 +16,6 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
         private readonly IProductRepository _productRepository;
         private readonly IStockMovementRepository _stockMovementRepository;
         private readonly ICurrentUserService _currentUserService;
-        private readonly IDocumentNumberService _documentNumbers;
 
         public Handler(
             ISalesInvoiceRepository invoiceRepository,
@@ -24,8 +23,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
             IDriverRepository driverRepository,
             IProductRepository productRepository,
             IStockMovementRepository stockMovementRepository,
-            ICurrentUserService currentUserService,
-            IDocumentNumberService documentNumbers)
+            ICurrentUserService currentUserService)
         {
             _invoiceRepository = invoiceRepository;
             _customerRepository = customerRepository;
@@ -33,7 +31,6 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
             _productRepository = productRepository;
             _stockMovementRepository = stockMovementRepository;
             _currentUserService = currentUserService;
-            _documentNumbers = documentNumbers;
         }
 
         public async Task<SalesInvoiceResponse> Handle(
@@ -49,11 +46,13 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
             SalesInvoice? created = null;
             await _invoiceRepository.ExecuteInTransactionAsync(async transactionToken =>
             {
-                var invoiceNumber = await _documentNumbers.GenerateAsync(
-                    DocumentNumberType.SalesInvoice,
-                    request.InvoiceDate,
-                    isDirectInvoice: true,
-                    cancellationToken: transactionToken);
+                var invoiceNumber = NormalizeRequired(request.InvoiceNumber);
+                if (await _invoiceRepository.InvoiceNumberExistsAsync(
+                    invoiceNumber,
+                    transactionToken))
+                {
+                    throw new BadRequestException("Invoice number already exists.");
+                }
 
                 var customer = await _customerRepository.GetByIdAsync(
                     request.CustomerId,
@@ -100,9 +99,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
                     Discount = request.Discount,
                     OtherCharges = otherCharges,
                     LaborCharge = laborCharge,
-                    DeliveryAddress = driver is null
-                        ? null
-                        : NormalizeOptional(request.DeliveryAddress),
+                    DeliveryAddress = NormalizeOptional(request.DeliveryAddress),
                     IsDeliveryChargePaid = false,
                     AmountPaid = 0,
                     Notes = NormalizeOptional(request.Notes),
@@ -215,5 +212,8 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
 
         private static string? NormalizeOptional(string? value) =>
             string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static string NormalizeRequired(string? value) =>
+            value?.Trim() ?? string.Empty;
     }
 }

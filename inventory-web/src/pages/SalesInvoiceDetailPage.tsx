@@ -127,7 +127,6 @@ export function SalesInvoiceDetailPage() {
                     <th>Tax amount</th>
                     <th>Line total</th>
                     <th>Cost at sale</th>
-                    <th>Source challan</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -141,41 +140,12 @@ export function SalesInvoiceDetailPage() {
                       <td>{formatCurrency(item.taxAmount)}</td>
                       <td>{formatCurrency(item.lineTotal)}</td>
                       <td>{item.costAtSale == null ? '-' : formatCurrency(item.costAtSale)}</td>
-                      <td>
-                        {item.deliveryChallanId && item.deliveryChallanNumber ? (
-                          <Link className="text-link" to={`/app/challans/${item.deliveryChallanId}`}>{item.deliveryChallanNumber}</Link>
-                        ) : (
-                          '-'
-                        )}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : null}
-
-          <h2>Source challans</h2>
-          {invoice.sourceChallans.length === 0 ? <EmptyState>No source challans linked.</EmptyState> : null}
-          {invoice.sourceChallans.length > 0 ? (
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Challan</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoice.sourceChallans.map((challan) => (
-                    <tr key={challan.id}>
-                      <td><Link className="text-link" to={`/app/challans/${challan.id}`}>{challan.challanNumber}</Link></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-
           <h2>Payments</h2>
           {invoice.payments.length === 0 ? <EmptyState>No payments linked.</EmptyState> : null}
           {invoice.payments.length > 0 ? (

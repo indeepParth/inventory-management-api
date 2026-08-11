@@ -1,26 +1,18 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { hasRouteAccess } from '../features/auth/roleAccess'
 import { useAuth } from '../features/auth/AuthContext'
-import {
-  getDeliveryChallan,
-  getDeliveryChallans,
-  type DeliveryChallan,
-} from '../features/challans/challansApi'
 import { getDrivers, type Driver } from '../features/drivers/driversApi'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { getCustomers, type Customer } from '../features/parties/partiesApi'
 import { getProducts, type Product } from '../features/products/productsApi'
-import { ChallanInvoiceForm } from '../features/salesInvoices/ChallanInvoiceForm'
 import { DirectInvoiceForm } from '../features/salesInvoices/DirectInvoiceForm'
 import {
   cancelSalesInvoice,
   createDirectInvoice,
-  createInvoiceFromChallans,
   getSalesInvoices,
   getSalesInvoiceStatusLabel,
   postSalesInvoice,
   updateDirectInvoice,
-  type ChallanInvoiceFormValues,
   type DirectInvoiceFormValues,
   type PagedResponse,
   type SalesInvoice,
@@ -31,39 +23,29 @@ import {
   type FieldErrors,
 } from '../shared/api/apiErrorMessages'
 import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
-import { formatCurrency } from '../shared/utils/formatters'
+import { formatCurrency, formatDate } from '../shared/utils/formatters'
 
 const pageSize = 10
-
-type InvoiceFormMode = 'direct' | 'challans'
 
 function isDirectInvoice(invoice: SalesInvoice): boolean {
   return invoice.items.every((item) => !item.deliveryChallanItemId)
 }
 
-function canCreateInvoiceFromChallan(challan: DeliveryChallan): boolean {
-  return challan.isAvailableForInvoicing
-}
-
 export function SalesInvoicesPage() {
   const { currentUser } = useAuth()
-  const [searchParams] = useSearchParams()
   const canCancelInvoices = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
   const [response, setResponse] = useState<PagedResponse<SalesInvoice> | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [products, setProducts] = useState<Product[]>([])
-  const [postedChallans, setPostedChallans] = useState<DeliveryChallan[]>([])
   const [editingInvoice, setEditingInvoice] = useState<SalesInvoice | undefined>()
-  const [formMode, setFormMode] = useState<InvoiceFormMode | null>(null)
+  const [isDirectFormOpen, setIsDirectFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [pageNumber, setPageNumber] = useState(1)
   const [status, setStatus] = useState('')
   const [invoiceNumberInput, setInvoiceNumberInput] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState('')
-  const [initialChallanId, setInitialChallanId] = useState<number | undefined>()
-  const [handledChallanRequest, setHandledChallanRequest] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -73,7 +55,7 @@ export function SalesInvoicesPage() {
     setErrorMessage(null)
 
     try {
-      const [invoicePage, customerPage, driverPage, productPage, challanPage] = await Promise.all([
+      const [invoicePage, customerPage, driverPage, productPage] = await Promise.all([
         getSalesInvoices({
           pageNumber,
           pageSize,
@@ -84,19 +66,11 @@ export function SalesInvoicesPage() {
         getCustomers(1, 100, '', 'true'),
         getDrivers(1, 100, '', 'true'),
         getProducts(1, 100),
-        getDeliveryChallans({
-          pageNumber: 1,
-          pageSize: 100,
-          customerId: '',
-          status: '1',
-          challanNumber: '',
-        }),
       ])
       setResponse(invoicePage)
       setCustomers(customerPage.items)
       setDrivers(driverPage.items)
       setProducts(productPage.items)
-      setPostedChallans(challanPage.items.filter(canCreateInvoiceFromChallan))
     } catch (error) {
       setErrorMessage(getErrorMessage(error))
     } finally {
@@ -108,77 +82,16 @@ export function SalesInvoicesPage() {
     void loadInvoices()
   }, [loadInvoices])
 
-  useEffect(() => {
-    async function openRequestedChallanForm(): Promise<void> {
-      const mode = searchParams.get('mode')
-      const challanIdValue = searchParams.get('challanId')
-      const challanId = Number(challanIdValue)
-      const requestKey = `${mode ?? ''}:${challanIdValue ?? ''}`
-
-      if (
-        mode !== 'challans' ||
-        !challanId ||
-        isLoading ||
-        handledChallanRequest === requestKey
-      ) {
-        return
-      }
-
-      setHandledChallanRequest(requestKey)
-      setFieldErrors({})
-      setActionError(null)
-
-      const existingChallan = postedChallans.find((challan) => challan.id === challanId)
-      if (existingChallan) {
-        setInitialChallanId(challanId)
-        setEditingInvoice(undefined)
-        setFormMode('challans')
-        return
-      }
-
-      try {
-        const challan = await getDeliveryChallan(challanId)
-        if (!canCreateInvoiceFromChallan(challan)) {
-          setActionError('Selected challan is not available for invoicing.')
-          return
-        }
-
-        setPostedChallans((currentChallans) =>
-          currentChallans.some((currentChallan) => currentChallan.id === challan.id)
-            ? currentChallans
-            : [challan, ...currentChallans],
-        )
-        setInitialChallanId(challanId)
-        setEditingInvoice(undefined)
-        setFormMode('challans')
-      } catch (error) {
-        setActionError(getErrorMessage(error))
-      }
-    }
-
-    void openRequestedChallanForm()
-  }, [handledChallanRequest, isLoading, postedChallans, searchParams])
-
   function closeForm(): void {
-    setFormMode(null)
+    setIsDirectFormOpen(false)
     setEditingInvoice(undefined)
-    setInitialChallanId(undefined)
     setFieldErrors({})
     setActionError(null)
   }
 
   function openDirectForm(invoice?: SalesInvoice): void {
-    setFormMode('direct')
+    setIsDirectFormOpen(true)
     setEditingInvoice(invoice)
-    setInitialChallanId(undefined)
-    setFieldErrors({})
-    setActionError(null)
-  }
-
-  function openChallanForm(): void {
-    setFormMode('challans')
-    setEditingInvoice(undefined)
-    setInitialChallanId(undefined)
     setFieldErrors({})
     setActionError(null)
   }
@@ -201,23 +114,6 @@ export function SalesInvoicesPage() {
         await createDirectInvoice(values)
       }
 
-      closeForm()
-      await loadInvoices()
-    } catch (error) {
-      setFieldErrors(getFieldErrors(error))
-      setActionError(getErrorMessage(error))
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  async function handleChallanSubmit(values: ChallanInvoiceFormValues): Promise<void> {
-    setIsSaving(true)
-    setFieldErrors({})
-    setActionError(null)
-
-    try {
-      await createInvoiceFromChallans(values)
       closeForm()
       await loadInvoices()
     } catch (error) {
@@ -263,7 +159,6 @@ export function SalesInvoicesPage() {
   }
 
   const invoices = response?.items ?? []
-  const hasPostedChallanItems = postedChallans.some((challan) => challan.items.length > 0)
 
   return (
     <section className="content-panel wide-panel" aria-labelledby="sales-invoices-title">
@@ -274,7 +169,6 @@ export function SalesInvoicesPage() {
         </div>
         <div className="form-actions">
           <button className="primary-button" disabled={customers.length === 0 || products.length === 0} onClick={() => openDirectForm()} type="button">New direct invoice</button>
-          <button className="secondary-button" disabled={!hasPostedChallanItems} onClick={openChallanForm} type="button">Invoice from challans</button>
         </div>
       </div>
 
@@ -295,13 +189,9 @@ export function SalesInvoicesPage() {
         <p className="state-message">Create at least one active customer and one product before adding direct invoices.</p>
       ) : null}
 
-      {!hasPostedChallanItems && !isLoading ? (
-        <p className="state-message">Posted delivery challans will appear as sources for challan-based invoices.</p>
-      ) : null}
-
       {actionError ? <ErrorBanner>{actionError}</ErrorBanner> : null}
 
-      {formMode === 'direct' ? (
+      {isDirectFormOpen ? (
         <DirectInvoiceForm
           customers={customers}
           drivers={drivers}
@@ -311,17 +201,6 @@ export function SalesInvoicesPage() {
           onCancel={closeForm}
           onSubmit={handleDirectSubmit}
           products={products}
-        />
-      ) : null}
-
-      {formMode === 'challans' ? (
-        <ChallanInvoiceForm
-          challans={postedChallans}
-          errors={fieldErrors}
-          initialChallanId={initialChallanId}
-          isSubmitting={isSaving}
-          onCancel={closeForm}
-          onSubmit={handleChallanSubmit}
         />
       ) : null}
 
@@ -336,6 +215,7 @@ export function SalesInvoicesPage() {
               <thead>
                 <tr>
                   <th>Invoice</th>
+                  <th>Date</th>
                   <th>Customer</th>
                   <th>Status</th>
                   <th>Total</th>
@@ -352,6 +232,7 @@ export function SalesInvoicesPage() {
                       <br />
                       <span>{invoice.items.some((item) => item.deliveryChallanItemId) ? 'From challans' : 'Direct'}</span>
                     </td>
+                    <td>{formatDate(invoice.invoiceDate)}</td>
                     <td>{invoice.customerName}</td>
                     <td>{getSalesInvoiceStatusLabel(invoice.status)}</td>
                     <td>{formatCurrency(invoice.grandTotal)}</td>

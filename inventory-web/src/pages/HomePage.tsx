@@ -5,7 +5,6 @@ const benefits = [
   'Stock',
   'Purchases',
   'Sales',
-  'Challans',
   'Invoices',
   'Payments',
   'Reports',

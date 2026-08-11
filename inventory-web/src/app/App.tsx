@@ -11,8 +11,6 @@ import { CustomerLedgerPage } from '../pages/CustomerLedgerPage'
 import { CustomerReturnsPage } from '../pages/CustomerReturnsPage'
 import { CustomersPage } from '../pages/CustomersPage'
 import { DashboardPage } from '../pages/DashboardPage'
-import { DeliveryChallanDetailPage } from '../pages/DeliveryChallanDetailPage'
-import { DeliveryChallansPage } from '../pages/DeliveryChallansPage'
 import { DriverDetailPage } from '../pages/DriverDetailPage'
 import { DriversPage } from '../pages/DriversPage'
 import { HomePage } from '../pages/HomePage'
@@ -83,10 +81,6 @@ export function App() {
               </Route>
               <Route element={<RoleProtectedRoute policy="managePurchases" />}>
                 <Route path="purchases" element={<PurchasesPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="manageDeliveryChallans" />}>
-                <Route path="challans" element={<DeliveryChallansPage />} />
-                <Route path="challans/:id" element={<DeliveryChallanDetailPage />} />
               </Route>
               <Route element={<RoleProtectedRoute policy="manageSalesInvoices" />}>
                 <Route path="sales-invoices" element={<SalesInvoicesPage />} />

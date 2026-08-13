@@ -237,9 +237,14 @@ export function CustomerDetailPage() {
           <p className="page-kicker">Customer account</p>
           <h1 id="customer-detail-title" className="page-title">{customer?.name ?? 'Customer detail'}</h1>
         </div>
-        {canCreateInvoices ? (
+        {canCreateInvoices || (canViewLedger && customer) ? (
           <div className="form-actions">
-            <button className="primary-button" disabled={products.length === 0} onClick={openNewDirectInvoiceForm} type="button">New direct invoice</button>
+            {canCreateInvoices ? (
+              <button className="primary-button" disabled={products.length === 0} onClick={openNewDirectInvoiceForm} type="button">New direct invoice</button>
+            ) : null}
+            {canViewLedger && customer ? (
+              <Link className="primary-button" to={`/app/customers/${customer.id}/ledger`}>View ledger</Link>
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -261,12 +266,6 @@ export function CustomerDetailPage() {
               <small>{formatCurrency(outstandingInvoiceTotal)}</small>
             </article>
           </div>
-
-          {canViewLedger ? (
-            <p className="page-action">
-              <Link className="text-link" to={`/app/customers/${customer.id}/ledger`}>View ledger</Link>
-            </p>
-          ) : null}
 
           {isDirectInvoiceFormOpen ? (
             <DirectInvoiceForm

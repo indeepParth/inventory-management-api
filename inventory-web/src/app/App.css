@@ -82,6 +82,9 @@
 }
 
 .primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 44px;
   border: 0;
   border-radius: 8px;
@@ -91,6 +94,7 @@
   font: inherit;
   font-weight: 800;
   padding: 0 18px;
+  text-decoration: none;
 }
 
 .primary-button:hover:not(:disabled) {

@@ -3,18 +3,24 @@ import { getFieldError, type FieldErrors } from '../../shared/api/apiErrorMessag
 import type { Customer, CustomerFormValues } from './partiesApi'
 
 type CustomerFormProps = {
+  canEdit?: boolean
   initialValue?: Customer
   errors: FieldErrors
+  isReadOnly?: boolean
   isSubmitting: boolean
   onCancel: () => void
+  onEdit?: () => void
   onSubmit: (values: CustomerFormValues) => Promise<void>
 }
 
 export function CustomerForm({
+  canEdit = true,
   initialValue,
   errors,
+  isReadOnly = false,
   isSubmitting,
   onCancel,
+  onEdit,
   onSubmit,
 }: CustomerFormProps) {
   const [name, setName] = useState(initialValue?.name ?? '')
@@ -37,7 +43,7 @@ export function CustomerForm({
     setGstNumber(initialValue?.gstNumber ?? '')
     setCreditLimit(initialValue?.creditLimit.toString() ?? '0')
     setIsActive(initialValue?.isActive ?? true)
-  }, [initialValue])
+  }, [initialValue, isReadOnly])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
@@ -54,58 +60,65 @@ export function CustomerForm({
     })
   }
 
+  const areFieldsDisabled = isSubmitting || isReadOnly
+
   return (
     <form className="entity-form" onSubmit={handleSubmit}>
       <div className="form-grid">
         <label className="form-field">
           <span>Name</span>
-          <input disabled={isSubmitting} maxLength={150} onChange={(event) => setName(event.target.value)} required type="text" value={name} />
+          <input disabled={areFieldsDisabled} maxLength={150} onChange={(event) => setName(event.target.value)} required type="text" value={name} />
           {getFieldError(errors, 'Name') ? <span className="field-error">{getFieldError(errors, 'Name')}</span> : null}
         </label>
         <label className="form-field">
           <span>Contact person</span>
-          <input disabled={isSubmitting} maxLength={150} onChange={(event) => setContactPerson(event.target.value)} type="text" value={contactPerson} />
+          <input disabled={areFieldsDisabled} maxLength={150} onChange={(event) => setContactPerson(event.target.value)} type="text" value={contactPerson} />
           {getFieldError(errors, 'ContactPerson') ? <span className="field-error">{getFieldError(errors, 'ContactPerson')}</span> : null}
         </label>
         <label className="form-field">
           <span>Phone</span>
-          <input disabled={isSubmitting} maxLength={30} onChange={(event) => setPhone(event.target.value)} type="tel" value={phone} />
+          <input disabled={areFieldsDisabled} maxLength={30} onChange={(event) => setPhone(event.target.value)} type="tel" value={phone} />
           {getFieldError(errors, 'Phone') ? <span className="field-error">{getFieldError(errors, 'Phone')}</span> : null}
         </label>
         <label className="form-field">
           <span>Email</span>
-          <input disabled={isSubmitting} maxLength={254} onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
+          <input disabled={areFieldsDisabled} maxLength={254} onChange={(event) => setEmail(event.target.value)} type="email" value={email} />
           {getFieldError(errors, 'Email') ? <span className="field-error">{getFieldError(errors, 'Email')}</span> : null}
         </label>
         <label className="form-field">
           <span>GST number</span>
-          <input disabled={isSubmitting} onChange={(event) => setGstNumber(event.target.value)} type="text" value={gstNumber} />
+          <input disabled={areFieldsDisabled} onChange={(event) => setGstNumber(event.target.value)} type="text" value={gstNumber} />
           {getFieldError(errors, 'GstNumber') ? <span className="field-error">{getFieldError(errors, 'GstNumber')}</span> : null}
         </label>
         <label className="form-field">
           <span>Credit limit</span>
-          <input disabled={isSubmitting} min="0" onChange={(event) => setCreditLimit(event.target.value)} step="0.01" type="number" value={creditLimit} />
+          <input disabled={areFieldsDisabled} min="0" onChange={(event) => setCreditLimit(event.target.value)} step="0.01" type="number" value={creditLimit} />
           {getFieldError(errors, 'CreditLimit') ? <span className="field-error">{getFieldError(errors, 'CreditLimit')}</span> : null}
         </label>
       </div>
       <label className="form-field">
         <span>Billing address</span>
-        <textarea disabled={isSubmitting} maxLength={500} onChange={(event) => setBillingAddress(event.target.value)} rows={3} value={billingAddress} />
+        <textarea disabled={areFieldsDisabled} maxLength={500} onChange={(event) => setBillingAddress(event.target.value)} rows={3} value={billingAddress} />
         {getFieldError(errors, 'BillingAddress') ? <span className="field-error">{getFieldError(errors, 'BillingAddress')}</span> : null}
       </label>
       <label className="form-field">
         <span>Delivery address</span>
-        <textarea disabled={isSubmitting} maxLength={500} onChange={(event) => setDeliveryAddress(event.target.value)} rows={3} value={deliveryAddress} />
+        <textarea disabled={areFieldsDisabled} maxLength={500} onChange={(event) => setDeliveryAddress(event.target.value)} rows={3} value={deliveryAddress} />
         {getFieldError(errors, 'DeliveryAddress') ? <span className="field-error">{getFieldError(errors, 'DeliveryAddress')}</span> : null}
       </label>
       {initialValue ? (
         <label className="checkbox-field">
-          <input checked={isActive} disabled={isSubmitting} onChange={(event) => setIsActive(event.target.checked)} type="checkbox" />
+          <input checked={isActive} disabled={areFieldsDisabled} onChange={(event) => setIsActive(event.target.checked)} type="checkbox" />
           <span>Active</span>
         </label>
       ) : null}
       <div className="form-actions">
-        <button className="primary-button" disabled={isSubmitting} type="submit">{isSubmitting ? 'Saving...' : 'Save'}</button>
+        {isReadOnly && canEdit ? (
+          <button className="primary-button" disabled={isSubmitting} onClick={onEdit} type="button">Edit</button>
+        ) : null}
+        {!isReadOnly ? (
+          <button className="primary-button" disabled={isSubmitting} type="submit">{isSubmitting ? 'Saving...' : 'Save'}</button>
+        ) : null}
         <button className="secondary-button" disabled={isSubmitting} onClick={onCancel} type="button">Cancel</button>
       </div>
     </form>

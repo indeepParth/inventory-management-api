@@ -3,7 +3,13 @@ import { hasRouteAccess } from '../features/auth/roleAccess'
 import { useAuth } from '../features/auth/AuthContext'
 import { getDrivers, type Driver } from '../features/drivers/driversApi'
 import { Link, useParams } from 'react-router-dom'
-import { getCustomer, type Customer } from '../features/parties/partiesApi'
+import { CustomerForm } from '../features/parties/CustomerForm'
+import {
+  getCustomer,
+  updateCustomer,
+  type Customer,
+  type CustomerFormValues,
+} from '../features/parties/partiesApi'
 import { PaymentForm } from '../features/payments/PaymentForm'
 import { createPayment, type PaymentFormValues } from '../features/payments/paymentsApi'
 import { getProducts, type Product } from '../features/products/productsApi'
@@ -73,13 +79,17 @@ export function CustomerDetailPage() {
   const canCreateInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
   const canReceivePayments = hasRouteAccess(currentUser?.roles ?? [], 'viewPayments')
   const canViewLedger = hasRouteAccess(currentUser?.roles ?? [], 'viewCustomerStatements')
+  const canManageCustomers = hasRouteAccess(currentUser?.roles ?? [], 'manageCustomers')
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [invoices, setInvoices] = useState<SalesInvoice[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [paymentInvoice, setPaymentInvoice] = useState<SalesInvoice | undefined>()
+  const [isCustomerDetailsOpen, setIsCustomerDetailsOpen] = useState(false)
+  const [isCustomerDetailsEditing, setIsCustomerDetailsEditing] = useState(false)
   const [isDirectInvoiceFormOpen, setIsDirectInvoiceFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false)
   const [isSavingDirectInvoice, setIsSavingDirectInvoice] = useState(false)
   const [isSavingPayment, setIsSavingPayment] = useState(false)
   const [fromDateInput, setFromDateInput] = useState('')
@@ -89,6 +99,7 @@ export function CustomerDetailPage() {
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('outstanding')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [customerFieldErrors, setCustomerFieldErrors] = useState<FieldErrors>({})
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   const customerId = Number(id)
@@ -148,7 +159,10 @@ export function CustomerDetailPage() {
 
   function openNewDirectInvoiceForm(): void {
     setFieldErrors({})
+    setCustomerFieldErrors({})
     setActionError(null)
+    setIsCustomerDetailsOpen(false)
+    setIsCustomerDetailsEditing(false)
     setPaymentInvoice(undefined)
     setIsDirectInvoiceFormOpen(true)
   }
@@ -161,7 +175,10 @@ export function CustomerDetailPage() {
 
   function openPaymentForm(invoice: SalesInvoice): void {
     setFieldErrors({})
+    setCustomerFieldErrors({})
     setActionError(null)
+    setIsCustomerDetailsOpen(false)
+    setIsCustomerDetailsEditing(false)
     setIsDirectInvoiceFormOpen(false)
     setPaymentInvoice(invoice)
   }
@@ -170,6 +187,34 @@ export function CustomerDetailPage() {
     setFieldErrors({})
     setActionError(null)
     setPaymentInvoice(undefined)
+  }
+
+  function openCustomerDetails(): void {
+    setFieldErrors({})
+    setCustomerFieldErrors({})
+    setActionError(null)
+    setIsDirectInvoiceFormOpen(false)
+    setPaymentInvoice(undefined)
+    setIsCustomerDetailsOpen(true)
+    setIsCustomerDetailsEditing(false)
+  }
+
+  function editCustomerDetails(): void {
+    setCustomerFieldErrors({})
+    setActionError(null)
+    setIsCustomerDetailsEditing(true)
+  }
+
+  function cancelCustomerDetails(): void {
+    setCustomerFieldErrors({})
+    setActionError(null)
+
+    if (isCustomerDetailsEditing) {
+      setIsCustomerDetailsEditing(false)
+      return
+    }
+
+    setIsCustomerDetailsOpen(false)
   }
 
   async function handleDirectInvoiceSubmit(values: DirectInvoiceFormValues): Promise<void> {
@@ -206,6 +251,27 @@ export function CustomerDetailPage() {
     }
   }
 
+  async function handleCustomerSubmit(values: CustomerFormValues): Promise<void> {
+    if (!customer) {
+      return
+    }
+
+    setIsSavingCustomer(true)
+    setCustomerFieldErrors({})
+    setActionError(null)
+
+    try {
+      setCustomer(await updateCustomer(customer.id, values))
+      setIsCustomerDetailsEditing(false)
+      await loadCustomerDetail()
+    } catch (error) {
+      setCustomerFieldErrors(getFieldErrors(error))
+      setActionError(getErrorMessage(error))
+    } finally {
+      setIsSavingCustomer(false)
+    }
+  }
+
   async function handlePostInvoice(invoice: SalesInvoice): Promise<void> {
     const confirmed = window.confirm(`Post invoice "${invoice.invoiceNumber}"?`)
 
@@ -237,13 +303,16 @@ export function CustomerDetailPage() {
           <p className="page-kicker">Customer account</p>
           <h1 id="customer-detail-title" className="page-title">{customer?.name ?? 'Customer detail'}</h1>
         </div>
-        {canCreateInvoices || (canViewLedger && customer) ? (
+        {customer || canCreateInvoices ? (
           <div className="form-actions">
-            {canCreateInvoices ? (
-              <button className="primary-button" disabled={products.length === 0} onClick={openNewDirectInvoiceForm} type="button">New direct invoice</button>
+            {customer ? (
+              <button className="primary-button" onClick={openCustomerDetails} type="button">Details</button>
             ) : null}
             {canViewLedger && customer ? (
               <Link className="primary-button" to={`/app/customers/${customer.id}/ledger`}>View ledger</Link>
+            ) : null}
+            {canCreateInvoices ? (
+              <button className="primary-button" disabled={products.length === 0} onClick={openNewDirectInvoiceForm} type="button">New direct invoice</button>
             ) : null}
           </div>
         ) : null}
@@ -266,6 +335,19 @@ export function CustomerDetailPage() {
               <small>{formatCurrency(outstandingInvoiceTotal)}</small>
             </article>
           </div>
+
+          {isCustomerDetailsOpen ? (
+            <CustomerForm
+              canEdit={canManageCustomers}
+              errors={customerFieldErrors}
+              initialValue={customer}
+              isReadOnly={!isCustomerDetailsEditing}
+              isSubmitting={isSavingCustomer}
+              onCancel={cancelCustomerDetails}
+              onEdit={editCustomerDetails}
+              onSubmit={handleCustomerSubmit}
+            />
+          ) : null}
 
           {isDirectInvoiceFormOpen ? (
             <DirectInvoiceForm
@@ -304,17 +386,6 @@ export function CustomerDetailPage() {
           {products.length === 0 && canCreateInvoices && !isLoading ? (
             <p className="state-message">Create at least one product before adding invoices for this customer.</p>
           ) : null}
-
-          <div className="detail-grid">
-            <span>Status</span><strong>{customer.isActive ? 'Active' : 'Inactive'}</strong>
-            <span>Credit limit</span><strong>{formatCurrency(customer.creditLimit)}</strong>
-            <span>Contact person</span><strong>{customer.contactPerson || '-'}</strong>
-            <span>Phone</span><strong>{customer.phone || '-'}</strong>
-            <span>Email</span><strong>{customer.email || '-'}</strong>
-            <span>GST number</span><strong>{customer.gstNumber || '-'}</strong>
-            <span>Billing address</span><strong>{customer.billingAddress || '-'}</strong>
-            <span>Delivery address</span><strong>{customer.deliveryAddress || '-'}</strong>
-          </div>
 
           <form className="toolbar customer-account-filters" onSubmit={handleFilters}>
             <input aria-label="From date" onChange={(event) => setFromDateInput(event.target.value)} type="date" value={fromDateInput} />

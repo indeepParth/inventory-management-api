@@ -164,7 +164,11 @@ export function DriversPage() {
                     <td>{driver.name}</td>
                     <td>{driver.phone || '-'}</td>
                     <td>{driver.licenseNumber || '-'}</td>
-                    <td>{driver.isActive ? 'Active' : 'Inactive'}</td>
+                    <td>
+                      <span className={driver.isActive ? 'status-pill active' : 'status-pill inactive'}>
+                        {driver.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
                     <td>
                       <div className="table-actions">
                         <Link className="text-link" to={`/app/drivers/${driver.id}`}>View</Link>

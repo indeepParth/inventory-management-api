@@ -152,7 +152,7 @@ export function UnitsPage() {
               <tr>
                 <th>Name</th>
                 <th>Short name</th>
-                <th>Factor to base</th>
+                <th className="numeric-cell">Factor to base</th>
                 <th>Base unit</th>
                 <th>Status</th>
                 {canManageProducts ? <th>Actions</th> : null}
@@ -163,9 +163,13 @@ export function UnitsPage() {
                 <tr key={unit.id}>
                   <td>{unit.name}</td>
                   <td>{unit.shortName || '-'}</td>
-                  <td>{unit.factorToBaseUnit}</td>
+                  <td className="numeric-cell">{unit.factorToBaseUnit}</td>
                   <td>{unit.baseUnitName || unit.name}</td>
-                  <td>{unit.isActive ? 'Active' : 'Inactive'}</td>
+                  <td>
+                    <span className={unit.isActive ? 'status-pill active' : 'status-pill inactive'}>
+                      {unit.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
                   {canManageProducts ? (
                     <td>
                       <div className="table-actions">

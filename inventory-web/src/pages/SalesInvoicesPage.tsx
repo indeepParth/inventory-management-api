@@ -31,6 +31,18 @@ function isDirectInvoice(invoice: SalesInvoice): boolean {
   return invoice.items.every((item) => !item.deliveryChallanItemId)
 }
 
+function getInvoiceStatusClassName(status: SalesInvoice['status']): string {
+  const statusClasses: Record<SalesInvoice['status'], string> = {
+    0: 'draft',
+    1: 'unpaid',
+    2: 'partially-paid',
+    3: 'paid',
+    4: 'cancelled',
+  }
+
+  return `status-pill ${statusClasses[status]}`
+}
+
 export function SalesInvoicesPage() {
   const { currentUser } = useAuth()
   const canCancelInvoices = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
@@ -218,9 +230,9 @@ export function SalesInvoicesPage() {
                   <th>Date</th>
                   <th>Customer</th>
                   <th>Status</th>
-                  <th>Total</th>
-                  <th>Paid</th>
-                  <th>Balance</th>
+                  <th className="numeric-cell">Total</th>
+                  <th className="numeric-cell">Paid</th>
+                  <th className="numeric-cell">Balance</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -234,10 +246,14 @@ export function SalesInvoicesPage() {
                     </td>
                     <td>{formatDate(invoice.invoiceDate)}</td>
                     <td>{invoice.customerName}</td>
-                    <td>{getSalesInvoiceStatusLabel(invoice.status)}</td>
-                    <td>{formatCurrency(invoice.grandTotal)}</td>
-                    <td>{formatCurrency(invoice.amountPaid)}</td>
-                    <td>{formatCurrency(invoice.balanceDue)}</td>
+                    <td>
+                      <span className={getInvoiceStatusClassName(invoice.status)}>
+                        {getSalesInvoiceStatusLabel(invoice.status)}
+                      </span>
+                    </td>
+                    <td className="numeric-cell">{formatCurrency(invoice.grandTotal)}</td>
+                    <td className="numeric-cell">{formatCurrency(invoice.amountPaid)}</td>
+                    <td className="numeric-cell">{formatCurrency(invoice.balanceDue)}</td>
                     <td>
                       <div className="table-actions">
                         {invoice.status === 0 ? (

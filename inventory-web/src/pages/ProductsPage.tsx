@@ -233,8 +233,8 @@ export function ProductsPage() {
                   <th>Name</th>
                   <th>SKU</th>
                   <th>Category</th>
-                  <th>Stock</th>
-                  <th>Price</th>
+                  <th className="numeric-cell">Stock</th>
+                  <th className="numeric-cell">Price</th>
                   {canManageProducts ? <th>Actions</th> : null}
                 </tr>
               </thead>
@@ -244,13 +244,13 @@ export function ProductsPage() {
                     <td>{product.name}</td>
                     <td>{product.sku}</td>
                     <td>{product.categoryName}</td>
-                    <td>
+                    <td className="numeric-cell">
                       {formatQuantity(product.availableQuantity)} {product.baseUnitName}
                       {product.isSubProduct && product.baseProductName ? (
                         <span className="muted-text"> from {product.baseProductName}</span>
                       ) : null}
                     </td>
-                    <td>{formatCurrency(product.defaultSellingPrice)}</td>
+                    <td className="numeric-cell">{formatCurrency(product.defaultSellingPrice)}</td>
                     {canManageProducts ? (
                       <td>
                         <div className="table-actions">

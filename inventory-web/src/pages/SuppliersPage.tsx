@@ -163,7 +163,11 @@ export function SuppliersPage() {
                     <td><Link className="text-link" to={`/app/suppliers/${supplier.id}`}>{supplier.name}</Link></td>
                     <td>{supplier.phone || supplier.email || '-'}</td>
                     <td>{supplier.gstNumber || '-'}</td>
-                    <td>{supplier.isActive ? 'Active' : 'Inactive'}</td>
+                    <td>
+                      <span className={supplier.isActive ? 'status-pill active' : 'status-pill inactive'}>
+                        {supplier.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
                     <td>
                       <div className="table-actions">
                         <Link className="text-link" to={`/app/suppliers/${supplier.id}`}>View</Link>

@@ -158,7 +158,11 @@ export function CategoriesPage() {
                 <tr key={category.id}>
                   <td>{category.name}</td>
                   <td>{category.description || '-'}</td>
-                  <td>{category.isActive ? 'Active' : 'Inactive'}</td>
+                  <td>
+                    <span className={category.isActive ? 'status-pill active' : 'status-pill inactive'}>
+                      {category.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
                   {canManageProducts ? (
                     <td>
                       <div className="table-actions">

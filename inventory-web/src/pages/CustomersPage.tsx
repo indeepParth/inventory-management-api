@@ -160,7 +160,7 @@ export function CustomersPage() {
                 <tr>
                   <th>Name</th>
                   <th>Contact</th>
-                  <th>Balance</th>
+                  <th className="numeric-cell">Balance</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -170,8 +170,12 @@ export function CustomersPage() {
                   <tr key={customer.id}>
                     <td><Link className="text-link" to={`/app/customers/${customer.id}`}>{customer.name}</Link></td>
                     <td>{customer.phone || customer.email || '-'}</td>
-                    <td>{formatCurrency(customer.balanceDue)}</td>
-                    <td>{customer.isActive ? 'Active' : 'Inactive'}</td>
+                    <td className="numeric-cell">{formatCurrency(customer.balanceDue)}</td>
+                    <td>
+                      <span className={customer.isActive ? 'status-pill active' : 'status-pill inactive'}>
+                        {customer.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
                     <td>
                       <div className="table-actions">
                         <Link className="text-link" to={`/app/customers/${customer.id}`}>View</Link>

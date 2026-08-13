@@ -48,6 +48,14 @@ function getPaymentState(payment: Payment): string {
   return 'Posted'
 }
 
+function getPaymentStateClassName(payment: Payment): string {
+  if (payment.reversesPaymentId || payment.reversalPaymentId) {
+    return 'status-pill warning'
+  }
+
+  return 'status-pill success'
+}
+
 export function PaymentsPage() {
   const { currentUser } = useAuth()
   const canReversePayments = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
@@ -216,7 +224,7 @@ export function PaymentsPage() {
                   <th>Party</th>
                   <th>Document</th>
                   <th>Method</th>
-                  <th>Amount</th>
+                  <th className="numeric-cell">Amount</th>
                   <th>Status</th>
                   <th>Actions</th>
                 </tr>
@@ -238,8 +246,12 @@ export function PaymentsPage() {
                       )}
                     </td>
                     <td>{getPaymentMethodLabel(payment.method as PaymentMethod)}</td>
-                    <td>{formatCurrency(payment.amount)}</td>
-                    <td>{getPaymentState(payment)}</td>
+                    <td className="numeric-cell">{formatCurrency(payment.amount)}</td>
+                    <td>
+                      <span className={getPaymentStateClassName(payment)}>
+                        {getPaymentState(payment)}
+                      </span>
+                    </td>
                     <td>
                       <div className="table-actions">
                         {!payment.reversesPaymentId && !payment.reversalPaymentId && canReversePayments ? (

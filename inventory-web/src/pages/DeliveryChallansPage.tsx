@@ -31,6 +31,17 @@ function canCreateInvoiceFromChallan(challan: DeliveryChallan): boolean {
   return challan.isAvailableForInvoicing
 }
 
+function getChallanStatusClassName(status: DeliveryChallan['status']): string {
+  const statusClasses: Record<DeliveryChallan['status'], string> = {
+    0: 'draft',
+    1: 'success',
+    2: 'cancelled',
+    3: 'completed',
+  }
+
+  return `status-pill ${statusClasses[status]}`
+}
+
 export function DeliveryChallansPage() {
   const { currentUser } = useAuth()
   const navigate = useNavigate()
@@ -214,7 +225,7 @@ export function DeliveryChallansPage() {
                   <th>Customer</th>
                   <th>Date</th>
                   <th>Status</th>
-                  <th>Items</th>
+                  <th className="numeric-cell">Items</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -224,8 +235,12 @@ export function DeliveryChallansPage() {
                     <td><Link className="text-link" to={`/app/challans/${challan.id}`}>{challan.challanNumber}</Link></td>
                     <td>{challan.customerName}</td>
                     <td>{formatDate(challan.challanDate)}</td>
-                    <td>{getDeliveryChallanStatusLabel(challan.status)}</td>
-                    <td>{challan.items.length}</td>
+                    <td>
+                      <span className={getChallanStatusClassName(challan.status)}>
+                        {getDeliveryChallanStatusLabel(challan.status)}
+                      </span>
+                    </td>
+                    <td className="numeric-cell">{challan.items.length}</td>
                     <td>
                       <div className="table-actions">
                         {challan.status === 0 ? (

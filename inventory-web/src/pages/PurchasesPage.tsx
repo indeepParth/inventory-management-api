@@ -25,6 +25,18 @@ import { formatCurrency } from '../shared/utils/formatters'
 
 const pageSize = 10
 
+function getPurchaseStatusClassName(status: Purchase['status']): string {
+  const statusClasses: Record<Purchase['status'], string> = {
+    0: 'draft',
+    1: 'success',
+    2: 'cancelled',
+    3: 'partially-paid',
+    4: 'paid',
+  }
+
+  return `status-pill ${statusClasses[status]}`
+}
+
 export function PurchasesPage() {
   const { currentUser } = useAuth()
   const canCancelPurchases = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
@@ -203,9 +215,9 @@ export function PurchasesPage() {
                   <th>Purchase</th>
                   <th>Supplier</th>
                   <th>Status</th>
-                  <th>Total</th>
-                  <th>Paid</th>
-                  <th>Balance</th>
+                  <th className="numeric-cell">Total</th>
+                  <th className="numeric-cell">Paid</th>
+                  <th className="numeric-cell">Balance</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -218,10 +230,14 @@ export function PurchasesPage() {
                       <span>{purchase.supplierBillNumber || '-'}</span>
                     </td>
                     <td>{purchase.supplierName}</td>
-                    <td>{getPurchaseStatusLabel(purchase.status)}</td>
-                    <td>{formatCurrency(purchase.grandTotal)}</td>
-                    <td>{formatCurrency(purchase.amountPaid)}</td>
-                    <td>{formatCurrency(purchase.balanceDue)}</td>
+                    <td>
+                      <span className={getPurchaseStatusClassName(purchase.status)}>
+                        {getPurchaseStatusLabel(purchase.status)}
+                      </span>
+                    </td>
+                    <td className="numeric-cell">{formatCurrency(purchase.grandTotal)}</td>
+                    <td className="numeric-cell">{formatCurrency(purchase.amountPaid)}</td>
+                    <td className="numeric-cell">{formatCurrency(purchase.balanceDue)}</td>
                     <td>
                       <div className="table-actions">
                         {purchase.status === 0 ? (

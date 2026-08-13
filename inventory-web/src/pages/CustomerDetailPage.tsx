@@ -20,6 +20,7 @@ import {
   getSalesInvoiceStatusLabel,
   postSalesInvoice,
   type DirectInvoiceFormValues,
+  type PagedResponse,
   type SalesInvoice,
   type SalesInvoiceStatus,
 } from '../features/salesInvoices/salesInvoicesApi'
@@ -28,45 +29,52 @@ import {
   getFieldErrors,
   type FieldErrors,
 } from '../shared/api/apiErrorMessages'
-import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
+import { ErrorBanner, LoadingState } from '../shared/components/Feedback'
 import { formatCurrency, formatDate } from '../shared/utils/formatters'
 
-const detailPageSize = 100
+const detailPageSize = 20
 
-type PaymentFilter = 'outstanding' | 'all' | 'draft' | 'unpaid' | 'partial' | 'paid'
+type InvoiceStatusFilter = 'outstanding' | 'all' | 'draft' | 'unpaid' | 'partial' | 'paid' | 'cancelled'
+type DateFilter = 'all' | 'today' | 'thisWeek' | 'thisMonth' | 'lastMonth' | 'last30Days' | 'custom'
 
-function isCollectionInvoice(invoice: SalesInvoice): boolean {
-  return invoice.status === 0 || invoice.status === 1 || invoice.status === 2 || invoice.status === 3
-}
-
-function matchesPaymentFilter(invoice: SalesInvoice, paymentFilter: PaymentFilter): boolean {
-  if (paymentFilter === 'all') {
-    return isCollectionInvoice(invoice)
+function matchesInvoiceStatusFilter(invoice: SalesInvoice, statusFilter: InvoiceStatusFilter): boolean {
+  if (statusFilter === 'all') {
+    return true
   }
 
-  if (paymentFilter === 'outstanding') {
+  if (statusFilter === 'outstanding') {
     return invoice.status === 1 || invoice.status === 2
   }
 
-  if (paymentFilter === 'draft') {
+  if (statusFilter === 'draft') {
     return invoice.status === 0
   }
 
-  if (paymentFilter === 'unpaid') {
+  if (statusFilter === 'unpaid') {
     return invoice.status === 1
   }
 
-  if (paymentFilter === 'partial') {
+  if (statusFilter === 'partial') {
     return invoice.status === 2
   }
 
-  return invoice.status === 3
+  if (statusFilter === 'paid') {
+    return invoice.status === 3
+  }
+
+  return invoice.status === 4
 }
 
-function getInvoiceOutstandingTotal(invoices: SalesInvoice[]): number {
-  return invoices
-    .filter((invoice) => invoice.status === 1 || invoice.status === 2)
-    .reduce((total, invoice) => total + invoice.balanceDue, 0)
+function getApiStatusFilter(statusFilter: InvoiceStatusFilter): string {
+  const statusMap: Partial<Record<InvoiceStatusFilter, string>> = {
+    draft: '0',
+    unpaid: '1',
+    partial: '2',
+    paid: '3',
+    cancelled: '4',
+  }
+
+  return statusMap[statusFilter] ?? ''
 }
 
 function canReceivePaymentForInvoice(invoice: SalesInvoice): boolean {
@@ -80,6 +88,74 @@ function getCustomerMetaItems(customer: Customer): string[] {
   ].filter((value): value is string => Boolean(value))
 }
 
+function formatDateInputValue(date: Date): string {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+
+  return `${year}-${month}-${day}`
+}
+
+function getDateRange(dateFilter: DateFilter, customFromDate: string, customToDate: string): { dateFrom: string, dateTo: string } {
+  const today = new Date()
+
+  if (dateFilter === 'all') {
+    return { dateFrom: '', dateTo: '' }
+  }
+
+  if (dateFilter === 'custom') {
+    return { dateFrom: customFromDate, dateTo: customToDate }
+  }
+
+  const start = new Date(today)
+  const end = new Date(today)
+
+  if (dateFilter === 'today') {
+    return { dateFrom: formatDateInputValue(today), dateTo: formatDateInputValue(today) }
+  }
+
+  if (dateFilter === 'thisWeek') {
+    const day = start.getDay()
+    const offset = day === 0 ? -6 : 1 - day
+    start.setDate(start.getDate() + offset)
+  }
+
+  if (dateFilter === 'thisMonth') {
+    start.setDate(1)
+  }
+
+  if (dateFilter === 'lastMonth') {
+    start.setMonth(start.getMonth() - 1, 1)
+    end.setDate(0)
+  }
+
+  if (dateFilter === 'last30Days') {
+    start.setDate(start.getDate() - 29)
+  }
+
+  return { dateFrom: formatDateInputValue(start), dateTo: formatDateInputValue(end) }
+}
+
+function getDisplayInvoiceStatusLabel(status: SalesInvoiceStatus): string {
+  if (status === 1) {
+    return 'Unpaid'
+  }
+
+  return getSalesInvoiceStatusLabel(status)
+}
+
+function getInvoiceStatusClassName(status: SalesInvoiceStatus): string {
+  const statusClasses: Record<SalesInvoiceStatus, string> = {
+    0: 'draft',
+    1: 'unpaid',
+    2: 'partial',
+    3: 'paid',
+    4: 'cancelled',
+  }
+
+  return `invoice-status-badge ${statusClasses[status]}`
+}
+
 export function CustomerDetailPage() {
   const { id } = useParams()
   const { currentUser } = useAuth()
@@ -88,6 +164,8 @@ export function CustomerDetailPage() {
   const canViewLedger = hasRouteAccess(currentUser?.roles ?? [], 'viewCustomerStatements')
   const canManageCustomers = hasRouteAccess(currentUser?.roles ?? [], 'manageCustomers')
   const [customer, setCustomer] = useState<Customer | null>(null)
+  const [invoiceResponse, setInvoiceResponse] = useState<PagedResponse<SalesInvoice> | null>(null)
+  const [accountOutstandingInvoiceCount, setAccountOutstandingInvoiceCount] = useState(0)
   const [invoices, setInvoices] = useState<SalesInvoice[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -99,17 +177,20 @@ export function CustomerDetailPage() {
   const [isSavingCustomer, setIsSavingCustomer] = useState(false)
   const [isSavingDirectInvoice, setIsSavingDirectInvoice] = useState(false)
   const [isSavingPayment, setIsSavingPayment] = useState(false)
-  const [fromDateInput, setFromDateInput] = useState('')
-  const [toDateInput, setToDateInput] = useState('')
-  const [fromDate, setFromDate] = useState('')
-  const [toDate, setToDate] = useState('')
-  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>('outstanding')
+  const [pageNumber, setPageNumber] = useState(1)
+  const [invoiceNumber, setInvoiceNumber] = useState('')
+  const [statusFilter, setStatusFilter] = useState<InvoiceStatusFilter>('outstanding')
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all')
+  const [customFromDate, setCustomFromDate] = useState('')
+  const [customToDate, setCustomToDate] = useState('')
+  const [openInvoiceActionsId, setOpenInvoiceActionsId] = useState<number | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [customerFieldErrors, setCustomerFieldErrors] = useState<FieldErrors>({})
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
   const customerId = Number(id)
+  const dateRange = getDateRange(dateFilter, customFromDate, customToDate)
 
   const loadCustomerDetail = useCallback(async (): Promise<void> => {
     if (!customerId) {
@@ -120,23 +201,46 @@ export function CustomerDetailPage() {
     setErrorMessage(null)
 
     try {
-      const [customerResponse, invoiceResponse, driverResponse, productResponse] = await Promise.all([
+      const [
+        customerResponse,
+        invoiceResponse,
+        unpaidInvoiceResponse,
+        partialInvoiceResponse,
+        driverResponse,
+        productResponse,
+      ] = await Promise.all([
         getCustomer(customerId),
         getSalesInvoices({
-          pageNumber: 1,
+          pageNumber,
           pageSize: detailPageSize,
           customerId: customerId.toString(),
-          status: '',
+          status: getApiStatusFilter(statusFilter),
+          invoiceNumber,
+          dateFrom: dateRange.dateFrom,
+          dateTo: dateRange.dateTo,
+        }),
+        getSalesInvoices({
+          pageNumber: 1,
+          pageSize: 1,
+          customerId: customerId.toString(),
+          status: '1',
           invoiceNumber: '',
-          dateFrom: fromDate,
-          dateTo: toDate,
+        }),
+        getSalesInvoices({
+          pageNumber: 1,
+          pageSize: 1,
+          customerId: customerId.toString(),
+          status: '2',
+          invoiceNumber: '',
         }),
         getDrivers(1, 100, '', 'true'),
         getProducts(1, 100),
       ])
 
       setCustomer(customerResponse)
-      setInvoices(invoiceResponse.items.filter(isCollectionInvoice))
+      setInvoiceResponse(invoiceResponse)
+      setAccountOutstandingInvoiceCount(unpaidInvoiceResponse.totalCount + partialInvoiceResponse.totalCount)
+      setInvoices(invoiceResponse.items)
       setDrivers(driverResponse.items)
       setProducts(productResponse.items)
     } catch (error) {
@@ -144,7 +248,7 @@ export function CustomerDetailPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [customerId, fromDate, toDate])
+  }, [customerId, dateRange.dateFrom, dateRange.dateTo, invoiceNumber, pageNumber, statusFilter])
 
   useEffect(() => {
     void loadCustomerDetail()
@@ -152,16 +256,51 @@ export function CustomerDetailPage() {
 
   function handleFilters(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault()
-    setFromDate(fromDateInput)
-    setToDate(toDateInput)
+    setPageNumber(1)
   }
 
   function clearFilters(): void {
-    setFromDateInput('')
-    setToDateInput('')
-    setFromDate('')
-    setToDate('')
-    setPaymentFilter('outstanding')
+    setInvoiceNumber('')
+    setStatusFilter('outstanding')
+    setDateFilter('all')
+    setCustomFromDate('')
+    setCustomToDate('')
+    setPageNumber(1)
+    setOpenInvoiceActionsId(null)
+  }
+
+  function handleInvoiceSearch(value: string): void {
+    setInvoiceNumber(value)
+    setPageNumber(1)
+    setOpenInvoiceActionsId(null)
+  }
+
+  function handleStatusFilter(value: InvoiceStatusFilter): void {
+    setStatusFilter(value)
+    setPageNumber(1)
+    setOpenInvoiceActionsId(null)
+  }
+
+  function handleDateFilter(value: DateFilter): void {
+    setDateFilter(value)
+    if (value !== 'custom') {
+      setCustomFromDate('')
+      setCustomToDate('')
+    }
+    setPageNumber(1)
+    setOpenInvoiceActionsId(null)
+  }
+
+  function handleCustomFromDate(value: string): void {
+    setCustomFromDate(value)
+    setPageNumber(1)
+    setOpenInvoiceActionsId(null)
+  }
+
+  function handleCustomToDate(value: string): void {
+    setCustomToDate(value)
+    setPageNumber(1)
+    setOpenInvoiceActionsId(null)
   }
 
   function openNewDirectInvoiceForm(): void {
@@ -280,6 +419,7 @@ export function CustomerDetailPage() {
   }
 
   async function handlePostInvoice(invoice: SalesInvoice): Promise<void> {
+    setOpenInvoiceActionsId(null)
     const confirmed = window.confirm(`Post invoice "${invoice.invoiceNumber}"?`)
 
     if (!confirmed) {
@@ -297,13 +437,13 @@ export function CustomerDetailPage() {
   }
 
   const visibleInvoices = invoices.filter((invoice) =>
-    matchesPaymentFilter(invoice, paymentFilter),
+    matchesInvoiceStatusFilter(invoice, statusFilter),
   )
-  const outstandingInvoiceTotal = getInvoiceOutstandingTotal(invoices)
-  const outstandingInvoiceCount = invoices.filter((invoice) =>
-    invoice.status === 1 || invoice.status === 2,
-  ).length
   const customerMetaItems = customer ? getCustomerMetaItems(customer) : []
+  const hasActiveFilters = invoiceNumber.trim().length > 0
+    || statusFilter !== 'outstanding'
+    || dateFilter !== 'all'
+  const hasAnyInvoices = (invoiceResponse?.totalCount ?? 0) > 0
   return (
     <section className="content-panel wide-panel" aria-labelledby="customer-detail-title">
       <div className="customer-account-header">
@@ -342,15 +482,19 @@ export function CustomerDetailPage() {
 
       {customer ? (
         <>
-          <div className="summary-grid">
-            <article className="summary-card">
+          <div className="customer-account-summary-grid">
+            <article className="customer-account-summary-card balance-due">
               <span>Balance due</span>
-              <strong>{formatCurrency(customer.balanceDue)}</strong>
+              <strong>₹{formatCurrency(customer.balanceDue)}</strong>
             </article>
-            <article className="summary-card">
-              <span>Outstanding invoices</span>
-              <strong>{outstandingInvoiceCount}</strong>
-              <small>{formatCurrency(outstandingInvoiceTotal)}</small>
+            <article className="customer-account-summary-card">
+              <span>Outstanding</span>
+              <strong>{accountOutstandingInvoiceCount} {accountOutstandingInvoiceCount === 1 ? 'invoice' : 'invoices'}</strong>
+              <small>₹{formatCurrency(customer.balanceDue)} total</small>
+            </article>
+            <article className="customer-account-summary-card">
+              <span>Credit limit</span>
+              <strong>₹{formatCurrency(customer.creditLimit)}</strong>
             </article>
           </div>
 
@@ -405,68 +549,146 @@ export function CustomerDetailPage() {
             <p className="state-message">Create at least one product before adding invoices for this customer.</p>
           ) : null}
 
-          <form className="toolbar customer-account-filters" onSubmit={handleFilters}>
-            <input aria-label="From date" onChange={(event) => setFromDateInput(event.target.value)} type="date" value={fromDateInput} />
-            <input aria-label="To date" onChange={(event) => setToDateInput(event.target.value)} type="date" value={toDateInput} />
-            <select aria-label="Payment status" onChange={(event) => setPaymentFilter(event.target.value as PaymentFilter)} value={paymentFilter}>
-              <option value="outstanding">Outstanding</option>
-              <option value="all">All</option>
-              <option value="draft">Draft</option>
-              <option value="unpaid">Unpaid</option>
-              <option value="partial">Partially paid</option>
-              <option value="paid">Paid</option>
-            </select>
-            <button className="secondary-button" type="submit">Apply dates</button>
-            <button className="text-button" onClick={clearFilters} type="button">Clear</button>
-          </form>
+          <section className="customer-invoices-section" aria-labelledby="customer-invoices-title">
+            <h2 id="customer-invoices-title">Invoices</h2>
+            <form className="customer-invoice-toolbar" onSubmit={handleFilters}>
+              <input
+                aria-label="Search invoices"
+                onChange={(event) => handleInvoiceSearch(event.target.value)}
+                placeholder="Search invoices"
+                type="search"
+                value={invoiceNumber}
+              />
+              <select
+                aria-label="Invoice status"
+                onChange={(event) => handleStatusFilter(event.target.value as InvoiceStatusFilter)}
+                value={statusFilter}
+              >
+                <option value="all">All invoices</option>
+                <option value="outstanding">Outstanding</option>
+                <option value="draft">Draft</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="partial">Partially paid</option>
+                <option value="paid">Paid</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <select
+                aria-label="Invoice date range"
+                onChange={(event) => handleDateFilter(event.target.value as DateFilter)}
+                value={dateFilter}
+              >
+                <option value="all">Date</option>
+                <option value="today">Today</option>
+                <option value="thisWeek">This week</option>
+                <option value="thisMonth">This month</option>
+                <option value="lastMonth">Last month</option>
+                <option value="last30Days">Last 30 days</option>
+                <option value="custom">Custom range</option>
+              </select>
+              {dateFilter === 'custom' ? (
+                <>
+                  <input aria-label="From date" onChange={(event) => handleCustomFromDate(event.target.value)} type="date" value={customFromDate} />
+                  <input aria-label="To date" onChange={(event) => handleCustomToDate(event.target.value)} type="date" value={customToDate} />
+                </>
+              ) : null}
+              {hasActiveFilters ? (
+                <button className="customer-invoice-clear" onClick={clearFilters} type="button">Clear</button>
+              ) : null}
+            </form>
 
-          <h2>Sales invoices</h2>
-          {visibleInvoices.length === 0 ? <EmptyState>No matching invoices found.</EmptyState> : null}
-          {visibleInvoices.length > 0 ? (
-            <div className="table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Invoice</th>
-                    <th>Date</th>
-                    <th>Payment status</th>
-                    <th>Grand total</th>
-                    <th>Amount paid</th>
-                    <th>Balance due</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visibleInvoices.map((invoice) => (
-                    <tr key={invoice.id}>
-                      <td>
-                        {canCreateInvoices ? (
-                          <Link className="text-link" to={`/app/sales-invoices/${invoice.id}`}>{invoice.invoiceNumber}</Link>
-                        ) : (
-                          invoice.invoiceNumber
-                        )}
-                      </td>
-                      <td>{formatDate(invoice.invoiceDate)}</td>
-                      <td>{getSalesInvoiceStatusLabel(invoice.status as SalesInvoiceStatus)}</td>
-                      <td>{formatCurrency(invoice.grandTotal)}</td>
-                      <td>{formatCurrency(invoice.amountPaid)}</td>
-                      <td>{formatCurrency(invoice.balanceDue)}</td>
-                      <td>
-                        <div className="table-actions">
-                          {canCreateInvoices && invoice.status === 0 ? (
-                            <button className="text-button" onClick={() => void handlePostInvoice(invoice)} type="button">Post</button>
-                          ) : null}
-                          {canReceivePayments && canReceivePaymentForInvoice(invoice) ? (
-                            <button className="text-button" onClick={() => openPaymentForm(invoice)} type="button">Receive payment</button>
-                          ) : null}
-                        </div>
-                      </td>
+            <div className="customer-invoice-table-wrap">
+              {isLoading ? <LoadingState>Loading invoices...</LoadingState> : null}
+              {!isLoading && !errorMessage && visibleInvoices.length === 0 ? (
+                <div className="customer-invoice-empty">
+                  <strong>{hasAnyInvoices ? 'No invoices match your filters.' : 'No invoices yet'}</strong>
+                  {!hasAnyInvoices ? <span>Create the first invoice for this customer.</span> : null}
+                  {hasAnyInvoices && hasActiveFilters ? (
+                    <button className="customer-invoice-clear" onClick={clearFilters} type="button">Clear filters</button>
+                  ) : null}
+                  {!hasAnyInvoices && canCreateInvoices && products.length > 0 ? (
+                    <button className="customer-account-action primary" onClick={openNewDirectInvoiceForm} type="button">+ New Invoice</button>
+                  ) : null}
+                </div>
+              ) : null}
+              {visibleInvoices.length > 0 ? (
+                <table className="customer-invoice-table">
+                  <thead>
+                    <tr>
+                      <th>Invoice</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th className="numeric-cell">Total</th>
+                      <th className="numeric-cell">Paid</th>
+                      <th className="numeric-cell">Due</th>
+                      <th className="actions-cell">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {visibleInvoices.map((invoice) => (
+                      <tr key={invoice.id}>
+                        <td>
+                          {canCreateInvoices ? (
+                            <Link className="invoice-number-link" to={`/app/sales-invoices/${invoice.id}`}>{invoice.invoiceNumber}</Link>
+                          ) : (
+                            <span className="invoice-number-text">{invoice.invoiceNumber}</span>
+                          )}
+                        </td>
+                        <td>{formatDate(invoice.invoiceDate)}</td>
+                        <td>
+                          <span className={getInvoiceStatusClassName(invoice.status as SalesInvoiceStatus)}>
+                            {getDisplayInvoiceStatusLabel(invoice.status as SalesInvoiceStatus)}
+                          </span>
+                        </td>
+                        <td className="numeric-cell">₹{formatCurrency(invoice.grandTotal)}</td>
+                        <td className="numeric-cell">₹{formatCurrency(invoice.amountPaid)}</td>
+                        <td className="numeric-cell due-cell">₹{formatCurrency(invoice.balanceDue)}</td>
+                        <td className="actions-cell">
+                          <div className="invoice-row-actions">
+                            {canReceivePayments && canReceivePaymentForInvoice(invoice) ? (
+                              <button className="invoice-row-action" onClick={() => openPaymentForm(invoice)} type="button">Receive Payment</button>
+                            ) : null}
+                            {canCreateInvoices ? (
+                              <div className="invoice-more-menu">
+                                <button
+                                  aria-expanded={openInvoiceActionsId === invoice.id}
+                                  aria-label={`More actions for invoice ${invoice.invoiceNumber}`}
+                                  className="invoice-more-button"
+                                  onClick={() => setOpenInvoiceActionsId((current) => current === invoice.id ? null : invoice.id)}
+                                  type="button"
+                                >
+                                  ...
+                                </button>
+                                {openInvoiceActionsId === invoice.id ? (
+                                  <div className="invoice-more-menu-panel">
+                                    <Link className="invoice-menu-item" to={`/app/sales-invoices/${invoice.id}`}>View invoice</Link>
+                                    {invoice.status === 0 ? (
+                                      <button className="invoice-menu-item" onClick={() => void handlePostInvoice(invoice)} type="button">Post</button>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : null}
             </div>
-          ) : null}
+            {invoiceResponse && invoiceResponse.totalPages > 1 ? (
+              <div className="customer-invoice-pagination">
+                <span>
+                  Showing {(invoiceResponse.pageNumber - 1) * invoiceResponse.pageSize + 1}-{Math.min(invoiceResponse.pageNumber * invoiceResponse.pageSize, invoiceResponse.totalCount)} of {invoiceResponse.totalCount}
+                </span>
+                <div>
+                  <button disabled={!invoiceResponse.hasPreviousPage} onClick={() => setPageNumber((current) => Math.max(1, current - 1))} type="button">Previous</button>
+                  <span>Page {invoiceResponse.pageNumber} of {invoiceResponse.totalPages}</span>
+                  <button disabled={!invoiceResponse.hasNextPage} onClick={() => setPageNumber((current) => current + 1)} type="button">Next</button>
+                </div>
+              </div>
+            ) : null}
+          </section>
         </>
       ) : null}
 

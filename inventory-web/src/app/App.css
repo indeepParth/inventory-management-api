@@ -302,6 +302,130 @@
   margin-bottom: 24px;
 }
 
+.customer-account-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 20px 0;
+}
+
+.customer-account-identity {
+  min-width: 0;
+}
+
+.customer-account-name {
+  margin: 0;
+  color: #0f172a;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  line-height: 32px;
+}
+
+.customer-account-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 5px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.customer-account-meta > * + *::before {
+  content: "·";
+  margin: 0 8px;
+  color: #94a3b8;
+}
+
+.customer-status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.customer-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.customer-status-dot.active {
+  background: #16a34a;
+}
+
+.customer-status-dot.inactive {
+  background: #94a3b8;
+}
+
+.customer-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.customer-account-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border-radius: 7px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 0 14px;
+  text-decoration: none;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+  white-space: nowrap;
+}
+
+.customer-account-action.ghost {
+  border: 1px solid transparent;
+  background: transparent;
+  color: #475569;
+}
+
+.customer-account-action.ghost:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.customer-account-action.secondary {
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #334155;
+}
+
+.customer-account-action.secondary:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.customer-account-action.primary {
+  border: 0;
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.customer-account-action.primary:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.customer-account-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -803,6 +927,16 @@
 
   .page-header {
     display: grid;
+  }
+
+  .customer-account-header {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .customer-account-actions {
+    justify-content: flex-start;
+    width: 100%;
   }
 
   .content-panel {

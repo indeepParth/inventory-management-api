@@ -73,6 +73,13 @@ function canReceivePaymentForInvoice(invoice: SalesInvoice): boolean {
   return (invoice.status === 1 || invoice.status === 2) && invoice.balanceDue > 0
 }
 
+function getCustomerMetaItems(customer: Customer): string[] {
+  return [
+    customer.contactPerson,
+    customer.phone || customer.email,
+  ].filter((value): value is string => Boolean(value))
+}
+
 export function CustomerDetailPage() {
   const { id } = useParams()
   const { currentUser } = useAuth()
@@ -296,23 +303,34 @@ export function CustomerDetailPage() {
   const outstandingInvoiceCount = invoices.filter((invoice) =>
     invoice.status === 1 || invoice.status === 2,
   ).length
+  const customerMetaItems = customer ? getCustomerMetaItems(customer) : []
   return (
     <section className="content-panel wide-panel" aria-labelledby="customer-detail-title">
-      <div className="page-header">
-        <div>
-          <p className="page-kicker">Customer account</p>
-          <h1 id="customer-detail-title" className="page-title">{customer?.name ?? 'Customer detail'}</h1>
+      <div className="customer-account-header">
+        <div className="customer-account-identity">
+          <h1 id="customer-detail-title" className="customer-account-name">{customer?.name ?? 'Customer detail'}</h1>
+          {customer ? (
+            <div className="customer-account-meta">
+              {customerMetaItems.map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+              <span className="customer-status-inline">
+                <span aria-hidden="true" className={customer.isActive ? 'customer-status-dot active' : 'customer-status-dot inactive'} />
+                {customer.isActive ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          ) : null}
         </div>
         {customer || canCreateInvoices ? (
-          <div className="form-actions">
+          <div className="customer-account-actions">
             {customer ? (
-              <button className="primary-button" onClick={openCustomerDetails} type="button">Details</button>
+              <button className="customer-account-action ghost" onClick={openCustomerDetails} type="button">Details</button>
             ) : null}
             {canViewLedger && customer ? (
-              <Link className="primary-button" to={`/app/customers/${customer.id}/ledger`}>View ledger</Link>
+              <Link className="customer-account-action secondary" to={`/app/customers/${customer.id}/ledger`}>Ledger</Link>
             ) : null}
             {canCreateInvoices ? (
-              <button className="primary-button" disabled={products.length === 0} onClick={openNewDirectInvoiceForm} type="button">New direct invoice</button>
+              <button className="customer-account-action primary" disabled={products.length === 0} onClick={openNewDirectInvoiceForm} type="button">+ New Invoice</button>
             ) : null}
           </div>
         ) : null}

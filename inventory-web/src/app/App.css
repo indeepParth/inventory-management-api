@@ -1369,6 +1369,75 @@
   font-weight: 600;
 }
 
+.invoice-detail-summary {
+  display: grid;
+  position: relative;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  padding: var(--space-5);
+}
+
+.invoice-detail-status {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-5);
+}
+
+.invoice-detail-summary-grid {
+  display: grid;
+  gap: var(--space-5) var(--space-8);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding-right: 76px;
+}
+
+.invoice-detail-section {
+  min-width: 0;
+}
+
+.invoice-detail-section h2 {
+  margin: 0 0 var(--space-3);
+  color: var(--color-text);
+  font-size: var(--font-subsection-title);
+  font-weight: 600;
+  line-height: var(--line-subsection-title);
+}
+
+.invoice-detail-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.invoice-detail-row {
+  display: grid;
+  align-items: start;
+  gap: var(--space-3);
+  grid-template-columns: minmax(120px, 180px) minmax(0, 1fr);
+}
+
+.invoice-detail-row dt {
+  color: var(--color-text-muted);
+  font-size: var(--font-label);
+  line-height: var(--line-label);
+}
+
+.invoice-detail-row dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--font-body);
+  font-weight: 600;
+  line-height: var(--line-body);
+  overflow-wrap: anywhere;
+}
+
+.invoice-detail-row.emphasized dd {
+  font-size: 15px;
+}
+
 .line-items {
   display: grid;
   gap: 14px;
@@ -1471,9 +1540,14 @@
 
   .form-grid,
   .detail-grid,
+  .invoice-detail-summary-grid,
   .line-item-row,
   .dashboard-table-grid {
     grid-template-columns: 1fr;
+  }
+
+  .invoice-detail-row {
+    grid-template-columns: minmax(120px, 42%) minmax(0, 1fr);
   }
 }
 
@@ -1488,5 +1562,19 @@
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .invoice-detail-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+
+  .invoice-detail-status {
+    position: static;
+    justify-self: start;
+  }
+
+  .invoice-detail-summary-grid {
+    padding-right: 0;
   }
 }

@@ -42,6 +42,33 @@ function getPaymentState(payment: SalesInvoicePayment): string {
   return 'Posted'
 }
 
+type DetailItem = {
+  label: string
+  value: string
+  isEmphasized?: boolean
+}
+
+type DetailSectionProps = {
+  title: string
+  items: DetailItem[]
+}
+
+function DetailSection({ title, items }: DetailSectionProps) {
+  return (
+    <section className="invoice-detail-section" aria-labelledby={`invoice-${title.toLowerCase().replace(/\W+/g, '-')}`}>
+      <h2 id={`invoice-${title.toLowerCase().replace(/\W+/g, '-')}`}>{title}</h2>
+      <dl className="invoice-detail-list">
+        {items.map((item) => (
+          <div className={item.isEmphasized ? 'invoice-detail-row emphasized' : 'invoice-detail-row'} key={item.label}>
+            <dt>{item.label}</dt>
+            <dd>{item.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
+
 export function SalesInvoiceDetailPage() {
   const { id } = useParams()
   const invoiceId = Number(id)
@@ -88,28 +115,56 @@ export function SalesInvoiceDetailPage() {
 
       {invoice ? (
         <>
-          <div className="detail-grid">
-            <span>Status</span><strong>{getSalesInvoiceStatusLabel(invoice.status)}</strong>
-            <span>Invoice date</span><strong>{formatDate(invoice.invoiceDate)}</strong>
-            <span>Customer</span><strong>{invoice.customerName}</strong>
-            <span>Source type</span><strong>{getInvoiceSourceType(invoice)}</strong>
-            <span>Driver</span><strong>{invoice.driverName || '-'}</strong>
-            <span>Delivery address</span><strong>{invoice.deliveryAddress || '-'}</strong>
-            <span>Driver charge status</span><strong>{invoice.otherCharges > 0 ? invoice.isDeliveryChargePaid ? 'Paid' : 'Unpaid' : '-'}</strong>
-            <span>Created by</span><strong>{invoice.createdBy || '-'}</strong>
-            <span>Subtotal</span><strong>{formatCurrency(invoice.subtotal)}</strong>
-            <span>Discount</span><strong>{formatCurrency(invoice.discount)}</strong>
-            <span>Tax amount</span><strong>{formatCurrency(invoice.taxAmount)}</strong>
-            <span>{getOtherChargesLabel(invoice)}</span><strong>{formatCurrency(invoice.otherCharges)}</strong>
-            <span>Laber charge</span><strong>{formatCurrency(invoice.laborCharge)}</strong>
-            <span>Grand total</span><strong>{formatCurrency(invoice.grandTotal)}</strong>
-            <span>Amount paid</span><strong>{formatCurrency(invoice.amountPaid)}</strong>
-            <span>Balance due</span><strong>{formatCurrency(invoice.balanceDue)}</strong>
-            <span>Notes</span><strong>{invoice.notes || '-'}</strong>
-            <span>Created</span><strong>{formatOptionalDate(invoice.createdAtUtc)}</strong>
-            <span>Updated</span><strong>{formatOptionalDate(invoice.updatedAtUtc)}</strong>
-            <span>Posted</span><strong>{formatOptionalDate(invoice.postedAtUtc)}</strong>
-            <span>Cancelled</span><strong>{formatOptionalDate(invoice.cancelledAtUtc)}</strong>
+          <div className="invoice-detail-summary">
+            <span className="status-pill success invoice-detail-status">{getSalesInvoiceStatusLabel(invoice.status)}</span>
+
+            <div className="invoice-detail-summary-grid">
+              <DetailSection
+                title="Customer & Source"
+                items={[
+                  { label: 'Customer', value: invoice.customerName },
+                  { label: 'Invoice date', value: formatDate(invoice.invoiceDate) },
+                  { label: 'Source type', value: getInvoiceSourceType(invoice) },
+                ]}
+              />
+              <DetailSection
+                title="Delivery / Driver"
+                items={[
+                  { label: 'Driver', value: invoice.driverName || '-' },
+                  { label: 'Delivery address', value: invoice.deliveryAddress || '-' },
+                  {
+                    label: 'Driver charge status',
+                    value: invoice.otherCharges > 0
+                      ? invoice.isDeliveryChargePaid ? 'Paid' : 'Unpaid'
+                      : '-',
+                  },
+                ]}
+              />
+              <DetailSection
+                title="Timeline / Notes"
+                items={[
+                  { label: 'Created', value: formatOptionalDate(invoice.createdAtUtc) },
+                  { label: 'Updated', value: formatOptionalDate(invoice.updatedAtUtc) },
+                  { label: 'Posted', value: formatOptionalDate(invoice.postedAtUtc) },
+                  { label: 'Cancelled', value: formatOptionalDate(invoice.cancelledAtUtc) },
+                  { label: 'Created by', value: invoice.createdBy || '-' },
+                  { label: 'Notes', value: invoice.notes || '-' },
+                ]}
+              />
+              <DetailSection
+                title="Amount Summary"
+                items={[
+                  { label: 'Subtotal', value: formatCurrency(invoice.subtotal) },
+                  { label: 'Discount', value: formatCurrency(invoice.discount) },
+                  { label: 'Tax amount', value: formatCurrency(invoice.taxAmount) },
+                  { label: getOtherChargesLabel(invoice), value: formatCurrency(invoice.otherCharges) },
+                  { label: 'Labor charge', value: formatCurrency(invoice.laborCharge) },
+                  { label: 'Grand total', value: formatCurrency(invoice.grandTotal), isEmphasized: true },
+                  { label: 'Amount paid', value: formatCurrency(invoice.amountPaid) },
+                  { label: 'Balance due', value: formatCurrency(invoice.balanceDue), isEmphasized: true },
+                ]}
+              />
+            </div>
           </div>
 
           <h2>Items</h2>

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using InventoryManagement.Infrastructure.Persistence;
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -58,21 +59,63 @@ public class DeliveryChallanItemUnitMigrationTests
 
             await migrator.MigrateAsync("20260731072004_AddDeliveryChallanItemUnits");
 
-            var item = await db.DeliveryChallanItems
-                .AsNoTracking()
-                .Include(x => x.Unit)
-                .SingleAsync();
-            var product = await db.Products.AsNoTracking().SingleAsync();
+            var item = await ReadSingleItemAsync(db);
+            var productQuantity = await ReadSingleProductQuantityAsync(db);
 
             item.EnteredQuantity.Should().Be(2.750m);
             item.ConvertedBaseQuantity.Should().Be(2.750m);
             item.UnitId.Should().Be(3);
-            item.Unit.Name.Should().Be("Bag");
-            product.Quantity.Should().Be(9.500m);
+            item.UnitName.Should().Be("Bag");
+            productQuantity.Should().Be(9.500m);
         }
         finally
         {
             File.Delete(databasePath);
         }
     }
+
+    private static async Task<ItemSnapshot> ReadSingleItemAsync(
+        ApplicationDbContext db)
+    {
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT i."EnteredQuantity", i."ConvertedBaseQuantity", i."UnitId", u."Name"
+            FROM "DeliveryChallanItems" i
+            INNER JOIN "Units" u ON u."Id" = i."UnitId"
+            LIMIT 1;
+            """;
+        await using var reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        return new ItemSnapshot(
+            reader.GetDecimal(0),
+            reader.GetDecimal(1),
+            reader.GetInt32(2),
+            reader.GetString(3));
+    }
+
+    private static async Task<decimal> ReadSingleProductQuantityAsync(
+        ApplicationDbContext db)
+    {
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+        await using var command = connection.CreateCommand();
+        command.CommandText = """SELECT "Quantity" FROM "Products" LIMIT 1;""";
+        var value = await command.ExecuteScalarAsync();
+        return Convert.ToDecimal(value);
+    }
+
+    private sealed record ItemSnapshot(
+        decimal EnteredQuantity,
+        decimal ConvertedBaseQuantity,
+        int UnitId,
+        string UnitName);
 }

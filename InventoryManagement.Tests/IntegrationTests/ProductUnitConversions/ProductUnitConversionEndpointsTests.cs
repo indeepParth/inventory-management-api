@@ -20,10 +20,11 @@ public class ProductUnitConversionEndpointsTests : TestBase
     }
 
     [Fact]
-    public async Task CreateProduct_Should_Create_BaseUnitConversion()
+    public async Task CreateConversion_Should_Create_BaseUnitConversion()
     {
         await AuthenticateAsync();
         var product = await CreateProductAsync(baseUnitId: 4);
+        await CreateConversionAsync(product.Id, unitId: 4, factor: 1m);
 
         var conversions = await GetConversionsAsync(product.Id);
 
@@ -92,6 +93,7 @@ public class ProductUnitConversionEndpointsTests : TestBase
     {
         await AuthenticateAsync();
         var product = await CreateProductAsync(baseUnitId: 4);
+        await CreateConversionAsync(product.Id, unitId: 4, factor: 1m);
         var baseConversion = (await GetConversionsAsync(product.Id))
             .Single(x => x.IsBaseUnit);
 

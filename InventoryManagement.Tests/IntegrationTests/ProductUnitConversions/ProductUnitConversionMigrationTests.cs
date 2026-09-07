@@ -1,5 +1,6 @@
 using FluentAssertions;
 using InventoryManagement.Infrastructure.Persistence;
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
@@ -37,12 +38,10 @@ public class ProductUnitConversionMigrationTests
 
             await migrator.MigrateAsync("20260731070352_AddProductUnitConversions");
 
-            var product = await db.Products.AsNoTracking().SingleAsync();
+            var product = await ReadSingleProductAsync(db);
             product.Quantity.Should().Be(7.500m);
 
-            var conversion = await db.ProductUnitConversions
-                .AsNoTracking()
-                .SingleAsync();
+            var conversion = await ReadSingleConversionAsync(db);
             conversion.ProductId.Should().Be(product.Id);
             conversion.UnitId.Should().Be(1);
             conversion.FactorToBaseUnit.Should().Be(1m);
@@ -53,4 +52,53 @@ public class ProductUnitConversionMigrationTests
             File.Delete(databasePath);
         }
     }
+
+    private static async Task<ProductSnapshot> ReadSingleProductAsync(
+        ApplicationDbContext db)
+    {
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+        await using var command = connection.CreateCommand();
+        command.CommandText = """SELECT "Id", "Quantity" FROM "Products" LIMIT 1;""";
+        await using var reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        return new ProductSnapshot(
+            reader.GetInt32(0),
+            reader.GetDecimal(1));
+    }
+
+    private static async Task<ConversionSnapshot> ReadSingleConversionAsync(
+        ApplicationDbContext db)
+    {
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+        await using var command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT "ProductId", "UnitId", "FactorToBaseUnit", "IsActive"
+            FROM "ProductUnitConversions"
+            LIMIT 1;
+            """;
+        await using var reader = await command.ExecuteReaderAsync();
+        await reader.ReadAsync();
+        return new ConversionSnapshot(
+            reader.GetInt32(0),
+            reader.GetInt32(1),
+            reader.GetDecimal(2),
+            reader.GetBoolean(3));
+    }
+
+    private sealed record ProductSnapshot(int Id, decimal Quantity);
+
+    private sealed record ConversionSnapshot(
+        int ProductId,
+        int UnitId,
+        decimal FactorToBaseUnit,
+        bool IsActive);
 }

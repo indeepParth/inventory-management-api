@@ -208,6 +208,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
                 Name = $"Correction product {suffix}",
                 SKU = $"COR-{suffix}",
                 Quantity = quantity,
+                BaseUnitId = 1,
                 AverageCost = averageCost,
                 Category = new Category
                 {

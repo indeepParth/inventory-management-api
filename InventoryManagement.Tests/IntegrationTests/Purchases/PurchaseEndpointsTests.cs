@@ -106,7 +106,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
             var matchingNumber = $"MATCH-{Guid.NewGuid():N}";
             var matchingBill = $"FILTER-{Guid.NewGuid():N}";
 
-            await CreatePurchaseAsync(
+            var matchingPurchase = await CreatePurchaseAsync(
                 seed,
                 matchingNumber,
                 matchingBill,
@@ -121,7 +121,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
                 $"/api/purchases?pageNumber=1&pageSize=1" +
                 $"&supplierId={seed.SupplierId}&status=Draft" +
                 "&dateFrom=2026-07-01&dateTo=2026-07-31" +
-                $"&purchaseNumber={matchingNumber[..12]}" +
+                $"&purchaseNumber={matchingPurchase.PurchaseNumber}" +
                 $"&supplierBillNumber={matchingBill[..12]}");
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -129,7 +129,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
                 .ReadFromJsonAsync<PagedResponse<PurchaseResponse>>();
             page.Should().NotBeNull();
             page!.Items.Should().ContainSingle(x =>
-                x.PurchaseNumber == matchingNumber &&
+                x.PurchaseNumber == matchingPurchase.PurchaseNumber &&
                 x.SupplierBillNumber == matchingBill);
             page.PageNumber.Should().Be(1);
             page.PageSize.Should().Be(1);
@@ -526,6 +526,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
                 Name = $"Purchase product {suffix}",
                 SKU = $"PUR-{suffix}",
                 Quantity = 12.5m,
+                BaseUnitId = 1,
                 AverageCost = 32,
                 Category = new Category
                 {
@@ -587,6 +588,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
                 Name = $"Additional purchase product {suffix}",
                 SKU = $"ADD-{suffix}",
                 Quantity = quantity,
+                BaseUnitId = 1,
                 AverageCost = averageCost,
                 Category = new Category
                 {

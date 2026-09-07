@@ -33,6 +33,7 @@ public class PurchasePersistenceTests
         {
             Name = "Purchase test product",
             SKU = "PUR-TEST-1",
+            BaseUnitId = 1,
             Category = category
         };
         db.AddRange(supplier, product);

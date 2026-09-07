@@ -259,6 +259,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SupplierReturns
                 Name = $"Supplier return product {suffix}",
                 SKU = $"SRET-{suffix}",
                 Quantity = 10,
+                BaseUnitId = 1,
                 AverageCost = 20,
                 Category = new Category
                 {

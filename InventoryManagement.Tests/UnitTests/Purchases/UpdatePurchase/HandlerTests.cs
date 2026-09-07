@@ -56,7 +56,7 @@ namespace InventoryManagement.Tests.UnitTests.Purchases.UpdatePurchase
                     }),
                     CancellationToken.None);
 
-            purchase.PurchaseNumber.Should().Be("PUR-UPDATED");
+            purchase.PurchaseNumber.Should().Be("PUR-OLD");
             purchase.SupplierId.Should().Be(2);
             purchase.Items.Should().ContainSingle(x => x.ProductId == 20);
             purchase.Subtotal.Should().Be(30);

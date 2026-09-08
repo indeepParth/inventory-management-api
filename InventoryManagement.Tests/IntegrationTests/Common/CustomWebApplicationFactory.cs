@@ -11,9 +11,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Common
 {
     public class CustomWebApplicationFactory : WebApplicationFactory<Program>
     {
-        // private const string DatabaseName = "integration.db";
-        private readonly string _databaseName =
-    $"integration-{Guid.NewGuid()}.db";
+        private readonly PostgresTestDatabase _database = new();
 
         public CustomWebApplicationFactory()
         {
@@ -48,7 +46,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Common
                 // Register test database
                 services.AddDbContext<ApplicationDbContext>(options =>
                 {
-                    options.UseSqlite($"Data Source={_databaseName}");
+                    options.UseNpgsql(_database.ConnectionString);
                 });
 
                 var serviceProvider = services.BuildServiceProvider();
@@ -57,10 +55,19 @@ namespace InventoryManagement.Tests.IntegrationTests.Common
 
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
-                db.Database.EnsureDeleted();
-
+                _database.CreateAsync().GetAwaiter().GetResult();
                 db.Database.Migrate();
             });
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+
+            if (disposing)
+            {
+                _database.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
         }
     }
 }

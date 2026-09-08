@@ -71,7 +71,8 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
             result!.TotalCount.Should().Be(2);
             result.Items.Should().ContainSingle();
             result.Items[0].QuantityChange.Should().Be(3);
-            result.Items[0].OccurredAtUtc.Should().Be(now.AddHours(-1));
+            result.Items[0].OccurredAtUtc.Should()
+                .BeCloseTo(now.AddHours(-1), TimeSpan.FromMilliseconds(1));
         }
 
         private static StockMovement CreateMovement(

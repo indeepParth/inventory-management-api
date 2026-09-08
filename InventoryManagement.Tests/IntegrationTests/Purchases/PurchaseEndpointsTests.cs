@@ -69,7 +69,12 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
             var getResponse = await Client.GetAsync($"/api/purchases/{created.Id}");
             getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             var fetched = await getResponse.Content.ReadFromJsonAsync<PurchaseResponse>();
-            fetched.Should().BeEquivalentTo(created);
+            fetched.Should().BeEquivalentTo(
+                created,
+                options => options
+                    .Using<DateTime>(ctx => ctx.Subject.Should()
+                        .BeCloseTo(ctx.Expectation, TimeSpan.FromMilliseconds(1)))
+                    .WhenTypeIs<DateTime>());
 
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -180,7 +185,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
             updated.GrandTotal.Should().Be(61);
             updated.Items.Should().ContainSingle();
             updated.Items[0].Quantity.Should().Be(3);
-            updated.CreatedAtUtc.Should().Be(created.CreatedAtUtc);
+            updated.CreatedAtUtc.Should()
+                .BeCloseTo(created.CreatedAtUtc, TimeSpan.FromMilliseconds(1));
             updated.CreatedBy.Should().Be(created.CreatedBy);
 
             using var scope = _factory.Services.CreateScope();
@@ -316,11 +322,19 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 await db.Database.ExecuteSqlRawAsync(
                     """
-                    CREATE TRIGGER FailPurchaseMovement
-                    BEFORE INSERT ON StockMovements
+                    CREATE OR REPLACE FUNCTION fail_purchase_movement()
+                    RETURNS trigger
+                    LANGUAGE plpgsql
+                    AS $$
                     BEGIN
-                        SELECT RAISE(ABORT, 'forced posting failure');
+                        RAISE EXCEPTION 'forced posting failure';
                     END;
+                    $$;
+
+                    CREATE TRIGGER "FailPurchaseMovement"
+                    BEFORE INSERT ON "StockMovements"
+                    FOR EACH ROW
+                    EXECUTE FUNCTION fail_purchase_movement();
                     """);
             }
 
@@ -355,7 +369,10 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
                 var cleanupDb = cleanupScope.ServiceProvider
                     .GetRequiredService<ApplicationDbContext>();
                 await cleanupDb.Database.ExecuteSqlRawAsync(
-                    "DROP TRIGGER IF EXISTS FailPurchaseMovement;");
+                    """
+                    DROP TRIGGER IF EXISTS "FailPurchaseMovement" ON "StockMovements";
+                    DROP FUNCTION IF EXISTS fail_purchase_movement();
+                    """);
             }
         }
 
@@ -388,7 +405,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
             var secondResult = await secondResponse.Content
                 .ReadFromJsonAsync<PurchaseResponse>();
             secondResult.Should().NotBeNull();
-            secondResult!.CancelledAtUtc.Should().Be(firstResult.CancelledAtUtc);
+            secondResult!.CancelledAtUtc.Should()
+                .BeCloseTo(firstResult.CancelledAtUtc!.Value, TimeSpan.FromMilliseconds(1));
 
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

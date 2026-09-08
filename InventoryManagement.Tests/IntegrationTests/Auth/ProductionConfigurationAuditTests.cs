@@ -19,7 +19,10 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             compose.Should().Contain("Swagger__Enabled: \"false\"");
             compose.Should().Contain("/health/ready");
             compose.Should().Contain("restart: unless-stopped");
-            compose.Should().Contain("inventory_data:/app/Data");
+            compose.Should().Contain("postgres:");
+            compose.Should().Contain("image: postgres:18");
+            compose.Should().Contain("inventory_postgres_data:/var/lib/postgresql/data");
+            compose.Should().Contain("ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;");
             compose.Should().Contain("inventory_logs:/app/Logs");
 
             var apiService = GetComposeServiceBlock(

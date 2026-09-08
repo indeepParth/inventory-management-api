@@ -63,6 +63,8 @@ namespace InventoryManagement.Infrastructure.Persistence
         {
             base.OnModelCreating(builder);
 
+            builder.HasPostgresExtension("citext");
+
             builder.Entity<RefreshToken>(entity =>
             {
                 entity.HasIndex(x => x.Token)
@@ -94,7 +96,7 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .IsRequired();
                 entity.Property(x => x.Address).HasMaxLength(500);
                 entity.Property(x => x.GstNumber)
-                      .UseCollation("NOCASE")
+                      .HasColumnType("citext")
                       .HasMaxLength(15);
                 entity.Property(x => x.Email).HasMaxLength(254);
                 entity.Property(x => x.Phone).HasMaxLength(30);
@@ -122,7 +124,7 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .IsUnique();
 
                 entity.Property(x => x.Name)
-                      .UseCollation("NOCASE")
+                      .HasColumnType("citext")
                       .HasMaxLength(100)
                       .IsRequired();
 
@@ -212,11 +214,11 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .IsUnique();
 
                 entity.Property(x => x.Name)
-                      .UseCollation("NOCASE")
+                      .HasColumnType("citext")
                       .IsRequired();
 
                 entity.Property(x => x.GstNumber)
-                      .UseCollation("NOCASE");
+                      .HasColumnType("citext");
             });
 
             builder.Entity<Customer>(entity =>
@@ -228,7 +230,7 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .IsUnique();
 
                 entity.Property(x => x.Name)
-                      .UseCollation("NOCASE")
+                      .HasColumnType("citext")
                       .HasMaxLength(150)
                       .IsRequired();
 
@@ -238,7 +240,7 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.BillingAddress).HasMaxLength(500);
                 entity.Property(x => x.DeliveryAddress).HasMaxLength(500);
                 entity.Property(x => x.GstNumber)
-                      .UseCollation("NOCASE")
+                      .HasColumnType("citext")
                       .HasMaxLength(15);
                 entity.Property(x => x.CreditLimit).HasPrecision(18, 2);
                 entity.Property(x => x.BalanceDue).HasPrecision(18, 2);
@@ -250,7 +252,7 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .IsUnique();
 
                 entity.Property(x => x.Name)
-                      .UseCollation("NOCASE")
+                      .HasColumnType("citext")
                       .HasMaxLength(150)
                       .IsRequired();
 
@@ -343,6 +345,8 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .IsUnique();
 
                 entity.Property(x => x.PurchaseNumber).IsRequired();
+                entity.Property(x => x.BillDate)
+                      .HasColumnType("timestamp without time zone");
                 entity.Property(x => x.Status).IsRequired();
                 entity.Property(x => x.Subtotal).HasPrecision(18, 2);
                 entity.Property(x => x.Discount).HasPrecision(18, 2);
@@ -385,6 +389,8 @@ namespace InventoryManagement.Infrastructure.Persistence
             {
                 entity.HasIndex(x => x.ChallanNumber).IsUnique();
                 entity.Property(x => x.ChallanNumber).HasMaxLength(50).IsRequired();
+                entity.Property(x => x.ChallanDate)
+                      .HasColumnType("timestamp without time zone");
                 entity.Property(x => x.Status).IsRequired();
                 entity.Property(x => x.VehicleNumber).HasMaxLength(50);
                 entity.Property(x => x.DriverName).HasMaxLength(150);
@@ -421,6 +427,8 @@ namespace InventoryManagement.Infrastructure.Persistence
             {
                 entity.HasIndex(x => x.InvoiceNumber).IsUnique();
                 entity.Property(x => x.InvoiceNumber).HasMaxLength(50).IsRequired();
+                entity.Property(x => x.InvoiceDate)
+                      .HasColumnType("timestamp without time zone");
                 entity.Property(x => x.Status).IsRequired();
                 entity.Property(x => x.Subtotal).HasPrecision(18, 2);
                 entity.Property(x => x.Discount).HasPrecision(18, 2);
@@ -447,7 +455,7 @@ namespace InventoryManagement.Infrastructure.Persistence
                     .IsUnique()
                     .HasFilter(
                         "\"DeliveryChallanItemId\" IS NOT NULL AND " +
-                        "\"IsChallanAllocationActive\" = 1");
+                        "\"IsChallanAllocationActive\" = TRUE");
                 entity.Property(x => x.Quantity).HasPrecision(18, 3);
                 entity.Property(x => x.SellingUnitPrice).HasPrecision(18, 2);
                 entity.Property(x => x.TaxRate).HasPrecision(9, 4);
@@ -471,6 +479,8 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.HasIndex(x => x.ReturnNumber).IsUnique();
                 entity.HasIndex(x => new { x.SalesInvoiceId, x.ReturnDate });
                 entity.Property(x => x.ReturnNumber).HasMaxLength(50).IsRequired();
+                entity.Property(x => x.ReturnDate)
+                      .HasColumnType("timestamp without time zone");
                 entity.Property(x => x.Status).IsRequired();
                 entity.Property(x => x.Subtotal).HasPrecision(18, 2);
                 entity.Property(x => x.TaxAmount).HasPrecision(18, 2);
@@ -509,6 +519,8 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.HasIndex(x => x.ReturnNumber).IsUnique();
                 entity.HasIndex(x => new { x.PurchaseId, x.ReturnDate });
                 entity.Property(x => x.ReturnNumber).HasMaxLength(50).IsRequired();
+                entity.Property(x => x.ReturnDate)
+                      .HasColumnType("timestamp without time zone");
                 entity.Property(x => x.Status).IsRequired();
                 entity.Property(x => x.Subtotal).HasPrecision(18, 2);
                 entity.Property(x => x.TaxAmount).HasPrecision(18, 2);
@@ -550,6 +562,8 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.HasIndex(x => x.PurchaseId);
                 entity.HasIndex(x => x.ReversesPaymentId).IsUnique();
                 entity.Property(x => x.ReceiptNumber).HasMaxLength(50).IsRequired();
+                entity.Property(x => x.PaymentDate)
+                      .HasColumnType("timestamp without time zone");
                 entity.Property(x => x.Amount).HasPrecision(18, 2);
                 entity.Property(x => x.Method).IsRequired();
                 entity.Property(x => x.ExternalReference).HasMaxLength(150);

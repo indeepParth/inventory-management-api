@@ -73,8 +73,8 @@ Deploy the generated `dist/` directory with any static web host. The backend API
 base URL remains configurable through `VITE_API_BASE_URL`; no production URL is
 hardcoded in the source.
 
-This frontend is built separately from the backend. Backend Docker configuration
-is intentionally unchanged.
+This frontend is built separately from the backend. The repository Docker
+Compose files run the frontend, API, and PostgreSQL as separate services.
 
 ## Docker static hosting
 

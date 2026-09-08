@@ -48,7 +48,12 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
 
             getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             var fetched = await getResponse.Content.ReadFromJsonAsync<CustomerResponse>();
-            fetched.Should().BeEquivalentTo(created);
+            fetched.Should().BeEquivalentTo(
+                created,
+                options => options
+                    .Using<DateTime>(ctx => ctx.Subject.Should()
+                        .BeCloseTo(ctx.Expectation, TimeSpan.FromMilliseconds(1)))
+                    .WhenTypeIs<DateTime>());
         }
 
         [Fact]
@@ -147,7 +152,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
             updated.Should().NotBeNull();
             updated!.Name.Should().Be(update.Name);
             updated.IsActive.Should().BeFalse();
-            updated.CreatedAtUtc.Should().Be(created.CreatedAtUtc);
+            updated.CreatedAtUtc.Should()
+                .BeCloseTo(created.CreatedAtUtc, TimeSpan.FromMilliseconds(1));
             updated.UpdatedAtUtc.Should().BeAfter(created.UpdatedAtUtc);
         }
 
@@ -188,7 +194,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
             var secondResult = await secondResponse.Content.ReadFromJsonAsync<CustomerResponse>();
             secondResult.Should().NotBeNull();
             secondResult!.IsActive.Should().BeFalse();
-            secondResult.UpdatedAtUtc.Should().Be(firstResult.UpdatedAtUtc);
+            secondResult.UpdatedAtUtc.Should()
+                .BeCloseTo(firstResult.UpdatedAtUtc, TimeSpan.FromMilliseconds(1));
 
             var getResponse = await Client.GetAsync($"/api/customers/{customer.Id}");
             getResponse.StatusCode.Should().Be(HttpStatusCode.OK);

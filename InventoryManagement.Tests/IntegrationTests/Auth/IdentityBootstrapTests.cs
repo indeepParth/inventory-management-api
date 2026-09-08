@@ -3,8 +3,8 @@ using InventoryManagement.Application.Authorization;
 using InventoryManagement.Application.Common.Options;
 using InventoryManagement.Infrastructure.Identity;
 using InventoryManagement.Infrastructure.Persistence;
+using InventoryManagement.Tests.IntegrationTests.Common;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
@@ -135,8 +135,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             AdminBootstrapOptions adminOptions,
             string environmentName = "Production")
         {
-            var connection = new SqliteConnection("Data Source=:memory:");
-            await connection.OpenAsync();
+            var database = new PostgresTestDatabase();
+            await database.CreateAsync();
 
             var services = new ServiceCollection();
 
@@ -144,7 +144,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             services.AddDataProtection();
             services.AddDbContext<ApplicationDbContext>(options =>
             {
-                options.UseSqlite(connection);
+                options.UseNpgsql(database.ConnectionString);
             });
 
             services.AddSingleton<IHostEnvironment>(
@@ -173,10 +173,10 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             var dbContext = scope.ServiceProvider
                 .GetRequiredService<ApplicationDbContext>();
 
-            await dbContext.Database.EnsureCreatedAsync();
+            await dbContext.Database.MigrateAsync();
 
             return new BootstrapTestContext(
-                connection,
+                database,
                 scope,
                 dbContext,
                 scope.ServiceProvider.GetRequiredService<IdentityBootstrapService>(),
@@ -210,18 +210,18 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
 
         private sealed class BootstrapTestContext : IAsyncDisposable
         {
-            private readonly SqliteConnection _connection;
+            private readonly PostgresTestDatabase _database;
             private readonly IServiceScope _scope;
 
             public BootstrapTestContext(
-                SqliteConnection connection,
+                PostgresTestDatabase database,
                 IServiceScope scope,
                 ApplicationDbContext dbContext,
                 IdentityBootstrapService bootstrapService,
                 UserManager<ApplicationUser> userManager,
                 RoleManager<IdentityRole> roleManager)
             {
-                _connection = connection;
+                _database = database;
                 _scope = scope;
                 DbContext = dbContext;
                 BootstrapService = bootstrapService;
@@ -237,7 +237,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             public async ValueTask DisposeAsync()
             {
                 _scope.Dispose();
-                await _connection.DisposeAsync();
+                await _database.DisposeAsync();
             }
         }
     }

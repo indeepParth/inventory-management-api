@@ -101,7 +101,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         {
             return new Dictionary<string, string?>
             {
-                ["ConnectionStrings:DefaultConnection"] = "Data Source=Data/inventory.db",
+                ["ConnectionStrings:DefaultConnection"] = "Host=localhost;Port=5432;Database=inventorydatabase_test;Username=postgres;Password=admin123",
                 ["Jwt:Issuer"] = "InventoryManagement",
                 ["Jwt:Audience"] = "InventoryManagementUsers",
                 ["Jwt:Key"] = new string('P', JwtOptions.MinimumSigningKeyBytes),

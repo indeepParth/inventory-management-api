@@ -93,7 +93,12 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             getResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             var fetched = await getResponse.Content
                 .ReadFromJsonAsync<SalesInvoiceResponse>();
-            fetched.Should().BeEquivalentTo(created);
+            fetched.Should().BeEquivalentTo(
+                created,
+                options => options
+                    .Using<DateTime>(ctx => ctx.Subject.Should()
+                        .BeCloseTo(ctx.Expectation, TimeSpan.FromMilliseconds(1)))
+                    .WhenTypeIs<DateTime>());
 
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -308,7 +313,8 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             updated.Notes.Should().Be("Edited draft");
             updated.Items.Should().ContainSingle();
             updated.Items[0].CostAtSale.Should().BeNull();
-            updated.CreatedAtUtc.Should().Be(created.CreatedAtUtc);
+            updated.CreatedAtUtc.Should()
+                .BeCloseTo(created.CreatedAtUtc, TimeSpan.FromMilliseconds(1));
             updated.CreatedBy.Should().Be(created.CreatedBy);
             updated.UpdatedAtUtc.Should().BeAfter(created.UpdatedAtUtc);
 
@@ -541,11 +547,19 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                     .GetRequiredService<ApplicationDbContext>();
                 await db.Database.ExecuteSqlRawAsync(
                     """
-                    CREATE TRIGGER FailSalesInvoiceMovement
-                    BEFORE INSERT ON StockMovements
+                    CREATE OR REPLACE FUNCTION fail_sales_invoice_movement()
+                    RETURNS trigger
+                    LANGUAGE plpgsql
+                    AS $$
                     BEGIN
-                        SELECT RAISE(ABORT, 'forced sales posting failure');
+                        RAISE EXCEPTION 'forced sales posting failure';
                     END;
+                    $$;
+
+                    CREATE TRIGGER "FailSalesInvoiceMovement"
+                    BEFORE INSERT ON "StockMovements"
+                    FOR EACH ROW
+                    EXECUTE FUNCTION fail_sales_invoice_movement();
                     """);
             }
 
@@ -592,7 +606,10 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 var db = scope.ServiceProvider
                     .GetRequiredService<ApplicationDbContext>();
                 await db.Database.ExecuteSqlRawAsync(
-                    "DROP TRIGGER IF EXISTS FailSalesInvoiceMovement;");
+                    """
+                    DROP TRIGGER IF EXISTS "FailSalesInvoiceMovement" ON "StockMovements";
+                    DROP FUNCTION IF EXISTS fail_sales_invoice_movement();
+                    """);
             }
         }
 

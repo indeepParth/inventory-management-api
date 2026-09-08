@@ -24,8 +24,9 @@ The backend follows Clean Architecture with vertical feature slices:
 - `inventory-web`: React + TypeScript + Vite SPA, organized by pages, feature
   modules, and shared utilities/components.
 
-The database is SQLite through EF Core. Local development uses
-`Data/inventory.db` through `InventoryManagement.API/appsettings.Development.json`.
+The database is PostgreSQL through EF Core/Npgsql. Local development uses
+`inventorydatabase_dev` through
+`InventoryManagement.API/appsettings.Development.json`.
 
 ## Architecture Rules
 
@@ -124,8 +125,8 @@ The database is SQLite through EF Core. Local development uses
   reverse-proxy settings. See `README` and `production.env.example`.
 - Production automatic migrations are disabled by default. Apply migrations as a
   controlled deployment step unless a task explicitly changes that policy.
-- SQLite backup/restore guidance is documented in
-  `docs/sqlite-backup-restore.md`.
+- PostgreSQL backup/restore guidance is documented in
+  `docs/postgresql-backup-restore.md`.
 
 ## Build And Test Commands
 
@@ -182,7 +183,7 @@ sandbox before diagnosing source code.
 
 - `README`: project overview, workflow rules, API route summary, Docker and
   production guidance.
-- `docs/sqlite-backup-restore.md`: database backup and restore process.
+- `docs/postgresql-backup-restore.md`: database backup and restore process.
 - `inventory-web/README.md`: frontend development, build, and Docker hosting.
 - `.github/workflows/dotnet.yml`: CI build/test expectations.
 

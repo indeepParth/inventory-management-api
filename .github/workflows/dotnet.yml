@@ -17,6 +17,21 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: inventory_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d inventory_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
 
       - name: Checkout Repository
@@ -34,4 +49,6 @@ jobs:
         run: dotnet build InventoryManagement.sln --no-restore --configuration Release
 
       - name: Run Tests
+        env:
+          INVENTORY_TEST_POSTGRES_ADMIN_CONNECTION: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
         run: dotnet test InventoryManagement.sln --no-build --configuration Release

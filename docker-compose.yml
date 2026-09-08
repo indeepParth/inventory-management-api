@@ -1,6 +1,24 @@
 version: "3.9"
 
 services:
+  postgres:
+    container_name: inventory-postgres
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-inventorydatabase_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-admin123}
+    ports:
+      - "5433:5432"
+    volumes:
+      - inventory_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   inventory-web:
     container_name: inventory-web
     build:
@@ -28,7 +46,8 @@ services:
 
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__DefaultConnection: Data Source=Data/inventory.db
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=${POSTGRES_DB:-inventorydatabase_dev};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-admin123}
+      Database__ApplyMigrationsOnStartup: "true"
       Jwt__Key: ${Jwt__Key:?Set Jwt__Key before starting the container}
       Cors__AllowedOrigins__0: http://localhost:8081
       Bootstrap__Admin__Enabled: ${Bootstrap__Admin__Enabled:-true}
@@ -38,11 +57,20 @@ services:
       Bootstrap__Admin__Password: ${Bootstrap__Admin__Password:-AdminPassword123}
 
     volumes:
-      - inventory_local_data:/app/Data
       - inventory_local_logs:/app/Logs
 
+    depends_on:
+      postgres:
+        condition: service_healthy
+
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent --show-error http://localhost:8080/health/ready > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
 
 volumes:
-  inventory_local_data:
+  inventory_postgres_data:
   inventory_local_logs:

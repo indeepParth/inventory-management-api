@@ -2,7 +2,7 @@ using FluentAssertions;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
-using Microsoft.Data.Sqlite;
+using InventoryManagement.Tests.IntegrationTests.Common;
 using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.Tests.IntegrationTests.Purchases;
@@ -12,15 +12,12 @@ public class PurchasePersistenceTests
     [Fact]
     public async Task Database_Should_Enforce_Purchase_Uniqueness_And_Restrictive_Relationships()
     {
-        await using var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
+        await using var database = new PostgresTestDatabase();
+        await database.CreateAsync();
 
-        var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseSqlite(connection)
-            .Options;
-
+        var options = database.CreateOptions<ApplicationDbContext>();
         await using var db = new ApplicationDbContext(options);
-        await db.Database.EnsureCreatedAsync();
+        await db.Database.MigrateAsync();
 
         var category = new Category
         {
@@ -80,7 +77,7 @@ public class PurchasePersistenceTests
             Subtotal = 100,
             TaxAmount = 18,
             GrandTotal = 118,
-            CreatedAtUtc = new DateTime(2026, 7, 1),
+            CreatedAtUtc = new DateTime(2026, 7, 1, 0, 0, 0, DateTimeKind.Utc),
             CreatedBy = "test",
             Items =
             {

@@ -33,6 +33,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
         {
             await AuthenticateAsync();
             var now = new DateTime(2026, 6, 30, 8, 0, 0, DateTimeKind.Utc);
+            var baseUnitId = await GetUnitIdAsync("Piece");
             int productId;
 
             using (var scope = _factory.Services.CreateScope())
@@ -40,16 +41,18 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Ledger {Guid.NewGuid():N}",
                     Description = "Ledger test",
                     CreatedAt = now
                 };
                 var product = new Product
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = "Ledger product",
                     SKU = $"LED-{Guid.NewGuid():N}",
                     Category = category,
-                    BaseUnitId = 4
+                    BaseUnitId = baseUnitId
                 };
                 db.Products.Add(product);
                 db.StockMovements.AddRange(
@@ -75,7 +78,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
                 .BeCloseTo(now.AddHours(-1), TimeSpan.FromMilliseconds(1));
         }
 
-        private static StockMovement CreateMovement(
+        private StockMovement CreateMovement(
             Product product,
             StockMovementType movementType,
             DateTime occurredAt,
@@ -83,6 +86,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
         {
             return new StockMovement
             {
+                CompanyId = ActiveCompanyId,
                 Product = product,
                 MovementType = movementType,
                 QuantityChange = quantityChange,

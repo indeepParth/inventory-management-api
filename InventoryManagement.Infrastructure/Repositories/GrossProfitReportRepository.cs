@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -8,10 +9,14 @@ namespace InventoryManagement.Infrastructure.Repositories;
 public class GrossProfitReportRepository : IGrossProfitReportRepository
 {
     private readonly ApplicationDbContext _context;
+    private readonly IActiveCompanyService _activeCompany;
 
-    public GrossProfitReportRepository(ApplicationDbContext context)
+    public GrossProfitReportRepository(
+        ApplicationDbContext context,
+        IActiveCompanyService activeCompany)
     {
         _context = context;
+        _activeCompany = activeCompany;
     }
 
     public async Task<IReadOnlyList<GrossProfitTransaction>> GetTransactionsAsync(
@@ -26,6 +31,7 @@ public class GrossProfitReportRepository : IGrossProfitReportRepository
         var sales = _context.SalesInvoiceItems
             .AsNoTracking()
             .Where(x =>
+                x.SalesInvoice.CompanyId == _activeCompany.CompanyId &&
                 x.SalesInvoice.Status != SalesInvoiceStatus.Draft &&
                 x.SalesInvoice.Status != SalesInvoiceStatus.Cancelled &&
                 x.CostAtSale.HasValue);
@@ -69,6 +75,7 @@ public class GrossProfitReportRepository : IGrossProfitReportRepository
         var returns = _context.CustomerReturnItems
             .AsNoTracking()
             .Where(x =>
+                x.CustomerReturn.CompanyId == _activeCompany.CompanyId &&
                 x.CustomerReturn.Status == CustomerReturnStatus.Posted &&
                 x.CustomerReturn.SalesInvoice.Status !=
                     SalesInvoiceStatus.Cancelled);

@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
@@ -9,10 +10,14 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class SupplierReturnRepository : ISupplierReturnRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IActiveCompanyService _activeCompany;
 
-        public SupplierReturnRepository(ApplicationDbContext context)
+        public SupplierReturnRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
         {
             _context = context;
+            _activeCompany = activeCompany;
         }
 
         public Task<SupplierReturn?> GetByIdAsync(
@@ -39,7 +44,10 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Supplier)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
-                .FirstOrDefaultAsync(x => x.Id == purchaseId, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == purchaseId &&
+                         x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
         }
 
         public Task<bool> ReturnNumberExistsAsync(
@@ -47,7 +55,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return _context.SupplierReturns.AnyAsync(
-                x => x.ReturnNumber == returnNumber,
+                x => x.CompanyId == _activeCompany.CompanyId &&
+                     x.ReturnNumber == returnNumber,
                 cancellationToken);
         }
 
@@ -59,6 +68,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             var quantities = await _context.SupplierReturnItems
                 .Where(x =>
                     purchaseItemIds.Contains(x.PurchaseItemId) &&
+                    x.SupplierReturn.CompanyId == _activeCompany.CompanyId &&
                     x.SupplierReturn.Status == SupplierReturnStatus.Posted &&
                     (!excludingReturnId.HasValue ||
                      x.SupplierReturnId != excludingReturnId.Value))
@@ -76,6 +86,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             SupplierReturn supplierReturn,
             CancellationToken cancellationToken = default)
         {
+            supplierReturn.CompanyId = _activeCompany.CompanyId;
             await _context.SupplierReturns.AddAsync(
                 supplierReturn,
                 cancellationToken);
@@ -112,7 +123,8 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
                 .Include(x => x.Items)
-                    .ThenInclude(x => x.PurchaseItem);
+                    .ThenInclude(x => x.PurchaseItem)
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
         }
     }
 }

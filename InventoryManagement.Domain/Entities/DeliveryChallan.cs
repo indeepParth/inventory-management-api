@@ -5,6 +5,8 @@ namespace InventoryManagement.Domain.Entities
     public class DeliveryChallan
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
+        public Company Company { get; set; } = null!;
         public string ChallanNumber { get; set; } = string.Empty;
         public int CustomerId { get; set; }
         public Customer Customer { get; set; } = null!;

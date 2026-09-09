@@ -226,6 +226,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
             db.DeliveryChallans.AddRange(postedPaid, invoicedUnpaid, draft, cancelled);
             var laborOnlyInvoice = new SalesInvoice
             {
+                CompanyId = ActiveCompanyId,
                 InvoiceNumber = $"LABER-INV-{suffix}",
                 Customer = customer,
                 Driver = driver,
@@ -282,6 +283,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
         {
             var challan = new DeliveryChallan
             {
+                CompanyId = driver.CompanyId,
                 ChallanNumber = $"DC-{label}-{suffix}",
                 Driver = driver,
                 Customer = customer,

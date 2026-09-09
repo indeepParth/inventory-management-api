@@ -347,6 +347,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
             };
             var invoice = new SalesInvoice
             {
+                CompanyId = ActiveCompanyId,
                 InvoiceNumber = $"PAY-INV-{suffix}",
                 Customer = customer,
                 InvoiceDate = new DateTime(2026, 7, 1),
@@ -377,6 +378,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
             };
             var purchase = new Purchase
             {
+                CompanyId = ActiveCompanyId,
                 PurchaseNumber = $"PAY-PUR-{suffix}",
                 Supplier = supplier,
                 BillDate = new DateTime(2026, 7, 1),

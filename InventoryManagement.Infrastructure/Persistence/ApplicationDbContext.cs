@@ -83,11 +83,17 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<DocumentSequence>(entity =>
             {
-                entity.HasIndex(x => new { x.DocumentType, x.Year })
+                entity.HasIndex(x => new { x.CompanyId, x.DocumentType, x.Year })
                       .IsUnique();
 
                 entity.Property(x => x.DocumentType)
                       .HasMaxLength(50)
+                      .IsRequired();
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.DocumentSequences)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Restrict)
                       .IsRequired();
             });
 
@@ -363,8 +369,15 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.Reason).HasMaxLength(500);
                 entity.Property(x => x.CreatedBy).IsRequired();
 
-                entity.HasIndex(x => new { x.ProductId, x.OccurredAtUtc });
-                entity.HasIndex(x => new { x.MovementType, x.OccurredAtUtc });
+                entity.HasIndex(x => x.CompanyId);
+                entity.HasIndex(x => new { x.CompanyId, x.ProductId, x.OccurredAtUtc });
+                entity.HasIndex(x => new { x.CompanyId, x.MovementType, x.OccurredAtUtc });
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.StockMovements)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
 
                 entity.HasOne(x => x.Product)
                       .WithMany(x => x.StockMovements)
@@ -375,10 +388,10 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<Purchase>(entity =>
             {
-                entity.HasIndex(x => x.PurchaseNumber)
+                entity.HasIndex(x => new { x.CompanyId, x.PurchaseNumber })
                       .IsUnique();
 
-                entity.HasIndex(x => new { x.SupplierId, x.SupplierBillNumber })
+                entity.HasIndex(x => new { x.CompanyId, x.SupplierId, x.SupplierBillNumber })
                       .IsUnique();
 
                 entity.Property(x => x.PurchaseNumber).IsRequired();
@@ -393,6 +406,12 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.AmountPaid).HasPrecision(18, 2);
                 entity.Property(x => x.BalanceDue).HasPrecision(18, 2);
                 entity.Property(x => x.CreatedBy).IsRequired();
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.Purchases)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
 
                 entity.HasOne(x => x.Supplier)
                       .WithMany()
@@ -424,7 +443,7 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<DeliveryChallan>(entity =>
             {
-                entity.HasIndex(x => x.ChallanNumber).IsUnique();
+                entity.HasIndex(x => new { x.CompanyId, x.ChallanNumber }).IsUnique();
                 entity.Property(x => x.ChallanNumber).HasMaxLength(50).IsRequired();
                 entity.Property(x => x.ChallanDate)
                       .HasColumnType("timestamp without time zone");
@@ -436,6 +455,10 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.DeliveryCharge).HasPrecision(18, 2);
                 entity.Property(x => x.Notes).HasMaxLength(1000);
                 entity.Property(x => x.CreatedBy).IsRequired();
+                entity.HasIndex(x => x.CompanyId);
+                entity.HasOne(x => x.Company).WithMany(x => x.DeliveryChallans)
+                    .HasForeignKey(x => x.CompanyId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
                 entity.HasOne(x => x.Customer).WithMany()
                     .HasForeignKey(x => x.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict).IsRequired();
@@ -462,7 +485,7 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<SalesInvoice>(entity =>
             {
-                entity.HasIndex(x => x.InvoiceNumber).IsUnique();
+                entity.HasIndex(x => new { x.CompanyId, x.InvoiceNumber }).IsUnique();
                 entity.Property(x => x.InvoiceNumber).HasMaxLength(50).IsRequired();
                 entity.Property(x => x.InvoiceDate)
                       .HasColumnType("timestamp without time zone");
@@ -478,6 +501,10 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.BalanceDue).HasPrecision(18, 2);
                 entity.Property(x => x.Notes).HasMaxLength(1000);
                 entity.Property(x => x.CreatedBy).IsRequired();
+                entity.HasIndex(x => x.CompanyId);
+                entity.HasOne(x => x.Company).WithMany(x => x.SalesInvoices)
+                    .HasForeignKey(x => x.CompanyId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
                 entity.HasOne(x => x.Customer).WithMany()
                     .HasForeignKey(x => x.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict).IsRequired();
@@ -513,8 +540,8 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<CustomerReturn>(entity =>
             {
-                entity.HasIndex(x => x.ReturnNumber).IsUnique();
-                entity.HasIndex(x => new { x.SalesInvoiceId, x.ReturnDate });
+                entity.HasIndex(x => new { x.CompanyId, x.ReturnNumber }).IsUnique();
+                entity.HasIndex(x => new { x.CompanyId, x.SalesInvoiceId, x.ReturnDate });
                 entity.Property(x => x.ReturnNumber).HasMaxLength(50).IsRequired();
                 entity.Property(x => x.ReturnDate)
                       .HasColumnType("timestamp without time zone");
@@ -524,6 +551,10 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.GrandTotal).HasPrecision(18, 2);
                 entity.Property(x => x.Notes).HasMaxLength(1000);
                 entity.Property(x => x.CreatedBy).IsRequired();
+                entity.HasIndex(x => x.CompanyId);
+                entity.HasOne(x => x.Company).WithMany(x => x.CustomerReturns)
+                    .HasForeignKey(x => x.CompanyId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
                 entity.HasOne(x => x.SalesInvoice).WithMany()
                     .HasForeignKey(x => x.SalesInvoiceId)
                     .OnDelete(DeleteBehavior.Restrict).IsRequired();
@@ -553,8 +584,8 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<SupplierReturn>(entity =>
             {
-                entity.HasIndex(x => x.ReturnNumber).IsUnique();
-                entity.HasIndex(x => new { x.PurchaseId, x.ReturnDate });
+                entity.HasIndex(x => new { x.CompanyId, x.ReturnNumber }).IsUnique();
+                entity.HasIndex(x => new { x.CompanyId, x.PurchaseId, x.ReturnDate });
                 entity.Property(x => x.ReturnNumber).HasMaxLength(50).IsRequired();
                 entity.Property(x => x.ReturnDate)
                       .HasColumnType("timestamp without time zone");
@@ -564,6 +595,10 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.GrandTotal).HasPrecision(18, 2);
                 entity.Property(x => x.Notes).HasMaxLength(1000);
                 entity.Property(x => x.CreatedBy).IsRequired();
+                entity.HasIndex(x => x.CompanyId);
+                entity.HasOne(x => x.Company).WithMany(x => x.SupplierReturns)
+                    .HasForeignKey(x => x.CompanyId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
                 entity.HasOne(x => x.Purchase).WithMany()
                     .HasForeignKey(x => x.PurchaseId)
                     .OnDelete(DeleteBehavior.Restrict).IsRequired();
@@ -592,11 +627,11 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<Payment>(entity =>
             {
-                entity.HasIndex(x => x.ReceiptNumber).IsUnique();
-                entity.HasIndex(x => new { x.CustomerId, x.PaymentDate });
-                entity.HasIndex(x => x.SalesInvoiceId);
-                entity.HasIndex(x => new { x.SupplierId, x.PaymentDate });
-                entity.HasIndex(x => x.PurchaseId);
+                entity.HasIndex(x => new { x.CompanyId, x.ReceiptNumber }).IsUnique();
+                entity.HasIndex(x => new { x.CompanyId, x.CustomerId, x.PaymentDate });
+                entity.HasIndex(x => new { x.CompanyId, x.SalesInvoiceId });
+                entity.HasIndex(x => new { x.CompanyId, x.SupplierId, x.PaymentDate });
+                entity.HasIndex(x => new { x.CompanyId, x.PurchaseId });
                 entity.HasIndex(x => x.ReversesPaymentId).IsUnique();
                 entity.Property(x => x.ReceiptNumber).HasMaxLength(50).IsRequired();
                 entity.Property(x => x.PaymentDate)
@@ -606,6 +641,9 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.ExternalReference).HasMaxLength(150);
                 entity.Property(x => x.Note).HasMaxLength(1000);
                 entity.Property(x => x.CreatedBy).IsRequired();
+                entity.HasOne(x => x.Company).WithMany(x => x.Payments)
+                    .HasForeignKey(x => x.CompanyId)
+                    .OnDelete(DeleteBehavior.Restrict).IsRequired();
                 entity.HasOne(x => x.Customer).WithMany()
                     .HasForeignKey(x => x.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict);

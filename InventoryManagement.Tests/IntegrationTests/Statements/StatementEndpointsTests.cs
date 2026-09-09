@@ -181,6 +181,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Statements
             Customer customer, string number, DateTime date, DateTime timestamp,
             decimal amount) => new()
         {
+            CompanyId = customer.CompanyId,
             InvoiceNumber = number,
             Customer = customer,
             InvoiceDate = date,
@@ -197,6 +198,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Statements
             Supplier supplier, string number, DateTime date, DateTime timestamp,
             decimal amount) => new()
         {
+            CompanyId = supplier.CompanyId,
             PurchaseNumber = number,
             Supplier = supplier,
             BillDate = date,
@@ -212,6 +214,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Statements
             Customer customer, string number, DateTime date, DateTime timestamp,
             decimal amount, int? reversesPaymentId = null) => new()
         {
+            CompanyId = customer.CompanyId,
             ReceiptNumber = number,
             Customer = customer,
             PaymentDate = date,
@@ -226,6 +229,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Statements
             Supplier supplier, string number, DateTime date, DateTime timestamp,
             decimal amount, int? reversesPaymentId = null) => new()
         {
+            CompanyId = supplier.CompanyId,
             ReceiptNumber = number,
             Supplier = supplier,
             PaymentDate = date,

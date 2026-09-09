@@ -110,17 +110,20 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
 
         private async Task<SeedResult> SeedDependenciesAsync()
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var supplier = new Supplier
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Number supplier {suffix}",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
             var customer = new Customer
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Number customer {suffix}",
                 IsActive = true,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -128,13 +131,15 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
             };
             var product = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Number product {suffix}",
                 SKU = $"NUM-{suffix}",
                 Quantity = 100,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = 10,
                 Category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Number category {suffix}",
                     Description = "Test",
                     IsActive = true,
@@ -144,7 +149,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
             db.ProductUnitConversions.Add(new ProductUnitConversion
             {
                 Product = product,
-                UnitId = 1,
+                UnitId = baseUnitId,
                 FactorToBaseUnit = 1,
                 IsActive = true
             });

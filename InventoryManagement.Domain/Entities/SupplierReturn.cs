@@ -5,6 +5,8 @@ namespace InventoryManagement.Domain.Entities
     public class SupplierReturn
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
+        public Company Company { get; set; } = null!;
         public string ReturnNumber { get; set; } = string.Empty;
         public int PurchaseId { get; set; }
         public Purchase Purchase { get; set; } = null!;

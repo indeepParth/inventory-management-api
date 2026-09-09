@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
@@ -9,10 +10,14 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class SalesInvoiceRepository : ISalesInvoiceRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IActiveCompanyService _activeCompany;
 
-        public SalesInvoiceRepository(ApplicationDbContext context)
+        public SalesInvoiceRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
         {
             _context = context;
+            _activeCompany = activeCompany;
         }
 
         public async Task<List<SalesInvoice>> GetAllAsync(
@@ -118,7 +123,9 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Items)
                     .ThenInclude(x => x.DeliveryChallanItem!)
                         .ThenInclude(x => x.DeliveryChallan)
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
         }
 
         public Task<SalesInvoice?> GetForUpdateAsync(
@@ -133,7 +140,9 @@ namespace InventoryManagement.Infrastructure.Repositories
                         .ThenInclude(x => x.BaseProduct)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.DeliveryChallanItem)
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
         }
 
         public Task<List<SalesInvoice>> GetDriverDeliveriesAsync(
@@ -166,7 +175,9 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
                         .ThenInclude(x => x.BaseProduct)
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
         }
 
         public Task<bool> InvoiceNumberExistsAsync(
@@ -174,7 +185,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return _context.SalesInvoices.AnyAsync(
-                x => x.InvoiceNumber == invoiceNumber,
+                x => x.CompanyId == _activeCompany.CompanyId &&
+                     x.InvoiceNumber == invoiceNumber,
                 cancellationToken);
         }
 
@@ -185,6 +197,7 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             return _context.SalesInvoices.AnyAsync(
                 x => x.Id != invoiceId &&
+                     x.CompanyId == _activeCompany.CompanyId &&
                      x.InvoiceNumber == invoiceNumber,
                 cancellationToken);
         }
@@ -194,7 +207,10 @@ namespace InventoryManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return _context.DeliveryChallanItems
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == id &&
+                         x.DeliveryChallan.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
         }
 
         public Task<List<DeliveryChallanItem>> GetChallanItemsForInvoiceAsync(
@@ -207,7 +223,8 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.DeliveryChallan)
                     .ThenInclude(x => x.Customer)
                 .Include(x => x.SalesInvoiceItems)
-                .Where(x => ids.Contains(x.Id))
+                .Where(x => ids.Contains(x.Id) &&
+                            x.DeliveryChallan.CompanyId == _activeCompany.CompanyId)
                 .ToListAsync(cancellationToken);
         }
 
@@ -219,9 +236,11 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Items)
                     .ThenInclude(x => x.SalesInvoiceItems)
                         .ThenInclude(x => x.SalesInvoice)
-                .Where(x => x.Items.Any(item =>
+                .Where(x => x.CompanyId == _activeCompany.CompanyId &&
+                    x.Items.Any(item =>
                     item.SalesInvoiceItems.Any(invoiceItem =>
-                        invoiceItem.SalesInvoiceId == invoiceId)))
+                        invoiceItem.SalesInvoiceId == invoiceId &&
+                        invoiceItem.SalesInvoice.CompanyId == _activeCompany.CompanyId)))
                 .ToListAsync(cancellationToken);
         }
 
@@ -229,6 +248,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             SalesInvoice invoice,
             CancellationToken cancellationToken = default)
         {
+            invoice.CompanyId = _activeCompany.CompanyId;
             await _context.SalesInvoices.AddAsync(invoice, cancellationToken);
         }
 
@@ -268,7 +288,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             DateTime? dateTo,
             string? invoiceNumber)
         {
-            IQueryable<SalesInvoice> query = _context.SalesInvoices;
+            IQueryable<SalesInvoice> query = _context.SalesInvoices
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
 
             if (customerId.HasValue)
             {
@@ -331,6 +352,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             bool? isDeliveryChargePaid)
         {
             IQueryable<SalesInvoice> query = _context.SalesInvoices
+                .Where(x => x.CompanyId == _activeCompany.CompanyId)
                 .Where(x => x.DriverId == driverId)
                 .Where(x => x.Items.All(item => !item.DeliveryChallanItemId.HasValue))
                 .Where(x =>

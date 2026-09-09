@@ -36,7 +36,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             int customerId, DateTime dateToExclusive,
             CancellationToken cancellationToken = default) =>
             _context.SalesInvoices.AsNoTracking()
-                .Where(x => x.CustomerId == customerId &&
+                .Where(x => x.CompanyId == _activeCompany.CompanyId &&
+                    x.CustomerId == customerId &&
                     x.InvoiceDate < dateToExclusive &&
                     (x.Status == SalesInvoiceStatus.Posted ||
                      x.Status == SalesInvoiceStatus.PartiallyPaid ||
@@ -47,7 +48,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             int supplierId, DateTime dateToExclusive,
             CancellationToken cancellationToken = default) =>
             _context.Purchases.AsNoTracking()
-                .Where(x => x.SupplierId == supplierId &&
+                .Where(x => x.CompanyId == _activeCompany.CompanyId &&
+                    x.SupplierId == supplierId &&
                     x.BillDate < dateToExclusive &&
                     (x.Status == PurchaseStatus.Posted ||
                      x.Status == PurchaseStatus.PartiallyPaid ||
@@ -58,7 +60,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             int customerId, DateTime dateToExclusive,
             CancellationToken cancellationToken = default) =>
             _context.Payments.AsNoTracking()
-                .Where(x => x.CustomerId == customerId &&
+                .Where(x => x.CompanyId == _activeCompany.CompanyId &&
+                            x.CustomerId == customerId &&
                             x.PaymentDate < dateToExclusive)
                 .ToListAsync(cancellationToken);
 
@@ -66,7 +69,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             int supplierId, DateTime dateToExclusive,
             CancellationToken cancellationToken = default) =>
             _context.Payments.AsNoTracking()
-                .Where(x => x.SupplierId == supplierId &&
+                .Where(x => x.CompanyId == _activeCompany.CompanyId &&
+                            x.SupplierId == supplierId &&
                             x.PaymentDate < dateToExclusive)
                 .ToListAsync(cancellationToken);
     }

@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
@@ -9,8 +10,15 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class DeliveryChallanRepository : IDeliveryChallanRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IActiveCompanyService _activeCompany;
 
-        public DeliveryChallanRepository(ApplicationDbContext context) => _context = context;
+        public DeliveryChallanRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
+        {
+            _context = context;
+            _activeCompany = activeCompany;
+        }
 
         public Task<List<DeliveryChallan>> GetAllAsync(
             int pageNumber, int pageSize, int? customerId,
@@ -77,7 +85,9 @@ namespace InventoryManagement.Infrastructure.Repositories
                     .ThenInclude(x => x.Unit)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.SalesInvoiceItems)
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
 
         public Task<DeliveryChallan?> GetForUpdateAsync(
             int id, CancellationToken cancellationToken = default) =>
@@ -87,24 +97,32 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Items).ThenInclude(x => x.Product)
                     .ThenInclude(x => x.BaseProduct)
                 .Include(x => x.Items).ThenInclude(x => x.Unit)
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
 
         public Task<bool> ChallanNumberExistsAsync(
             string challanNumber, CancellationToken cancellationToken = default) =>
             _context.DeliveryChallans.AnyAsync(
-                x => x.ChallanNumber == challanNumber, cancellationToken);
+                x => x.CompanyId == _activeCompany.CompanyId &&
+                     x.ChallanNumber == challanNumber,
+                cancellationToken);
 
         public Task<bool> ChallanNumberExistsForOtherAsync(
             string challanNumber, int deliveryChallanId,
             CancellationToken cancellationToken = default) =>
             _context.DeliveryChallans.AnyAsync(
                 x => x.Id != deliveryChallanId &&
+                     x.CompanyId == _activeCompany.CompanyId &&
                      x.ChallanNumber == challanNumber,
                 cancellationToken);
 
         public async Task AddAsync(
-            DeliveryChallan challan, CancellationToken cancellationToken = default) =>
+            DeliveryChallan challan, CancellationToken cancellationToken = default)
+        {
+            challan.CompanyId = _activeCompany.CompanyId;
             await _context.DeliveryChallans.AddAsync(challan, cancellationToken);
+        }
 
         public void RemoveItems(IEnumerable<DeliveryChallanItem> items) =>
             _context.DeliveryChallanItems.RemoveRange(items);
@@ -134,7 +152,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             int? customerId, DeliveryChallanStatus? status,
             DateTime? dateFrom, DateTime? dateTo, string? challanNumber)
         {
-            IQueryable<DeliveryChallan> query = _context.DeliveryChallans;
+            IQueryable<DeliveryChallan> query = _context.DeliveryChallans
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
             if (customerId.HasValue) query = query.Where(x => x.CustomerId == customerId);
             if (status.HasValue) query = query.Where(x => x.Status == status);
             if (dateFrom.HasValue) query = query.Where(x => x.ChallanDate >= dateFrom);
@@ -154,6 +173,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             bool? isDeliveryChargePaid)
         {
             IQueryable<DeliveryChallan> query = _context.DeliveryChallans
+                .Where(x => x.CompanyId == _activeCompany.CompanyId)
                 .Where(x => x.DriverId == driverId)
                 .Where(x =>
                     x.Status == DeliveryChallanStatus.Posted ||

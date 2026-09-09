@@ -123,6 +123,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var driver = new Driver
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Invoice driver {Guid.NewGuid():N}",
                     IsActive = true,
                     CreatedAtUtc = DateTime.UtcNow,
@@ -552,7 +553,10 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                     LANGUAGE plpgsql
                     AS $$
                     BEGIN
-                        RAISE EXCEPTION 'forced sales posting failure';
+                        IF NEW."Reference" LIKE 'ROLLBACK-%' THEN
+                            RAISE EXCEPTION 'forced sales posting failure';
+                        END IF;
+                        RETURN NEW;
                     END;
                     $$;
 
@@ -732,6 +736,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         {
             await AuthenticateAsync();
             var seed = await SeedDependenciesAsync();
+            var baseUnitId = await GetUnitIdAsync("Ton");
             int convertedUnitId;
             using (var scope = _factory.Services.CreateScope())
             {
@@ -744,7 +749,8 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 {
                     Name = $"Invoice conversion bag {Guid.NewGuid():N}",
                     ShortName = "bag",
-                    BaseUnitId = 1,
+                    BaseUnitId = baseUnitId,
+                    CompanyId = ActiveCompanyId,
                     FactorToBaseUnit = 4,
                     IsActive = true,
                     CreatedAtUtc = DateTime.UtcNow
@@ -1172,6 +1178,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             };
             var challan = new DeliveryChallan
             {
+                CompanyId = ActiveCompanyId,
                 ChallanNumber = $"DC-{suffix}",
                 Customer = customer,
                 ChallanDate = new DateTime(2026, 7, 1),
@@ -1262,6 +1269,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 var now = DateTime.UtcNow;
                 var invoice = new SalesInvoice
                 {
+                    CompanyId = ActiveCompanyId,
                     InvoiceNumber = invoiceNumber,
                     CustomerId = customer.Id,
                     Customer = customer,
@@ -1299,18 +1307,21 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             decimal quantity,
             decimal averageCost)
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var product = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Additional invoice product {suffix}",
                 SKU = $"INV-ADD-{suffix}",
                 Quantity = quantity,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = averageCost,
                 Category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Additional invoice category {suffix}",
                     Description = "Test",
                     IsActive = true,
@@ -1320,7 +1331,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             db.ProductUnitConversions.Add(new ProductUnitConversion
             {
                 Product = product,
-                UnitId = 1,
+                UnitId = baseUnitId,
                 FactorToBaseUnit = 1,
                 IsActive = true
             });

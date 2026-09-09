@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
@@ -9,10 +10,14 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class CustomerReturnRepository : ICustomerReturnRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IActiveCompanyService _activeCompany;
 
-        public CustomerReturnRepository(ApplicationDbContext context)
+        public CustomerReturnRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
         {
             _context = context;
+            _activeCompany = activeCompany;
         }
 
         public Task<CustomerReturn?> GetByIdAsync(
@@ -50,7 +55,10 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Customer)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
-                .FirstOrDefaultAsync(x => x.Id == invoiceId, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == invoiceId &&
+                         x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
         }
 
         public Task<bool> ReturnNumberExistsAsync(
@@ -58,7 +66,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return _context.CustomerReturns.AnyAsync(
-                x => x.ReturnNumber == returnNumber,
+                x => x.CompanyId == _activeCompany.CompanyId &&
+                     x.ReturnNumber == returnNumber,
                 cancellationToken);
         }
 
@@ -70,6 +79,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             var quantities = await _context.CustomerReturnItems
                 .Where(x =>
                     invoiceItemIds.Contains(x.SalesInvoiceItemId) &&
+                    x.CustomerReturn.CompanyId == _activeCompany.CompanyId &&
                     x.CustomerReturn.Status == CustomerReturnStatus.Posted &&
                     (!excludingReturnId.HasValue ||
                      x.CustomerReturnId != excludingReturnId.Value))
@@ -91,6 +101,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             CustomerReturn customerReturn,
             CancellationToken cancellationToken = default)
         {
+            customerReturn.CompanyId = _activeCompany.CompanyId;
             await _context.CustomerReturns.AddAsync(
                 customerReturn,
                 cancellationToken);
@@ -127,7 +138,8 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
                 .Include(x => x.Items)
-                    .ThenInclude(x => x.SalesInvoiceItem);
+                    .ThenInclude(x => x.SalesInvoiceItem)
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
         }
     }
 }

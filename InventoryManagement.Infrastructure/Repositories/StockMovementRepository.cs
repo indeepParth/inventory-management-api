@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
@@ -9,10 +10,14 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class StockMovementRepository : IStockMovementRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IActiveCompanyService _activeCompany;
 
-        public StockMovementRepository(ApplicationDbContext context)
+        public StockMovementRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
         {
             _context = context;
+            _activeCompany = activeCompany;
         }
 
         public async Task<List<StockMovement>> GetAsync(
@@ -47,6 +52,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             StockMovement stockMovement,
             CancellationToken cancellationToken = default)
         {
+            stockMovement.CompanyId = _activeCompany.CompanyId;
             await _context.StockMovements.AddAsync(stockMovement, cancellationToken);
         }
 
@@ -59,6 +65,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             return _context.StockMovements
                 .Include(x => x.Product)
                 .Where(x =>
+                    x.CompanyId == _activeCompany.CompanyId &&
                     x.MovementType == StockMovementType.Purchase &&
                     x.SourceType == "Purchase" &&
                     x.SourceId == sourceId)
@@ -75,6 +82,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             return _context.StockMovements
                 .Include(x => x.Product)
                 .Where(x =>
+                    x.CompanyId == _activeCompany.CompanyId &&
                     x.MovementType == StockMovementType.Sale &&
                     x.SourceType == "DeliveryChallan" &&
                     x.SourceId == sourceId)
@@ -90,6 +98,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             var sourceId = deliveryChallanId.ToString();
             return _context.StockMovements
                 .Where(x =>
+                    x.CompanyId == _activeCompany.CompanyId &&
                     x.MovementType == StockMovementType.Sale &&
                     x.SourceType == "DeliveryChallan" &&
                     x.SourceId == sourceId &&
@@ -106,6 +115,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             return _context.StockMovements
                 .Include(x => x.Product)
                 .Where(x =>
+                    x.CompanyId == _activeCompany.CompanyId &&
                     x.MovementType == StockMovementType.Sale &&
                     x.SourceType == "SalesInvoice" &&
                     x.SourceId == sourceId)
@@ -118,7 +128,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return _context.Products.FirstOrDefaultAsync(
-                x => x.Id == productId,
+                x => x.Id == productId &&
+                     x.CompanyId == _activeCompany.CompanyId,
                 cancellationToken);
         }
 
@@ -130,6 +141,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Product)
                 .FirstOrDefaultAsync(
                     x => x.Id == movementId &&
+                         x.CompanyId == _activeCompany.CompanyId &&
                          x.SourceType == "ManualCorrection" &&
                          (x.MovementType == StockMovementType.Damage ||
                           x.MovementType == StockMovementType.Adjustment),
@@ -146,6 +158,7 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Product)
                 .FirstOrDefaultAsync(
                     x => x.MovementType == StockMovementType.Reversal &&
+                         x.CompanyId == _activeCompany.CompanyId &&
                          x.SourceType == "ManualCorrectionReversal" &&
                          x.SourceId == sourceId,
                     cancellationToken);
@@ -182,7 +195,8 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             IQueryable<StockMovement> query = _context.StockMovements
                 .AsNoTracking()
-                .Include(x => x.Product);
+                .Include(x => x.Product)
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
 
             if (productId.HasValue)
                 query = query.Where(x => x.ProductId == productId.Value);

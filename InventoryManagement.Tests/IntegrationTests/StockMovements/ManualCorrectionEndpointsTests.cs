@@ -199,19 +199,22 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
             decimal quantity,
             decimal averageCost)
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider
                 .GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var product = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Correction product {suffix}",
                 SKU = $"COR-{suffix}",
                 Quantity = quantity,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = averageCost,
                 Category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Correction category {suffix}",
                     Description = "Test",
                     IsActive = true,

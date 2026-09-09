@@ -320,14 +320,16 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
             using (var scope = _factory.Services.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                await db.Database.ExecuteSqlRawAsync(
-                    """
+                var triggerSql = $"""
                     CREATE OR REPLACE FUNCTION fail_purchase_movement()
                     RETURNS trigger
                     LANGUAGE plpgsql
                     AS $$
                     BEGIN
-                        RAISE EXCEPTION 'forced posting failure';
+                        IF NEW."SourceType" = 'Purchase' AND NEW."SourceId" = '{purchase!.Id}' THEN
+                            RAISE EXCEPTION 'forced posting failure';
+                        END IF;
+                        RETURN NEW;
                     END;
                     $$;
 
@@ -335,7 +337,10 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
                     BEFORE INSERT ON "StockMovements"
                     FOR EACH ROW
                     EXECUTE FUNCTION fail_purchase_movement();
-                    """);
+                    """;
+
+                await db.Database.ExecuteSqlRawAsync(
+                    triggerSql);
             }
 
             try
@@ -530,24 +535,28 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
 
         private async Task<SeedResult> SeedPurchaseDependenciesAsync()
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var supplier = new Supplier
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Purchase supplier {suffix}",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
             var product = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Purchase product {suffix}",
                 SKU = $"PUR-{suffix}",
                 Quantity = 12.5m,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = 32,
                 Category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Purchase category {suffix}",
                     Description = "Test",
                     IsActive = true,
@@ -598,18 +607,21 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
             decimal quantity,
             decimal averageCost)
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var product = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Additional purchase product {suffix}",
                 SKU = $"ADD-{suffix}",
                 Quantity = quantity,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = averageCost,
                 Category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Additional purchase category {suffix}",
                     Description = "Test",
                     IsActive = true,

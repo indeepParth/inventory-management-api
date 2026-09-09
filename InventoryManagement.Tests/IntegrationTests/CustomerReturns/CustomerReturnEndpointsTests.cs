@@ -298,12 +298,14 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
 
         private async Task<SeedResult> SeedAsync()
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider
                 .GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var customer = new Customer
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Return customer {suffix}",
                 IsActive = true,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -311,13 +313,15 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
             };
             var product = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Return product {suffix}",
                 SKU = $"RET-{suffix}",
                 Quantity = 10,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = 25,
                 Category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Return category {suffix}",
                     Description = "Test",
                     IsActive = true,
@@ -327,7 +331,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
             db.ProductUnitConversions.Add(new ProductUnitConversion
             {
                 Product = product,
-                UnitId = 1,
+                UnitId = baseUnitId,
                 FactorToBaseUnit = 1,
                 IsActive = true
             });

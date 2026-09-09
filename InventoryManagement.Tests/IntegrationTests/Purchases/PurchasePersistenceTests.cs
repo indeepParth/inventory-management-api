@@ -19,32 +19,57 @@ public class PurchasePersistenceTests
         await using var db = new ApplicationDbContext(options);
         await db.Database.MigrateAsync();
 
+        var company = new Company
+        {
+            Name = $"Persistence company {Guid.NewGuid():N}",
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        var unit = new Unit
+        {
+            Company = company,
+            Name = $"Persistence unit {Guid.NewGuid():N}",
+            FactorToBaseUnit = 1,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        db.Units.Add(unit);
+        await db.SaveChangesAsync();
+        unit.BaseUnitId = unit.Id;
+        await db.SaveChangesAsync();
+
         var category = new Category
         {
+            CompanyId = company.Id,
             Name = "Purchase test category",
             Description = "Test",
             IsActive = true
         };
-        var supplier = new Supplier { Name = "Purchase test supplier", IsActive = true };
+        var supplier = new Supplier
+        {
+            CompanyId = company.Id,
+            Name = "Purchase test supplier",
+            IsActive = true
+        };
         var product = new Product
         {
+            CompanyId = company.Id,
             Name = "Purchase test product",
             SKU = "PUR-TEST-1",
-            BaseUnitId = 1,
+            BaseUnitId = unit.Id,
             Category = category
         };
         db.AddRange(supplier, product);
         await db.SaveChangesAsync();
 
-        db.Purchases.Add(CreatePurchase("PUR-001", "BILL-001", supplier.Id, product.Id));
+        db.Purchases.Add(CreatePurchase(company.Id, "PUR-001", "BILL-001", supplier.Id, product.Id));
         await db.SaveChangesAsync();
 
-        db.Purchases.Add(CreatePurchase("PUR-001", "BILL-002", supplier.Id, product.Id));
+        db.Purchases.Add(CreatePurchase(company.Id, "PUR-001", "BILL-002", supplier.Id, product.Id));
         var duplicatePurchaseNumber = () => db.SaveChangesAsync();
         await duplicatePurchaseNumber.Should().ThrowAsync<DbUpdateException>();
 
         db.ChangeTracker.Clear();
-        db.Purchases.Add(CreatePurchase("PUR-002", "BILL-001", supplier.Id, product.Id));
+        db.Purchases.Add(CreatePurchase(company.Id, "PUR-002", "BILL-001", supplier.Id, product.Id));
         var duplicateBill = () => db.SaveChangesAsync();
         await duplicateBill.Should().ThrowAsync<DbUpdateException>();
 
@@ -62,6 +87,7 @@ public class PurchasePersistenceTests
     }
 
     private static Purchase CreatePurchase(
+        int companyId,
         string purchaseNumber,
         string supplierBillNumber,
         int supplierId,
@@ -69,6 +95,7 @@ public class PurchasePersistenceTests
     {
         return new Purchase
         {
+            CompanyId = companyId,
             PurchaseNumber = purchaseNumber,
             SupplierId = supplierId,
             SupplierBillNumber = supplierBillNumber,

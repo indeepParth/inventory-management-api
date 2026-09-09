@@ -17,5 +17,13 @@ namespace InventoryManagement.Domain.Entities
         public ICollection<Supplier> Suppliers { get; set; } = new List<Supplier>();
         public ICollection<Driver> Drivers { get; set; } = new List<Driver>();
         public ICollection<CompanyProfile> Profiles { get; set; } = new List<CompanyProfile>();
+        public ICollection<Purchase> Purchases { get; set; } = new List<Purchase>();
+        public ICollection<SupplierReturn> SupplierReturns { get; set; } = new List<SupplierReturn>();
+        public ICollection<SalesInvoice> SalesInvoices { get; set; } = new List<SalesInvoice>();
+        public ICollection<CustomerReturn> CustomerReturns { get; set; } = new List<CustomerReturn>();
+        public ICollection<DeliveryChallan> DeliveryChallans { get; set; } = new List<DeliveryChallan>();
+        public ICollection<Payment> Payments { get; set; } = new List<Payment>();
+        public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
+        public ICollection<DocumentSequence> DocumentSequences { get; set; } = new List<DocumentSequence>();
     }
 }

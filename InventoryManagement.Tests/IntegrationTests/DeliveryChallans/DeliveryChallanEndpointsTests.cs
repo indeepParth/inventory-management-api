@@ -87,6 +87,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
         {
             await AuthenticateAsync();
             var seed = await SeedProductWithConversionAsync();
+            var invalidUnitId = await GetUnitIdAsync("Kilogram");
 
             var response = await Client.PostAsJsonAsync(
                 "/api/delivery-challans",
@@ -102,7 +103,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
                         {
                             ProductId = seed.ProductId,
                             EnteredQuantity = 1m,
-                            UnitId = 2
+                            UnitId = invalidUnitId
                         }
                     }
                 });
@@ -166,11 +167,13 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
             DeliveryChallanStatus status,
             decimal deliveryCharge)
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var customer = new Customer
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Challan customer {suffix}",
                 IsActive = true,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -178,13 +181,15 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
             };
             var product = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Challan product {suffix}",
                 SKU = $"CH-{suffix}",
                 Quantity = 10,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = 20,
                 Category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Challan category {suffix}",
                     Description = "Test",
                     IsActive = true,
@@ -193,6 +198,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
             };
             var challan = new DeliveryChallan
             {
+                CompanyId = ActiveCompanyId,
                 ChallanNumber = $"DC-{suffix}",
                 Customer = customer,
                 ChallanDate = new DateTime(2026, 7, 1),
@@ -210,7 +216,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
                     {
                         Product = product,
                         EnteredQuantity = 1,
-                        UnitId = 1,
+                        UnitId = baseUnitId,
                         ConvertedBaseQuantity = 1
                     }
                 }
@@ -223,11 +229,13 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
 
         private async Task<ConversionSeed> SeedProductWithConversionAsync()
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var customer = new Customer
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Conversion customer {suffix}",
                 IsActive = true,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -235,13 +243,15 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
             };
             var product = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Conversion product {suffix}",
                 SKU = $"CH-CONV-{suffix}",
                 Quantity = 10,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = 20,
                 Category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Conversion category {suffix}",
                     Description = "Test",
                     IsActive = true,
@@ -250,9 +260,10 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
             };
             var convertedUnit = new Unit
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Conversion bag {suffix}",
                 ShortName = "bag",
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 FactorToBaseUnit = 2,
                 IsActive = true,
                 CreatedAtUtc = DateTime.UtcNow

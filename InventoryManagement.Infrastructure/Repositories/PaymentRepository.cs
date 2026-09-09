@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
@@ -9,7 +10,15 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class PaymentRepository : IPaymentRepository
     {
         private readonly ApplicationDbContext _context;
-        public PaymentRepository(ApplicationDbContext context) => _context = context;
+        private readonly IActiveCompanyService _activeCompany;
+
+        public PaymentRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
+        {
+            _context = context;
+            _activeCompany = activeCompany;
+        }
 
         public Task<List<Payment>> GetAllAsync(
             int pageNumber, int pageSize, int? customerId, int? salesInvoiceId,
@@ -40,39 +49,56 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Customer)
                 .Include(x => x.SalesInvoice)
                 .Include(x => x.Reversal)
-                .Where(x => x.SalesInvoiceId == salesInvoiceId)
+                .Where(x => x.CompanyId == _activeCompany.CompanyId &&
+                            x.SalesInvoiceId == salesInvoiceId)
                 .OrderByDescending(x => x.PaymentDate)
                 .ThenByDescending(x => x.Id)
                 .ToListAsync(cancellationToken);
 
         public Task<bool> ReceiptNumberExistsAsync(
             string receiptNumber, CancellationToken cancellationToken = default) =>
-            _context.Payments.AnyAsync(x => x.ReceiptNumber == receiptNumber, cancellationToken);
+            _context.Payments.AnyAsync(
+                x => x.CompanyId == _activeCompany.CompanyId &&
+                     x.ReceiptNumber == receiptNumber,
+                cancellationToken);
 
         public Task<Customer?> GetCustomerForUpdateAsync(
             int id, CancellationToken cancellationToken = default) =>
-            _context.Customers.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            _context.Customers.FirstOrDefaultAsync(
+                x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                cancellationToken);
 
         public Task<SalesInvoice?> GetInvoiceForUpdateAsync(
             int id, CancellationToken cancellationToken = default) =>
-            _context.SalesInvoices.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            _context.SalesInvoices.FirstOrDefaultAsync(
+                x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                cancellationToken);
 
         public Task<Supplier?> GetSupplierForUpdateAsync(
             int id, CancellationToken cancellationToken = default) =>
-            _context.Suppliers.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            _context.Suppliers.FirstOrDefaultAsync(
+                x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                cancellationToken);
 
         public Task<Purchase?> GetPurchaseForUpdateAsync(
             int id, CancellationToken cancellationToken = default) =>
-            _context.Purchases.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            _context.Purchases.FirstOrDefaultAsync(
+                x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                cancellationToken);
 
         public Task<Payment?> GetForReversalAsync(
             int id, CancellationToken cancellationToken = default) =>
             _context.Payments.Include(x => x.Customer).Include(x => x.SalesInvoice)
                 .Include(x => x.Supplier).Include(x => x.Purchase)
-                .Include(x => x.Reversal).FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .Include(x => x.Reversal).FirstOrDefaultAsync(
+                    x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
 
-        public Task AddAsync(Payment payment, CancellationToken cancellationToken = default) =>
-            _context.Payments.AddAsync(payment, cancellationToken).AsTask();
+        public Task AddAsync(Payment payment, CancellationToken cancellationToken = default)
+        {
+            payment.CompanyId = _activeCompany.CompanyId;
+            return _context.Payments.AddAsync(payment, cancellationToken).AsTask();
+        }
 
         public Task SaveChangesAsync(CancellationToken cancellationToken = default) =>
             _context.SaveChangesAsync(cancellationToken);
@@ -100,7 +126,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             PaymentMethod? method,
             DateTime? dateFrom, DateTime? dateTo, string? receiptNumber)
         {
-            IQueryable<Payment> query = _context.Payments;
+            IQueryable<Payment> query = _context.Payments
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
             if (customerId.HasValue) query = query.Where(x => x.CustomerId == customerId);
             if (salesInvoiceId.HasValue) query = query.Where(x => x.SalesInvoiceId == salesInvoiceId);
             if (supplierId.HasValue) query = query.Where(x => x.SupplierId == supplierId);

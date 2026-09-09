@@ -5,6 +5,8 @@ namespace InventoryManagement.Domain.Entities
     public class CustomerReturn
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
+        public Company Company { get; set; } = null!;
         public string ReturnNumber { get; set; } = string.Empty;
         public int SalesInvoiceId { get; set; }
         public SalesInvoice SalesInvoice { get; set; } = null!;

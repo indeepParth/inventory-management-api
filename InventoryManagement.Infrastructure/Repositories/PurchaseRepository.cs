@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
@@ -9,10 +10,14 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class PurchaseRepository : IPurchaseRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IActiveCompanyService _activeCompany;
 
-        public PurchaseRepository(ApplicationDbContext context)
+        public PurchaseRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
         {
             _context = context;
+            _activeCompany = activeCompany;
         }
 
         public async Task<List<Purchase>> GetAllAsync(
@@ -106,7 +111,9 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Supplier)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
         }
 
         public Task<Purchase?> GetForUpdateAsync(
@@ -117,7 +124,9 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.Supplier)
                 .Include(x => x.Items)
                     .ThenInclude(x => x.Product)
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
         }
 
         public Task<bool> PurchaseNumberExistsAsync(
@@ -125,7 +134,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return _context.Purchases.AnyAsync(
-                x => x.PurchaseNumber == purchaseNumber,
+                x => x.CompanyId == _activeCompany.CompanyId &&
+                     x.PurchaseNumber == purchaseNumber,
                 cancellationToken);
         }
 
@@ -136,6 +146,7 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             return _context.Purchases.AnyAsync(
                 x => x.Id != purchaseId &&
+                     x.CompanyId == _activeCompany.CompanyId &&
                      x.PurchaseNumber == purchaseNumber,
                 cancellationToken);
         }
@@ -147,6 +158,7 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             return _context.Purchases.AnyAsync(
                 x => x.SupplierId == supplierId &&
+                     x.CompanyId == _activeCompany.CompanyId &&
                      x.SupplierBillNumber == supplierBillNumber,
                 cancellationToken);
         }
@@ -159,6 +171,7 @@ namespace InventoryManagement.Infrastructure.Repositories
         {
             return _context.Purchases.AnyAsync(
                 x => x.Id != purchaseId &&
+                     x.CompanyId == _activeCompany.CompanyId &&
                      x.SupplierId == supplierId &&
                      x.SupplierBillNumber == supplierBillNumber,
                 cancellationToken);
@@ -168,6 +181,7 @@ namespace InventoryManagement.Infrastructure.Repositories
             Purchase purchase,
             CancellationToken cancellationToken = default)
         {
+            purchase.CompanyId = _activeCompany.CompanyId;
             await _context.Purchases.AddAsync(purchase, cancellationToken);
         }
 
@@ -208,7 +222,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             string? purchaseNumber,
             string? supplierBillNumber)
         {
-            IQueryable<Purchase> query = _context.Purchases;
+            IQueryable<Purchase> query = _context.Purchases
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
 
             if (supplierId.HasValue)
             {

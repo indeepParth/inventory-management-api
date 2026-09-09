@@ -9,10 +9,14 @@ namespace InventoryManagement.Infrastructure.Services
     public class DocumentNumberService : IDocumentNumberService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IActiveCompanyService _activeCompany;
 
-        public DocumentNumberService(ApplicationDbContext context)
+        public DocumentNumberService(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
         {
             _context = context;
+            _activeCompany = activeCompany;
         }
 
         public async Task<string> GenerateAsync(
@@ -24,16 +28,20 @@ namespace InventoryManagement.Infrastructure.Services
             var year = documentDate.Year;
             var key = documentType.ToString();
             var prefix = GetPrefix(documentType);
+            var companyId = _activeCompany.CompanyId;
 
             var sequence = await _context.DocumentSequences
                 .SingleOrDefaultAsync(
-                    x => x.DocumentType == key && x.Year == year,
+                    x => x.CompanyId == companyId &&
+                         x.DocumentType == key &&
+                         x.Year == year,
                     cancellationToken);
 
             if (sequence is null)
             {
                 sequence = new DocumentSequence
                 {
+                    CompanyId = companyId,
                     DocumentType = key,
                     Year = year,
                     NextValue = await GetInitialNextValueAsync(
@@ -67,22 +75,26 @@ namespace InventoryManagement.Infrastructure.Services
             {
                 DocumentNumberType.SalesInvoice => await _context.SalesInvoices
                     .AsNoTracking()
-                    .Where(x => x.InvoiceNumber.StartsWith($"{prefix}_{year}_"))
+                    .Where(x => x.CompanyId == _activeCompany.CompanyId &&
+                                x.InvoiceNumber.StartsWith($"{prefix}_{year}_"))
                     .Select(x => x.InvoiceNumber)
                     .ToListAsync(cancellationToken),
                 DocumentNumberType.DeliveryChallan => await _context.DeliveryChallans
                     .AsNoTracking()
-                    .Where(x => x.ChallanNumber.StartsWith($"{prefix}_{year}_"))
+                    .Where(x => x.CompanyId == _activeCompany.CompanyId &&
+                                x.ChallanNumber.StartsWith($"{prefix}_{year}_"))
                     .Select(x => x.ChallanNumber)
                     .ToListAsync(cancellationToken),
                 DocumentNumberType.PaymentReceipt => await _context.Payments
                     .AsNoTracking()
-                    .Where(x => x.ReceiptNumber.StartsWith($"{prefix}_{year}_"))
+                    .Where(x => x.CompanyId == _activeCompany.CompanyId &&
+                                x.ReceiptNumber.StartsWith($"{prefix}_{year}_"))
                     .Select(x => x.ReceiptNumber)
                     .ToListAsync(cancellationToken),
                 DocumentNumberType.Purchase => await _context.Purchases
                     .AsNoTracking()
-                    .Where(x => x.PurchaseNumber.StartsWith($"{prefix}_{year}_"))
+                    .Where(x => x.CompanyId == _activeCompany.CompanyId &&
+                                x.PurchaseNumber.StartsWith($"{prefix}_{year}_"))
                     .Select(x => x.PurchaseNumber)
                     .ToListAsync(cancellationToken),
                 _ => throw new ArgumentOutOfRangeException(nameof(documentType))

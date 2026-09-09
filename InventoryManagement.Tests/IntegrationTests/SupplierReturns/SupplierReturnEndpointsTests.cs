@@ -244,25 +244,29 @@ namespace InventoryManagement.Tests.IntegrationTests.SupplierReturns
 
         private async Task<SeedResult> SeedAsync()
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider
                 .GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var supplier = new Supplier
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Return supplier {suffix}",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
             var product = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Supplier return product {suffix}",
                 SKU = $"SRET-{suffix}",
                 Quantity = 10,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = 20,
                 Category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Supplier return category {suffix}",
                     Description = "Test",
                     IsActive = true,

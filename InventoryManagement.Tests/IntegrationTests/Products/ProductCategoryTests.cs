@@ -25,7 +25,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             {
                 Name = "Uncategorized product",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                BaseUnitId = 4,
+                BaseUnitId = await GetUnitIdAsync(),
                 DefaultSellingPrice = 10
             });
 
@@ -41,7 +41,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             {
                 Name = "Invalid category product",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                BaseUnitId = 4,
+                BaseUnitId = await GetUnitIdAsync(),
                 DefaultSellingPrice = 10,
                 CategoryId = int.MaxValue
             });
@@ -72,12 +72,13 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
         {
             await AuthenticateAsync();
             var category = await CreateCategoryAsync();
+            var unitId = await GetUnitIdAsync();
 
             var createResponse = await Client.PostAsJsonAsync("/api/products", new CreateProductCommand
             {
                 Name = "Product to update",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                BaseUnitId = 4,
+                BaseUnitId = unitId,
                 DefaultSellingPrice = 10,
                 CategoryId = category.Id
             });

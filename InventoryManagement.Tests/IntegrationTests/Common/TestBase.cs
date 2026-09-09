@@ -10,6 +10,7 @@ using LoginCommand = InventoryManagement.Application.Features.Auth.Login.Command
 using LoginResponse = InventoryManagement.Application.Features.Auth.Login.Response;
 using RegisterCommand = InventoryManagement.Application.Features.Auth.Register.Command;
 using RegisterResponse = InventoryManagement.Application.Features.Auth.Register.Response;
+using UnitResponse = InventoryManagement.Application.Features.Units.Response;
 
 namespace InventoryManagement.Tests.IntegrationTests.Common
 {
@@ -17,6 +18,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Common
     {
         protected readonly HttpClient Client;
         private readonly CustomWebApplicationFactory _factory;
+        protected int ActiveCompanyId { get; private set; }
 
         protected TestBase(CustomWebApplicationFactory factory)
         {
@@ -58,6 +60,25 @@ namespace InventoryManagement.Tests.IntegrationTests.Common
             Client.DefaultRequestHeaders.Add(
                 "X-Company-Id",
                 register!.CompanyId.ToString());
+            ActiveCompanyId = register.CompanyId;
+        }
+
+        protected async Task<int> GetUnitIdAsync(string name = "Piece")
+        {
+            var units = await Client.GetFromJsonAsync<List<UnitResponse>>("/api/units");
+            units.Should().NotBeNull();
+
+            var unit = units!.SingleOrDefault(x => x.Name == name);
+            unit.Should().NotBeNull();
+
+            return unit!.Id;
+        }
+
+        protected void SetActiveCompanyId(int companyId)
+        {
+            Client.DefaultRequestHeaders.Remove("X-Company-Id");
+            Client.DefaultRequestHeaders.Add("X-Company-Id", companyId.ToString());
+            ActiveCompanyId = companyId;
         }
     }
 }

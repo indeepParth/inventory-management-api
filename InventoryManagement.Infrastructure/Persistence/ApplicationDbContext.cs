@@ -93,8 +93,9 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<CompanyProfile>(entity =>
             {
-                entity.Property(x => x.Id)
-                      .ValueGeneratedNever();
+                entity.HasIndex(x => x.CompanyId)
+                      .IsUnique();
+
                 entity.Property(x => x.CompanyName)
                       .HasMaxLength(150)
                       .IsRequired();
@@ -105,6 +106,12 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.Email).HasMaxLength(254);
                 entity.Property(x => x.Phone).HasMaxLength(30);
                 entity.Property(x => x.Website).HasMaxLength(200);
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.Profiles)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
             });
 
             builder.Entity<Company>(entity =>
@@ -144,10 +151,11 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<Category>(entity =>
             {
-                entity.HasIndex(x => x.Name)
+                entity.HasIndex(x => new { x.CompanyId, x.Name })
                       .IsUnique();
 
                 entity.Property(x => x.Name)
+                      .HasColumnType("citext")
                       .IsRequired();
 
                 entity.Property(x => x.Description)
@@ -155,11 +163,17 @@ namespace InventoryManagement.Infrastructure.Persistence
 
                 entity.Property(x => x.IsActive)
                       .IsRequired();
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.Categories)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
             });
 
             builder.Entity<Unit>(entity =>
             {
-                entity.HasIndex(x => x.Name)
+                entity.HasIndex(x => new { x.CompanyId, x.Name })
                       .IsUnique();
 
                 entity.Property(x => x.Name)
@@ -181,76 +195,21 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .HasForeignKey(x => x.BaseUnitId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasData(
-                    new Unit
-                    {
-                        Id = 1,
-                        Name = "Ton",
-                        ShortName = null,
-                        FactorToBaseUnit = 1m,
-                        BaseUnitId = 1,
-                        IsActive = true,
-                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
-                    },
-                    new Unit
-                    {
-                        Id = 2,
-                        Name = "Kilogram",
-                        ShortName = null,
-                        FactorToBaseUnit = 1m,
-                        BaseUnitId = 2,
-                        IsActive = true,
-                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
-                    },
-                    new Unit
-                    {
-                        Id = 3,
-                        Name = "Bag",
-                        ShortName = null,
-                        FactorToBaseUnit = 1m,
-                        BaseUnitId = 3,
-                        IsActive = true,
-                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
-                    },
-                    new Unit
-                    {
-                        Id = 4,
-                        Name = "Piece",
-                        ShortName = null,
-                        FactorToBaseUnit = 1m,
-                        BaseUnitId = 4,
-                        IsActive = true,
-                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
-                    },
-                    new Unit
-                    {
-                        Id = 5,
-                        Name = "Cubic foot",
-                        ShortName = null,
-                        FactorToBaseUnit = 1m,
-                        BaseUnitId = 5,
-                        IsActive = true,
-                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
-                    },
-                    new Unit
-                    {
-                        Id = 6,
-                        Name = "Cubic meter",
-                        ShortName = null,
-                        FactorToBaseUnit = 1m,
-                        BaseUnitId = 6,
-                        IsActive = true,
-                        CreatedAtUtc = new DateTime(2026, 7, 31, 0, 0, 0, DateTimeKind.Utc)
-                    });
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.Units)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
             });
 
             builder.Entity<Supplier>(entity =>
             {
-                entity.HasIndex(x => x.Name)
+                entity.HasIndex(x => new { x.CompanyId, x.Name })
                       .IsUnique();
 
-                entity.HasIndex(x => x.GstNumber)
-                      .IsUnique();
+                entity.HasIndex(x => new { x.CompanyId, x.GstNumber })
+                      .IsUnique()
+                      .HasFilter("\"GstNumber\" IS NOT NULL");
 
                 entity.Property(x => x.Name)
                       .HasColumnType("citext")
@@ -258,15 +217,22 @@ namespace InventoryManagement.Infrastructure.Persistence
 
                 entity.Property(x => x.GstNumber)
                       .HasColumnType("citext");
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.Suppliers)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
             });
 
             builder.Entity<Customer>(entity =>
             {
-                entity.HasIndex(x => x.Name)
+                entity.HasIndex(x => new { x.CompanyId, x.Name })
                       .IsUnique();
 
-                entity.HasIndex(x => x.GstNumber)
-                      .IsUnique();
+                entity.HasIndex(x => new { x.CompanyId, x.GstNumber })
+                      .IsUnique()
+                      .HasFilter("\"GstNumber\" IS NOT NULL");
 
                 entity.Property(x => x.Name)
                       .HasColumnType("citext")
@@ -283,11 +249,17 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .HasMaxLength(15);
                 entity.Property(x => x.CreditLimit).HasPrecision(18, 2);
                 entity.Property(x => x.BalanceDue).HasPrecision(18, 2);
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.Customers)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
             });
 
             builder.Entity<Driver>(entity =>
             {
-                entity.HasIndex(x => x.Name)
+                entity.HasIndex(x => new { x.CompanyId, x.Name })
                       .IsUnique();
 
                 entity.Property(x => x.Name)
@@ -297,10 +269,30 @@ namespace InventoryManagement.Infrastructure.Persistence
 
                 entity.Property(x => x.Phone).HasMaxLength(30);
                 entity.Property(x => x.LicenseNumber).HasMaxLength(100);
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.Drivers)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
             });
 
             builder.Entity<Product>(entity =>
             {
+                entity.HasIndex(x => new { x.CompanyId, x.Name })
+                      .IsUnique();
+
+                entity.HasIndex(x => new { x.CompanyId, x.SKU })
+                      .IsUnique();
+
+                entity.Property(x => x.Name)
+                      .HasColumnType("citext")
+                      .IsRequired();
+
+                entity.Property(x => x.SKU)
+                      .HasColumnType("citext")
+                      .IsRequired();
+
                 entity.Property(x => x.Quantity)
                       .HasPrecision(18, 3);
 
@@ -327,6 +319,12 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.HasOne(x => x.Category)
                       .WithMany(x => x.Products)
                       .HasForeignKey(x => x.CategoryId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.Products)
+                      .HasForeignKey(x => x.CompanyId)
                       .OnDelete(DeleteBehavior.Restrict)
                       .IsRequired();
             });

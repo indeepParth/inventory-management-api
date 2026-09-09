@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -8,10 +9,14 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class DriverRepository : IDriverRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IActiveCompanyService _activeCompany;
 
-        public DriverRepository(ApplicationDbContext context)
+        public DriverRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
         {
             _context = context;
+            _activeCompany = activeCompany;
         }
 
         public Task<List<Driver>> GetAllAsync(
@@ -38,16 +43,21 @@ namespace InventoryManagement.Infrastructure.Repositories
 
         public Task<Driver?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            return _context.Drivers.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            return _context.Drivers.FirstOrDefaultAsync(
+                x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                cancellationToken);
         }
 
         public Task<Driver?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
         {
-            return _context.Drivers.FirstOrDefaultAsync(x => x.Name == name, cancellationToken);
+            return _context.Drivers.FirstOrDefaultAsync(
+                x => x.Name == name && x.CompanyId == _activeCompany.CompanyId,
+                cancellationToken);
         }
 
         public async Task AddAsync(Driver driver, CancellationToken cancellationToken = default)
         {
+            driver.CompanyId = _activeCompany.CompanyId;
             await _context.Drivers.AddAsync(driver, cancellationToken);
         }
 
@@ -58,7 +68,8 @@ namespace InventoryManagement.Infrastructure.Repositories
 
         private IQueryable<Driver> BuildQuery(string? search, bool? isActive)
         {
-            IQueryable<Driver> query = _context.Drivers;
+            IQueryable<Driver> query = _context.Drivers
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
 
             if (!string.IsNullOrWhiteSpace(search))
             {

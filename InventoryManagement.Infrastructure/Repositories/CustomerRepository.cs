@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -8,10 +9,14 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class CustomerRepository : ICustomerRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IActiveCompanyService _activeCompany;
 
-        public CustomerRepository(ApplicationDbContext context)
+        public CustomerRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
         {
             _context = context;
+            _activeCompany = activeCompany;
         }
 
         public Task<List<Customer>> GetAllAsync(
@@ -38,12 +43,16 @@ namespace InventoryManagement.Infrastructure.Repositories
 
         public Task<Customer?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            return _context.Customers.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            return _context.Customers.FirstOrDefaultAsync(
+                x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                cancellationToken);
         }
 
         public Task<Customer?> GetByNameAsync(string name, CancellationToken cancellationToken = default)
         {
-            return _context.Customers.FirstOrDefaultAsync(x => x.Name == name, cancellationToken);
+            return _context.Customers.FirstOrDefaultAsync(
+                x => x.Name == name && x.CompanyId == _activeCompany.CompanyId,
+                cancellationToken);
         }
 
         public Task<Customer?> GetByGstNumberAsync(
@@ -51,12 +60,13 @@ namespace InventoryManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             return _context.Customers.FirstOrDefaultAsync(
-                x => x.GstNumber == gstNumber,
+                x => x.GstNumber == gstNumber && x.CompanyId == _activeCompany.CompanyId,
                 cancellationToken);
         }
 
         public async Task AddAsync(Customer customer, CancellationToken cancellationToken = default)
         {
+            customer.CompanyId = _activeCompany.CompanyId;
             await _context.Customers.AddAsync(customer, cancellationToken);
         }
 
@@ -67,7 +77,8 @@ namespace InventoryManagement.Infrastructure.Repositories
 
         private IQueryable<Customer> BuildQuery(string? search, bool? isActive)
         {
-            IQueryable<Customer> query = _context.Customers;
+            IQueryable<Customer> query = _context.Customers
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
 
             if (!string.IsNullOrWhiteSpace(search))
             {

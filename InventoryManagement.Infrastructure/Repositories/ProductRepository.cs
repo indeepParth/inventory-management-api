@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Features.InventoryReports.GetCurrentStock;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Persistence;
@@ -9,10 +10,14 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class ProductRepository : IProductRepository
     {
         private readonly ApplicationDbContext _context;
+        private readonly IActiveCompanyService _activeCompany;
 
-        public ProductRepository(ApplicationDbContext context)
+        public ProductRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
         {
             _context = context;
+            _activeCompany = activeCompany;
         }
 
         public async Task<List<Product>> GetAllProductAsync(int page, int pagesize, string? search, CancellationToken cancellationToken = default)
@@ -20,6 +25,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             var query = BuildSearchQuery(search);
             
             return await query
+                        .OrderBy(x => x.Name)
+                        .ThenBy(x => x.Id)
                         .Skip((page - 1) * pagesize)
                         .Take(pagesize)
                         .ToListAsync(cancellationToken);
@@ -61,7 +68,8 @@ namespace InventoryManagement.Infrastructure.Repositories
             IQueryable<Product> query = _context.Products
                 .Include(x => x.Category)
                 .Include(x => x.BaseUnit)
-                .Include(x => x.BaseProduct);
+                .Include(x => x.BaseProduct)
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -80,7 +88,8 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .AsNoTracking()
                 .Include(x => x.Category)
                 .Include(x => x.BaseUnit)
-                .Include(x => x.BaseProduct);
+                .Include(x => x.BaseProduct)
+                .Where(x => x.CompanyId == _activeCompany.CompanyId);
 
             if (categoryId.HasValue)
                 query = query.Where(x => x.CategoryId == categoryId.Value);
@@ -109,11 +118,14 @@ namespace InventoryManagement.Infrastructure.Repositories
                 .Include(x => x.BaseUnit)
                 .Include(x => x.BaseProduct)
                 .Include(x => x.SubProducts)
-                .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+                .FirstOrDefaultAsync(
+                    x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                    cancellationToken);
         }
 
         public async Task AddProductAsync(Product product, CancellationToken cancellationToken = default)
         {
+            product.CompanyId = _activeCompany.CompanyId;
             await _context.Products.AddAsync(product, cancellationToken);
         }
 

@@ -21,13 +21,16 @@ namespace InventoryManagement.API.Controllers
         private const int CompanyNameMaxLength = 150;
         private const string CompanyIdHeaderName = "X-Company-Id";
         private readonly ApplicationDbContext _context;
+        private readonly IDefaultCompanyDataService _defaultCompanyDataService;
         private readonly ICompanyMembershipService _membershipService;
 
         public CompaniesController(
             ApplicationDbContext context,
+            IDefaultCompanyDataService defaultCompanyDataService,
             ICompanyMembershipService membershipService)
         {
             _context = context;
+            _defaultCompanyDataService = defaultCompanyDataService;
             _membershipService = membershipService;
         }
 
@@ -63,6 +66,9 @@ namespace InventoryManagement.API.Controllers
             });
 
             await _context.SaveChangesAsync(HttpContext.RequestAborted);
+            await _defaultCompanyDataService.SeedDefaultUnitsAsync(
+                company.Id,
+                HttpContext.RequestAborted);
 
             var response = new UserCompanyDto
             {

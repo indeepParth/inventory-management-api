@@ -20,12 +20,13 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
         {
             await AuthenticateAsync();
             var category = await CreateCategoryAsync();
+            var unitId = await GetUnitIdAsync();
 
             var createResponse = await Client.PostAsJsonAsync("/api/products", new CreateProductCommand
             {
                 Name = "Keyboard",
                 SKU = $"SKU-{Guid.NewGuid():N}",
-                BaseUnitId = 4,
+                BaseUnitId = unitId,
                 DefaultSellingPrice = 49.99m,
                 CategoryId = category.Id
             });
@@ -47,7 +48,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
             result.Items.First().CategoryId.Should().Be(category.Id);
             result.Items.First().CategoryName.Should().Be(category.Name);
             result.Items.First().Quantity.Should().Be(0m);
-            result.Items.First().BaseUnitId.Should().Be(4);
+            result.Items.First().BaseUnitId.Should().Be(unitId);
             result.Items.First().BaseUnitName.Should().Be("Piece");
             result.Items.First().DefaultSellingPrice.Should().Be(49.99m);
             result.Items.First().AverageCost.Should().Be(0m);

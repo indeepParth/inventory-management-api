@@ -1141,11 +1141,13 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
 
         private async Task<SeedResult> SeedDependenciesAsync()
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var customer = new Customer
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Invoice customer {suffix}",
                 IsActive = true,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -1153,13 +1155,15 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             };
             var product = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Invoice product {suffix}",
                 SKU = $"INV-{suffix}",
                 Quantity = 12.5m,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = 25,
                 Category = new Category
                 {
+                    CompanyId = ActiveCompanyId,
                     Name = $"Invoice category {suffix}",
                     Description = "Test",
                     IsActive = true,
@@ -1182,7 +1186,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                     {
                         Product = product,
                         EnteredQuantity = 2.5m,
-                        UnitId = 1,
+                        UnitId = baseUnitId,
                         ConvertedBaseQuantity = 2.5m
                     }
                 }
@@ -1190,7 +1194,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             db.ProductUnitConversions.Add(new ProductUnitConversion
             {
                 Product = product,
-                UnitId = 1,
+                UnitId = baseUnitId,
                 FactorToBaseUnit = 1,
                 IsActive = true
             });
@@ -1200,6 +1204,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
             return new SeedResult(
                 customer.Id,
                 product.Id,
+                baseUnitId,
                 challan.Items.Single().Id,
                 product.Quantity,
                 await db.StockMovements.CountAsync(x => x.ProductId == product.Id));
@@ -1346,7 +1351,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                     {
                         ProductId = seed.ProductId,
                         EnteredQuantity = quantity,
-                        UnitId = 1
+                        UnitId = seed.UnitId
                     }
                 }
             };
@@ -1356,7 +1361,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
                 {
                     ProductId = secondProductId.Value,
                     EnteredQuantity = secondQuantity.Value,
-                    UnitId = 1
+                    UnitId = seed.UnitId
                 });
             }
 
@@ -1403,6 +1408,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         private sealed record SeedResult(
             int CustomerId,
             int ProductId,
+            int UnitId,
             int DeliveryChallanItemId,
             decimal StockQuantity,
             int StockMovementCount);

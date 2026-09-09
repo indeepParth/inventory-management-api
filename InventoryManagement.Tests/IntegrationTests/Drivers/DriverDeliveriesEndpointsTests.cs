@@ -123,11 +123,13 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
 
         private async Task<SeedResult> SeedDriverDeliveriesAsync()
         {
+            var baseUnitId = await GetUnitIdAsync("Ton");
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var suffix = Guid.NewGuid().ToString("N");
             var driver = new Driver
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"History driver {suffix}",
                 Phone = "9999999999",
                 LicenseNumber = $"LIC-{suffix}",
@@ -137,6 +139,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
             };
             var customer = new Customer
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"History customer {suffix}",
                 IsActive = true,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -144,6 +147,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
             };
             var category = new Category
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"History category {suffix}",
                 Description = "Test",
                 IsActive = true,
@@ -151,19 +155,21 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
             };
             var firstProduct = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"History product A {suffix}",
                 SKU = $"HISTA-{suffix}",
                 Quantity = 10,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = 20,
                 Category = category
             };
             var secondProduct = new Product
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"History product B {suffix}",
                 SKU = $"HISTB-{suffix}",
                 Quantity = 10,
-                BaseUnitId = 1,
+                BaseUnitId = baseUnitId,
                 AverageCost = 30,
                 Category = category
             };
@@ -178,6 +184,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 "Paid customer site",
                 100,
                 isPaid: true,
+                baseUnitId,
                 firstProduct,
                 secondProduct);
             var invoicedUnpaid = Challan(
@@ -190,6 +197,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 "Unpaid customer site",
                 150,
                 isPaid: false,
+                baseUnitId,
                 firstProduct);
             var draft = Challan(
                 suffix,
@@ -201,6 +209,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 "Draft customer site",
                 200,
                 isPaid: false,
+                baseUnitId,
                 firstProduct);
             var cancelled = Challan(
                 suffix,
@@ -212,6 +221,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 "Cancelled customer site",
                 250,
                 isPaid: false,
+                baseUnitId,
                 firstProduct);
             db.DeliveryChallans.AddRange(postedPaid, invoicedUnpaid, draft, cancelled);
             var laborOnlyInvoice = new SalesInvoice
@@ -267,6 +277,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
             string deliveryAddress,
             decimal deliveryCharge,
             bool isPaid,
+            int unitId,
             params Product[] products)
         {
             var challan = new DeliveryChallan
@@ -292,7 +303,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
                 {
                     Product = product,
                     EnteredQuantity = 1,
-                    UnitId = 1,
+                    UnitId = unitId,
                     ConvertedBaseQuantity = 1
                 });
             }

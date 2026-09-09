@@ -338,6 +338,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
             var suffix = Guid.NewGuid().ToString("N");
             var customer = new Customer
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Payment customer {suffix}",
                 IsActive = true,
                 BalanceDue = total,
@@ -369,6 +370,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
             var suffix = Guid.NewGuid().ToString("N");
             var supplier = new Supplier
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Payment supplier {suffix}",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow

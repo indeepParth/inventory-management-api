@@ -1,5 +1,6 @@
 using InventoryManagement.Application.Authorization;
 using InventoryManagement.Application.Common.Identity;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -10,13 +11,16 @@ namespace InventoryManagement.Infrastructure.Identity
     public class UserRegistrationService : IUserRegistrationService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IDefaultCompanyDataService _defaultCompanyDataService;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public UserRegistrationService(
             ApplicationDbContext context,
+            IDefaultCompanyDataService defaultCompanyDataService,
             UserManager<ApplicationUser> userManager)
         {
             _context = context;
+            _defaultCompanyDataService = defaultCompanyDataService;
             _userManager = userManager;
         }
 
@@ -64,6 +68,9 @@ namespace InventoryManagement.Infrastructure.Identity
             });
 
             await _context.SaveChangesAsync(cancellationToken);
+            await _defaultCompanyDataService.SeedDefaultUnitsAsync(
+                company.Id,
+                cancellationToken);
             await transaction.CommitAsync(cancellationToken);
 
             return (true, Enumerable.Empty<string>(), company.Id);

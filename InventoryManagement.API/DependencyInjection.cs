@@ -105,6 +105,7 @@ namespace InventoryManagement.API
 
             services.AddHttpContextAccessor();
             services.AddScoped<ICurrentUserService, CurrentUserService>();
+            services.AddScoped<IActiveCompanyService, ActiveCompanyService>();
             services.AddScoped<IAuthorizationHandler, CompanyRoleAuthorizationHandler>();
 
             services.AddAuthorization(options =>

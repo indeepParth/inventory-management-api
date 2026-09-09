@@ -84,7 +84,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Categories
             {
                 Name = "Milk",
                 SKU = $"MILK-{Guid.NewGuid():N}",
-                BaseUnitId = 4,
+                BaseUnitId = await GetUnitIdAsync(),
                 DefaultSellingPrice = 50,
                 CategoryId = category.Id
             });

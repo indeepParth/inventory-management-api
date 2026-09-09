@@ -3,6 +3,8 @@ namespace InventoryManagement.Domain.Entities
     public class Product
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
+        public Company Company { get; set; } = null!;
         public string Name { get; set; } = string.Empty;
         public string SKU { get; set; } = string.Empty;
         public decimal Quantity { get; set; }

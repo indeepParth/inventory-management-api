@@ -103,6 +103,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Statements
             var suffix = Guid.NewGuid().ToString("N");
             var customer = new Customer
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Statement customer {suffix}",
                 IsActive = true,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -145,6 +146,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Statements
             var suffix = Guid.NewGuid().ToString("N");
             var supplier = new Supplier
             {
+                CompanyId = ActiveCompanyId,
                 Name = $"Statement supplier {suffix}",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow

@@ -3,6 +3,8 @@ namespace InventoryManagement.Domain.Entities
     public class Unit
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
+        public Company Company { get; set; } = null!;
         public string Name { get; set; } = string.Empty;
         public string? ShortName { get; set; }
         public decimal FactorToBaseUnit { get; set; } = 1m;

@@ -3,6 +3,8 @@ namespace InventoryManagement.Domain.Entities
     public class CompanyProfile
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
+        public Company Company { get; set; } = null!;
         public string CompanyName { get; set; } = string.Empty;
         public string? Address { get; set; }
         public string? GstNumber { get; set; }

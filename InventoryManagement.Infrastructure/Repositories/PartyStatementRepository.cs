@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Persistence;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Persistence;
@@ -9,15 +10,27 @@ namespace InventoryManagement.Infrastructure.Repositories
     public class PartyStatementRepository : IPartyStatementRepository
     {
         private readonly ApplicationDbContext _context;
-        public PartyStatementRepository(ApplicationDbContext context) => _context = context;
+        private readonly IActiveCompanyService _activeCompany;
+
+        public PartyStatementRepository(
+            ApplicationDbContext context,
+            IActiveCompanyService activeCompany)
+        {
+            _context = context;
+            _activeCompany = activeCompany;
+        }
 
         public Task<bool> CustomerExistsAsync(
             int id, CancellationToken cancellationToken = default) =>
-            _context.Customers.AnyAsync(x => x.Id == id, cancellationToken);
+            _context.Customers.AnyAsync(
+                x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                cancellationToken);
 
         public Task<bool> SupplierExistsAsync(
             int id, CancellationToken cancellationToken = default) =>
-            _context.Suppliers.AnyAsync(x => x.Id == id, cancellationToken);
+            _context.Suppliers.AnyAsync(
+                x => x.Id == id && x.CompanyId == _activeCompany.CompanyId,
+                cancellationToken);
 
         public Task<List<SalesInvoice>> GetCustomerInvoicesThroughAsync(
             int customerId, DateTime dateToExclusive,

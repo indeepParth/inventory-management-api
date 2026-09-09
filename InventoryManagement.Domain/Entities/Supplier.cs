@@ -3,6 +3,8 @@ namespace InventoryManagement.Domain.Entities
     public class Supplier
     {
         public int Id { get; set; }
+        public int CompanyId { get; set; }
+        public Company Company { get; set; } = null!;
         public string Name { get; set; } = string.Empty;
         public string? ContactPerson { get; set; }
         public string? Email { get; set; }

@@ -66,12 +66,15 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         [Fact]
-        public async Task Sales_Should_Read_Customers_And_Manage_Sales_But_Not_Purchases_Or_Cost_Reports()
+        public async Task Staff_Should_Manage_Operational_Documents_But_Not_Master_Data_Or_Cost_Reports()
         {
-            await AuthenticateWithRoleAsync(CompanyRoles.Sales);
+            await AuthenticateWithRoleAsync(CompanyRoles.Staff);
 
             var productsResponse = await Client.GetAsync("/api/products");
             var customersResponse = await Client.GetAsync("/api/customers");
+            var createProductResponse = await Client.PostAsJsonAsync(
+                "/api/products",
+                new { });
             var challansResponse = await Client.GetAsync("/api/delivery-challans");
             var invoicesResponse = await Client.GetAsync("/api/sales-invoices");
             var purchasesResponse = await Client.GetAsync("/api/purchases");
@@ -80,16 +83,17 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
 
             productsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             customersResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            createProductResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
             challansResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             invoicesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-            purchasesResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            purchasesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             grossProfitResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
 
         [Fact]
-        public async Task Sales_Should_Be_Authorized_To_Create_Customer_Receipts()
+        public async Task Staff_Should_Be_Authorized_To_Create_Customer_Receipts()
         {
-            await AuthenticateWithRoleAsync(CompanyRoles.Sales);
+            await AuthenticateWithRoleAsync(CompanyRoles.Staff);
 
             var response = await Client.PostAsJsonAsync(
                 "/api/payments",
@@ -107,9 +111,9 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         [Fact]
-        public async Task Inventory_Should_Manage_Inventory_Flows_But_Not_Sales_Or_Customer_Reads()
+        public async Task Viewer_Should_Read_Business_Data_But_Not_Manage_Operational_Flows()
         {
-            await AuthenticateWithRoleAsync(CompanyRoles.Inventory);
+            await AuthenticateWithRoleAsync(CompanyRoles.Viewer);
 
             var productsResponse = await Client.GetAsync("/api/products");
             var suppliersResponse = await Client.GetAsync("/api/suppliers");
@@ -120,16 +124,16 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
 
             productsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             suppliersResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-            purchasesResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+            purchasesResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
             stockMovementsResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-            customersResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            customersResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             salesInvoicesResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
 
         [Fact]
-        public async Task Inventory_Should_Not_Access_Cost_Reports_Or_Manual_Adjustments()
+        public async Task Viewer_Should_Access_Read_Only_Reports_But_Not_Manual_Adjustments()
         {
-            await AuthenticateWithRoleAsync(CompanyRoles.Inventory);
+            await AuthenticateWithRoleAsync(CompanyRoles.Viewer);
 
             var reportResponse = await Client.GetAsync(
                 "/api/inventory-reports/current-stock");
@@ -137,13 +141,13 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 "/api/stock-movements/adjustment",
                 new { });
 
-            reportResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            reportResponse.StatusCode.Should().Be(HttpStatusCode.OK);
             adjustmentResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
 
         [Theory]
-        [InlineData(CompanyRoles.Sales, "/api/sales-invoices/1/cancel")]
-        [InlineData(CompanyRoles.Inventory, "/api/purchases/1/cancel")]
+        [InlineData(CompanyRoles.Staff, "/api/sales-invoices/1/cancel")]
+        [InlineData(CompanyRoles.Viewer, "/api/purchases/1/cancel")]
         public async Task Cancellation_Endpoints_Should_Be_Admin_Or_Manager_Only(
             string role,
             string path)

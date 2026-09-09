@@ -25,30 +25,30 @@ export type RoutePolicy =
   | 'manageSupplierReturns'
   | 'viewReports'
 
-export const allRoles: AppRole[] = ['Owner', 'Manager', 'Sales', 'Inventory']
+export const allRoles: AppRole[] = ['Owner', 'Admin', 'Manager', 'Staff', 'Viewer']
 
 const policyRoles: Record<RoutePolicy, AppRole[]> = {
   allAuthenticated: allRoles,
-  adminOnly: ['Owner'],
-  adminOrManager: ['Owner', 'Manager'],
-  readProducts: ['Owner', 'Manager', 'Sales', 'Inventory'],
-  manageProducts: ['Owner', 'Manager'],
-  readCustomers: ['Owner', 'Manager', 'Sales'],
-  manageCustomers: ['Owner', 'Manager'],
-  viewCustomerStatements: ['Owner', 'Manager', 'Sales'],
-  readDrivers: ['Owner', 'Manager', 'Sales'],
-  manageDrivers: ['Owner', 'Manager'],
-  readSuppliers: ['Owner', 'Manager', 'Inventory'],
-  manageSuppliers: ['Owner', 'Manager'],
-  viewSupplierStatements: ['Owner', 'Manager'],
-  managePurchases: ['Owner', 'Manager', 'Inventory'],
-  manageDeliveryChallans: ['Owner', 'Manager', 'Sales'],
-  manageSalesInvoices: ['Owner', 'Manager', 'Sales'],
-  viewPayments: ['Owner', 'Manager'],
-  viewStockMovements: ['Owner', 'Manager', 'Inventory'],
-  manageCustomerReturns: ['Owner', 'Manager', 'Inventory'],
-  manageSupplierReturns: ['Owner', 'Manager', 'Inventory'],
-  viewReports: ['Owner', 'Manager'],
+  adminOnly: ['Owner', 'Admin'],
+  adminOrManager: ['Owner', 'Admin', 'Manager'],
+  readProducts: ['Owner', 'Admin', 'Manager', 'Staff', 'Viewer'],
+  manageProducts: ['Owner', 'Admin', 'Manager'],
+  readCustomers: ['Owner', 'Admin', 'Manager', 'Staff', 'Viewer'],
+  manageCustomers: ['Owner', 'Admin', 'Manager'],
+  viewCustomerStatements: ['Owner', 'Admin', 'Manager', 'Staff', 'Viewer'],
+  readDrivers: ['Owner', 'Admin', 'Manager', 'Staff', 'Viewer'],
+  manageDrivers: ['Owner', 'Admin', 'Manager'],
+  readSuppliers: ['Owner', 'Admin', 'Manager', 'Staff', 'Viewer'],
+  manageSuppliers: ['Owner', 'Admin', 'Manager'],
+  viewSupplierStatements: ['Owner', 'Admin', 'Manager', 'Staff', 'Viewer'],
+  managePurchases: ['Owner', 'Admin', 'Manager', 'Staff'],
+  manageDeliveryChallans: ['Owner', 'Admin', 'Manager', 'Staff'],
+  manageSalesInvoices: ['Owner', 'Admin', 'Manager', 'Staff'],
+  viewPayments: ['Owner', 'Admin', 'Manager', 'Staff', 'Viewer'],
+  viewStockMovements: ['Owner', 'Admin', 'Manager', 'Staff', 'Viewer'],
+  manageCustomerReturns: ['Owner', 'Admin', 'Manager', 'Staff'],
+  manageSupplierReturns: ['Owner', 'Admin', 'Manager', 'Staff'],
+  viewReports: ['Owner', 'Admin', 'Manager', 'Viewer'],
 }
 
 export function hasRouteAccess(companyRole: string | undefined, policy: RoutePolicy): boolean {
@@ -56,7 +56,7 @@ export function hasRouteAccess(companyRole: string | undefined, policy: RoutePol
     return true
   }
 
-  if (companyRole === 'Owner') {
+  if (companyRole === 'Owner' || companyRole === 'Admin') {
     return true
   }
 

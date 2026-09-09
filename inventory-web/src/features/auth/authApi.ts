@@ -11,7 +11,7 @@ export type LoginResponse = {
   expiresAt: string
 }
 
-export type CompanyRole = 'Owner' | 'Manager' | 'Sales' | 'Inventory'
+export type CompanyRole = 'Owner' | 'Admin' | 'Manager' | 'Staff' | 'Viewer'
 
 export type UserCompany = {
   id: number

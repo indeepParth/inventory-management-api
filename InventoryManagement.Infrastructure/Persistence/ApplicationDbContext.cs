@@ -120,8 +120,10 @@ namespace InventoryManagement.Infrastructure.Persistence
 
             builder.Entity<CompanyUser>(entity =>
             {
-                entity.HasIndex(x => new { x.CompanyId, x.UserId })
+                entity.HasIndex(x => new { x.UserId, x.CompanyId })
                       .IsUnique();
+
+                entity.HasIndex(x => x.CompanyId);
 
                 entity.Property(x => x.UserId)
                       .IsRequired();

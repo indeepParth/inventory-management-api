@@ -70,7 +70,14 @@ function isAccountPath(pathname: string): boolean {
 export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { activeCompany, currentUser, isCurrentUserLoading, logout } = useAuth()
+  const {
+    activeCompany,
+    companies,
+    currentUser,
+    isCurrentUserLoading,
+    logout,
+    selectCompany,
+  } = useAuth()
   const visibleDirectNavItems = directNavItems.filter((item) =>
     hasRouteAccess(activeCompany?.role, item.policy),
   )
@@ -107,6 +114,12 @@ export function AppLayout() {
   function handleLogout(): void {
     logout()
     navigate('/login', { replace: true })
+  }
+
+  function handleCompanyChange(companyId: number): void {
+    void selectCompany(companyId).then(() => {
+      navigate(location.pathname, { replace: true })
+    })
   }
 
   function toggleGroup(groupId: string): void {
@@ -146,6 +159,21 @@ export function AppLayout() {
               {isAccountMenuOpen ? 'v' : '>'}
             </span>
           </button>
+          <label className="company-switcher">
+            <span>Company</span>
+            <select
+              disabled={isCurrentUserLoading || companies.length <= 1}
+              onChange={(event) => handleCompanyChange(Number(event.target.value))}
+              value={activeCompany?.id ?? ''}
+            >
+              {activeCompany ? null : <option value="">Select company</option>}
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>
+                  {company.name} - {company.role}
+                </option>
+              ))}
+            </select>
+          </label>
           {isAccountMenuOpen ? (
             <div className="app-account-menu" id={accountPanelId}>
               <NavLink className={({ isActive }) => isActive ? 'app-nav-link app-nav-child-link active' : 'app-nav-link app-nav-child-link'} to="/app/profile">

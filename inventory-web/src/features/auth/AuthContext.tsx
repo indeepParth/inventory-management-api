@@ -8,12 +8,14 @@ import {
   type ReactNode,
 } from 'react'
 import {
+  clearActiveCompanyId,
   clearAuthTokens,
   getActiveCompanyId,
   getStoredAuthTokens,
   setActiveCompanyId,
   setAuthTokens,
 } from '../../shared/api/tokenStorage'
+import { registerCompanyAccessLostHandler } from '../../shared/api/apiClient'
 import {
   getCurrentUser,
   login as loginRequest,
@@ -35,8 +37,12 @@ type AuthState = {
 }
 
 type AuthContextValue = AuthState & {
+  companies: UserCompany[]
   login: (request: LoginRequest) => Promise<void>
   logout: () => void
+  refreshCurrentUser: () => Promise<CurrentUser>
+  selectCompany: (companyId: number) => Promise<void>
+  handleCompanyAccessLost: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -73,6 +79,7 @@ function resolveActiveCompany(currentUser: CurrentUser): UserCompany | null {
     return company
   }
 
+  clearActiveCompanyId()
   return null
 }
 
@@ -117,6 +124,47 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setAuthState(mapLoginResponse(response, currentUser))
   }, [])
 
+  const refreshCurrentUser = useCallback(async (): Promise<CurrentUser> => {
+    const currentUser = await getCurrentUser()
+
+    setAuthState((currentState) => ({
+      ...currentState,
+      currentUser,
+      activeCompany: resolveActiveCompany(currentUser),
+      isAuthenticated: true,
+      isAuthResolved: true,
+      isCurrentUserLoading: false,
+    }))
+
+    return currentUser
+  }, [])
+
+  const selectCompany = useCallback(async (companyId: number): Promise<void> => {
+    const company = authState.currentUser?.companies.find(
+      (candidate) => candidate.id === companyId,
+    )
+
+    if (!company) {
+      clearActiveCompanyId()
+      await refreshCurrentUser()
+      return
+    }
+
+    setActiveCompanyId(company.id)
+    setAuthState((currentState) => ({
+      ...currentState,
+      activeCompany: company,
+    }))
+  }, [authState.currentUser?.companies, refreshCurrentUser])
+
+  const handleCompanyAccessLost = useCallback(async (): Promise<void> => {
+    try {
+      await refreshCurrentUser()
+    } catch {
+      logout()
+    }
+  }, [logout, refreshCurrentUser])
+
   useEffect(() => {
     if (!authState.accessToken || authState.currentUser || authState.isAuthResolved) {
       return
@@ -124,31 +172,45 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     async function loadCurrentUser(): Promise<void> {
       try {
-        const currentUser = await getCurrentUser()
-
-        setAuthState((currentState) => ({
-          ...currentState,
-          currentUser,
-          activeCompany: resolveActiveCompany(currentUser),
-          isAuthenticated: true,
-          isAuthResolved: true,
-          isCurrentUserLoading: false,
-        }))
+        await refreshCurrentUser()
       } catch {
         logout()
       }
     }
 
     void loadCurrentUser()
-  }, [authState.accessToken, authState.currentUser, authState.isAuthResolved, logout])
+  }, [
+    authState.accessToken,
+    authState.currentUser,
+    authState.isAuthResolved,
+    logout,
+    refreshCurrentUser,
+  ])
+
+  useEffect(() => {
+    registerCompanyAccessLostHandler(handleCompanyAccessLost)
+
+    return () => registerCompanyAccessLostHandler(null)
+  }, [handleCompanyAccessLost])
 
   const value = useMemo<AuthContextValue>(
     () => ({
       ...authState,
+      companies: authState.currentUser?.companies ?? [],
       login,
       logout,
+      refreshCurrentUser,
+      selectCompany,
+      handleCompanyAccessLost,
     }),
-    [authState, login, logout],
+    [
+      authState,
+      handleCompanyAccessLost,
+      login,
+      logout,
+      refreshCurrentUser,
+      selectCompany,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -16,11 +16,16 @@ type ApiRequestOptions<TBody> = {
   headers?: HeadersInit
   signal?: AbortSignal
   skipAuthRefresh?: boolean
+  skipCompanyAccessRecovery?: boolean
 }
 
 type RefreshTokenRequest = {
   refreshToken: string
 }
+
+type CompanyAccessLostHandler = () => Promise<void> | void
+
+let companyAccessLostHandler: CompanyAccessLostHandler | null = null
 
 export type ProblemDetails = {
   type?: string
@@ -59,7 +64,11 @@ async function parseResponse(response: Response): Promise<unknown> {
   return response.text()
 }
 
-function buildHeaders(hasBody: boolean, headers?: HeadersInit): Headers {
+function buildHeaders(
+  hasBody: boolean,
+  headers?: HeadersInit,
+  includeCompanyHeader = true,
+): Headers {
   const requestHeaders = new Headers(headers)
   const accessToken = getAccessToken()
 
@@ -77,16 +86,29 @@ function buildHeaders(hasBody: boolean, headers?: HeadersInit): Headers {
 
   const activeCompanyId = getActiveCompanyId()
 
-  if (activeCompanyId !== null && !requestHeaders.has('X-Company-Id')) {
+  if (includeCompanyHeader && activeCompanyId !== null && !requestHeaders.has('X-Company-Id')) {
     requestHeaders.set('X-Company-Id', String(activeCompanyId))
   }
 
   return requestHeaders
 }
 
+export function registerCompanyAccessLostHandler(
+  handler: CompanyAccessLostHandler | null,
+): void {
+  companyAccessLostHandler = handler
+}
+
 function buildUrl(path: string): string {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   return `${getApiBaseUrl()}${normalizedPath}`
+}
+
+function isAuthPath(path: string): boolean {
+  const normalizedPath = path.toLowerCase()
+
+  return normalizedPath.startsWith('/api/auth') ||
+    normalizedPath.startsWith('api/auth')
 }
 
 function redirectToLogin(): void {
@@ -135,7 +157,7 @@ async function sendRequest<TBody>(
 
   return fetch(buildUrl(path), {
     method: options.method ?? 'GET',
-    headers: buildHeaders(hasBody, options.headers),
+    headers: buildHeaders(hasBody, options.headers, !isAuthPath(path)),
     body: hasBody ? JSON.stringify(options.body) : undefined,
     signal: options.signal,
   })
@@ -150,7 +172,7 @@ async function refreshAccessToken(): Promise<boolean> {
 
   const response = await fetch(buildUrl('/api/Auth/RefreshToken'), {
     method: 'POST',
-    headers: buildHeaders(true),
+    headers: buildHeaders(true, undefined, false),
     body: JSON.stringify({ refreshToken } satisfies RefreshTokenRequest),
   })
 
@@ -211,6 +233,15 @@ export async function apiRequest<TResponse, TBody = unknown>(
   if (!response.ok) {
     if (response.status === 401 && !options.skipAuthRefresh) {
       await handleAuthFailure()
+    }
+
+    if (
+      response.status === 403 &&
+      !options.skipCompanyAccessRecovery &&
+      getActiveCompanyId() !== null &&
+      !isAuthPath(path)
+    ) {
+      await companyAccessLostHandler?.()
     }
 
     throw new ApiError(

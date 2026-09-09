@@ -1,6 +1,11 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '../features/auth/AuthContext'
-import { ProtectedRoute, PublicOnlyRoute, RoleProtectedRoute } from '../features/auth/AuthRoutes'
+import {
+  CompanyRequiredRoute,
+  ProtectedRoute,
+  PublicOnlyRoute,
+  RoleProtectedRoute,
+} from '../features/auth/AuthRoutes'
 import { AppLayout } from '../shared/components/AppLayout'
 import { PublicLayout } from '../shared/components/PublicLayout'
 import { CategoriesPage } from '../pages/CategoriesPage'
@@ -48,58 +53,62 @@ export function App() {
             <Route path="/app" element={<AppLayout />}>
               <Route index element={<Navigate to="/app/dashboard" replace />} />
               <Route element={<RoleProtectedRoute policy="allAuthenticated" />}>
-                <Route path="dashboard" element={<DashboardPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="change-password" element={<ChangePasswordPage />} />
               </Route>
-              <Route element={<RoleProtectedRoute policy="adminOnly" />}>
-                <Route path="users" element={<UsersPage />} />
-                <Route path="company-profile" element={<CompanyProfilePage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="readProducts" />}>
-                <Route path="products" element={<ProductsPage />} />
-                <Route path="categories" element={<CategoriesPage />} />
-                <Route path="units" element={<UnitsPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="readCustomers" />}>
-                <Route path="customers" element={<CustomersPage />} />
-                <Route path="customers/:id" element={<CustomerDetailPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="viewCustomerStatements" />}>
-                <Route path="customers/:id/ledger" element={<CustomerLedgerPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="readDrivers" />}>
-                <Route path="drivers" element={<DriversPage />} />
-                <Route path="drivers/:id" element={<DriverDetailPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="readSuppliers" />}>
-                <Route path="suppliers" element={<SuppliersPage />} />
-                <Route path="suppliers/:id" element={<SupplierDetailPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="viewSupplierStatements" />}>
-                <Route path="suppliers/:id/ledger" element={<SupplierLedgerPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="managePurchases" />}>
-                <Route path="purchases" element={<PurchasesPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="manageSalesInvoices" />}>
-                <Route path="sales-invoices" element={<SalesInvoicesPage />} />
-                <Route path="sales-invoices/:id" element={<SalesInvoiceDetailPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="viewPayments" />}>
-                <Route path="payments" element={<PaymentsPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="viewStockMovements" />}>
-                <Route path="stock-movements" element={<StockMovementsPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="manageCustomerReturns" />}>
-                <Route path="customer-returns" element={<CustomerReturnsPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="manageSupplierReturns" />}>
-                <Route path="supplier-returns" element={<SupplierReturnsPage />} />
-              </Route>
-              <Route element={<RoleProtectedRoute policy="viewReports" />}>
-                <Route path="reports" element={<ReportsPage />} />
+              <Route element={<CompanyRequiredRoute />}>
+                <Route element={<RoleProtectedRoute policy="allAuthenticated" />}>
+                  <Route path="dashboard" element={<DashboardPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="adminOnly" />}>
+                  <Route path="users" element={<UsersPage />} />
+                  <Route path="company-profile" element={<CompanyProfilePage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="readProducts" />}>
+                  <Route path="products" element={<ProductsPage />} />
+                  <Route path="categories" element={<CategoriesPage />} />
+                  <Route path="units" element={<UnitsPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="readCustomers" />}>
+                  <Route path="customers" element={<CustomersPage />} />
+                  <Route path="customers/:id" element={<CustomerDetailPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="viewCustomerStatements" />}>
+                  <Route path="customers/:id/ledger" element={<CustomerLedgerPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="readDrivers" />}>
+                  <Route path="drivers" element={<DriversPage />} />
+                  <Route path="drivers/:id" element={<DriverDetailPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="readSuppliers" />}>
+                  <Route path="suppliers" element={<SuppliersPage />} />
+                  <Route path="suppliers/:id" element={<SupplierDetailPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="viewSupplierStatements" />}>
+                  <Route path="suppliers/:id/ledger" element={<SupplierLedgerPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="managePurchases" />}>
+                  <Route path="purchases" element={<PurchasesPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="manageSalesInvoices" />}>
+                  <Route path="sales-invoices" element={<SalesInvoicesPage />} />
+                  <Route path="sales-invoices/:id" element={<SalesInvoiceDetailPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="viewPayments" />}>
+                  <Route path="payments" element={<PaymentsPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="viewStockMovements" />}>
+                  <Route path="stock-movements" element={<StockMovementsPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="manageCustomerReturns" />}>
+                  <Route path="customer-returns" element={<CustomerReturnsPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="manageSupplierReturns" />}>
+                  <Route path="supplier-returns" element={<SupplierReturnsPage />} />
+                </Route>
+                <Route element={<RoleProtectedRoute policy="viewReports" />}>
+                  <Route path="reports" element={<ReportsPage />} />
+                </Route>
               </Route>
             </Route>
           </Route>

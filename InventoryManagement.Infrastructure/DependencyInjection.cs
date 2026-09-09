@@ -52,6 +52,8 @@ namespace InventoryManagement.Infrastructure
             services.AddScoped<IUserRegistrationService, UserRegistrationService>();
             services.AddScoped<ICompanyMembershipService, CompanyMembershipService>();
             services.AddScoped<IDefaultCompanyDataService, DefaultCompanyDataService>();
+            services.AddScoped<ISubscriptionProvisioningService, SubscriptionProvisioningService>();
+            services.AddScoped<ISubscriptionLimitService, SubscriptionProvisioningService>();
             services.AddScoped<IdentityBootstrapService>();
             services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 

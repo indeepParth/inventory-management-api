@@ -304,6 +304,12 @@ Run database migrations as a controlled pre-deployment step:
 dotnet ef database update --project InventoryManagement.Infrastructure --startup-project InventoryManagement.API
 ```
 
+The current multi-company rollout assumes a fresh PostgreSQL database. Do not
+apply these migrations as a live legacy-data conversion path for an existing
+single-company installation. If an environment must be replaced, take a backup,
+recreate or restore the database as a whole, then initialize the fresh schema
+through registration or the configured bootstrap admin.
+
 For a first Docker production deployment with a new named volume, you can set
 `Database__ApplyMigrationsOnStartup=true` in the root `.env` for the first
 successful start, then set it back to `false` and restart the stack.

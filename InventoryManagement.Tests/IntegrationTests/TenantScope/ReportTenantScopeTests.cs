@@ -37,6 +37,7 @@ namespace InventoryManagement.Tests.IntegrationTests.TenantScope
         public async Task Reports_Ledgers_And_Dashboard_Source_Apis_Should_Use_Active_Company()
         {
             await AuthenticateAsync();
+            await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var companyAId = ActiveCompanyId;
             var companyA = await SeedReportDataAsync("A");
             var companyBId = await CreateAndSelectCompanyAsync();

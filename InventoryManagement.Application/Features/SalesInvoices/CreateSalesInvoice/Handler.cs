@@ -16,6 +16,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
         private readonly IProductRepository _productRepository;
         private readonly IStockMovementRepository _stockMovementRepository;
         private readonly ICurrentUserService _currentUserService;
+        private readonly ISubscriptionLimitService _subscriptionLimitService;
 
         public Handler(
             ISalesInvoiceRepository invoiceRepository,
@@ -23,7 +24,8 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
             IDriverRepository driverRepository,
             IProductRepository productRepository,
             IStockMovementRepository stockMovementRepository,
-            ICurrentUserService currentUserService)
+            ICurrentUserService currentUserService,
+            ISubscriptionLimitService subscriptionLimitService)
         {
             _invoiceRepository = invoiceRepository;
             _customerRepository = customerRepository;
@@ -31,6 +33,7 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
             _productRepository = productRepository;
             _stockMovementRepository = stockMovementRepository;
             _currentUserService = currentUserService;
+            _subscriptionLimitService = subscriptionLimitService;
         }
 
         public async Task<SalesInvoiceResponse> Handle(
@@ -42,6 +45,9 @@ namespace InventoryManagement.Application.Features.SalesInvoices.CreateSalesInvo
                 throw new BadRequestException(
                     "Use the challan invoice operation for delivery challan items.");
             }
+
+            await _subscriptionLimitService.EnsureCanCreateSalesInvoiceAsync(
+                cancellationToken);
 
             SalesInvoice? created = null;
             await _invoiceRepository.ExecuteInTransactionAsync(async transactionToken =>

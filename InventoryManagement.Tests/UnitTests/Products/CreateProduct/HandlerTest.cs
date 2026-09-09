@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using InventoryManagement.Application.Common.Exceptions;
+using InventoryManagement.Application.Common.Interfaces;
 using FluentAssertions;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Application.Features.Products.CreateProduct;
@@ -37,6 +38,10 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             var _repositoryMock = new Mock<IProductRepository>();
             var categoryRepositoryMock = new Mock<ICategoryRepository>();
             var unitRepositoryMock = new Mock<IUnitRepository>();
+            var subscriptionLimitServiceMock = new Mock<ISubscriptionLimitService>();
+            subscriptionLimitServiceMock
+                .Setup(x => x.EnsureCanCreateProductAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
             categoryRepositoryMock
                 .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(category);
@@ -51,7 +56,8 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             var handler = new Handler(
                 _repositoryMock.Object,
                 categoryRepositoryMock.Object,
-                unitRepositoryMock.Object);
+                unitRepositoryMock.Object,
+                subscriptionLimitServiceMock.Object);
 
             var newProduct = new Command
             {
@@ -115,6 +121,10 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             var repositoryMock = new Mock<IProductRepository>();
             var categoryRepositoryMock = new Mock<ICategoryRepository>();
             var unitRepositoryMock = new Mock<IUnitRepository>();
+            var subscriptionLimitServiceMock = new Mock<ISubscriptionLimitService>();
+            subscriptionLimitServiceMock
+                .Setup(x => x.EnsureCanCreateProductAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
             categoryRepositoryMock
                 .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(category);
@@ -134,7 +144,8 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             var handler = new Handler(
                 repositoryMock.Object,
                 categoryRepositoryMock.Object,
-                unitRepositoryMock.Object);
+                unitRepositoryMock.Object,
+                subscriptionLimitServiceMock.Object);
 
             var response = await handler.Handle(new Command
             {
@@ -178,6 +189,10 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             var repositoryMock = new Mock<IProductRepository>();
             var categoryRepositoryMock = new Mock<ICategoryRepository>();
             var unitRepositoryMock = new Mock<IUnitRepository>();
+            var subscriptionLimitServiceMock = new Mock<ISubscriptionLimitService>();
+            subscriptionLimitServiceMock
+                .Setup(x => x.EnsureCanCreateProductAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
             categoryRepositoryMock
                 .Setup(x => x.GetByIdAsync(1, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(category);
@@ -191,7 +206,8 @@ namespace InventoryManagement.Tests.UnitTests.Products.CreateProduct
             var handler = new Handler(
                 repositoryMock.Object,
                 categoryRepositoryMock.Object,
-                unitRepositoryMock.Object);
+                unitRepositoryMock.Object,
+                subscriptionLimitServiceMock.Object);
 
             var command = new Command
             {

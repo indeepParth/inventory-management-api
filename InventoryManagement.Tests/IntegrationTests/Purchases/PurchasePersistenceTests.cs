@@ -1,6 +1,7 @@
 using FluentAssertions;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
+using InventoryManagement.Infrastructure.Identity;
 using InventoryManagement.Infrastructure.Persistence;
 using InventoryManagement.Tests.IntegrationTests.Common;
 using Microsoft.EntityFrameworkCore;
@@ -18,10 +19,24 @@ public class PurchasePersistenceTests
         var options = database.CreateOptions<ApplicationDbContext>();
         await using var db = new ApplicationDbContext(options);
         await db.Database.MigrateAsync();
+        var ownerUnique = Guid.NewGuid().ToString("N");
+        var ownerUserName = $"purchase_owner_{ownerUnique}";
+        var ownerEmail = $"purchase_owner_{ownerUnique}@example.com";
+        var owner = new ApplicationUser
+        {
+            UserName = ownerUserName,
+            NormalizedUserName = ownerUserName.ToUpperInvariant(),
+            Email = ownerEmail,
+            NormalizedEmail = ownerEmail.ToUpperInvariant(),
+            PasswordHash = "test"
+        };
+        db.Users.Add(owner);
+        await db.SaveChangesAsync();
 
         var company = new Company
         {
             Name = $"Persistence company {Guid.NewGuid():N}",
+            BillingOwnerUserId = owner.Id,
             CreatedAtUtc = DateTime.UtcNow
         };
         var unit = new Unit

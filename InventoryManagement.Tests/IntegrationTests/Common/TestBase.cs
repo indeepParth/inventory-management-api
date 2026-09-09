@@ -5,7 +5,12 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
+using InventoryManagement.Application.Authorization;
+using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Identity;
+using InventoryManagement.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using LoginCommand = InventoryManagement.Application.Features.Auth.Login.Command;
 using LoginResponse = InventoryManagement.Application.Features.Auth.Login.Response;
 using RegisterCommand = InventoryManagement.Application.Features.Auth.Register.Command;
@@ -79,6 +84,42 @@ namespace InventoryManagement.Tests.IntegrationTests.Common
             Client.DefaultRequestHeaders.Remove("X-Company-Id");
             Client.DefaultRequestHeaders.Add("X-Company-Id", companyId.ToString());
             ActiveCompanyId = companyId;
+        }
+
+        protected async Task SetActiveCompanyBillingPlanLimitsAsync(
+            int maxCompanies = 10,
+            int maxUsersPerCompany = 10,
+            int maxInvoicesPerMonth = 1000,
+            int maxProducts = 1000,
+            int maxCustomers = 1000)
+        {
+            using var scope = _factory.Services.CreateScope();
+            var db = scope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
+            var company = await db.Companies
+                .SingleAsync(x => x.Id == ActiveCompanyId);
+            var plan = new SubscriptionPlan
+            {
+                Code = $"test-{Guid.NewGuid():N}",
+                Name = "Test Plan",
+                MaxCompanies = maxCompanies,
+                MaxUsersPerCompany = maxUsersPerCompany,
+                MaxInvoicesPerMonth = maxInvoicesPerMonth,
+                MaxProducts = maxProducts,
+                MaxCustomers = maxCustomers,
+                IsActive = true
+            };
+            db.SubscriptionPlans.Add(plan);
+
+            var subscription = await db.UserSubscriptions
+                .SingleAsync(x => x.UserId == company.BillingOwnerUserId);
+            subscription.Plan = plan;
+            subscription.Status = SubscriptionStatuses.Active;
+            subscription.ExpiresAtUtc = null;
+            subscription.CancelledAtUtc = null;
+            subscription.UpdatedAtUtc = DateTime.UtcNow;
+
+            await db.SaveChangesAsync();
         }
     }
 }

@@ -1,5 +1,6 @@
 using AutoMapper;
 using InventoryManagement.Application.Common.Exceptions;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Application.Features.Products;
 using InventoryManagement.Domain.Entities;
@@ -12,19 +13,25 @@ namespace InventoryManagement.Application.Features.Products.CreateProduct
         private readonly IProductRepository _repository;
         private readonly ICategoryRepository _categoryRepository;
         private readonly IUnitRepository _unitRepository;
+        private readonly ISubscriptionLimitService _subscriptionLimitService;
 
         public Handler(
             IProductRepository repository,
             ICategoryRepository categoryRepository,
-            IUnitRepository unitRepository)
+            IUnitRepository unitRepository,
+            ISubscriptionLimitService subscriptionLimitService)
         {
             _repository = repository;
             _categoryRepository = categoryRepository;
             _unitRepository = unitRepository;
+            _subscriptionLimitService = subscriptionLimitService;
         }
 
         public async Task<Response> Handle(Command request, CancellationToken cancellationToken)
         {
+            await _subscriptionLimitService.EnsureCanCreateProductAsync(
+                cancellationToken);
+
             var category = await _categoryRepository.GetByIdAsync(request.CategoryId, cancellationToken);
 
             if (category is null)

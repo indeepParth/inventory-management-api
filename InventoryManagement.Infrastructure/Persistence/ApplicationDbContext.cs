@@ -66,6 +66,12 @@ namespace InventoryManagement.Infrastructure.Persistence
         public DbSet<CompanyInvitation> CompanyInvitations =>
             Set<CompanyInvitation>();
 
+        public DbSet<SubscriptionPlan> SubscriptionPlans =>
+            Set<SubscriptionPlan>();
+
+        public DbSet<UserSubscription> UserSubscriptions =>
+            Set<UserSubscription>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -130,7 +136,72 @@ namespace InventoryManagement.Infrastructure.Persistence
                       .HasMaxLength(150)
                       .IsRequired();
 
+                entity.Property(x => x.BillingOwnerUserId)
+                      .IsRequired();
+
+                entity.HasIndex(x => x.BillingOwnerUserId);
+
+                entity.HasOne<ApplicationUser>()
+                      .WithMany()
+                      .HasForeignKey(x => x.BillingOwnerUserId)
+                      .OnDelete(DeleteBehavior.Restrict)
+                      .IsRequired();
+
                 entity.Property(x => x.CreatedAtUtc)
+                      .IsRequired();
+            });
+
+            builder.Entity<SubscriptionPlan>(entity =>
+            {
+                entity.HasIndex(x => x.Code)
+                      .IsUnique();
+
+                entity.Property(x => x.Code)
+                      .HasMaxLength(50)
+                      .IsRequired();
+
+                entity.Property(x => x.Name)
+                      .HasMaxLength(100)
+                      .IsRequired();
+
+                entity.HasData(new SubscriptionPlan
+                {
+                    Id = 1,
+                    Code = "free",
+                    Name = "Free",
+                    MaxCompanies = 1,
+                    MaxUsersPerCompany = 3,
+                    MaxInvoicesPerMonth = 100,
+                    MaxProducts = 500,
+                    MaxCustomers = 500,
+                    IsActive = true
+                });
+            });
+
+            builder.Entity<UserSubscription>(entity =>
+            {
+                entity.HasIndex(x => x.UserId)
+                      .IsUnique();
+
+                entity.HasIndex(x => x.PlanId);
+
+                entity.Property(x => x.UserId)
+                      .IsRequired();
+
+                entity.Property(x => x.Status)
+                      .HasMaxLength(50)
+                      .IsRequired();
+
+                entity.HasOne<ApplicationUser>()
+                      .WithMany()
+                      .HasForeignKey(x => x.UserId)
+                      .OnDelete(DeleteBehavior.Cascade)
+                      .IsRequired();
+
+                entity.HasOne(x => x.Plan)
+                      .WithMany(x => x.UserSubscriptions)
+                      .HasForeignKey(x => x.PlanId)
+                      .OnDelete(DeleteBehavior.Restrict)
                       .IsRequired();
             });
 

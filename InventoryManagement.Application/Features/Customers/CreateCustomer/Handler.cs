@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Common.Exceptions;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Domain.Entities;
 using MediatR;
@@ -8,14 +9,21 @@ namespace InventoryManagement.Application.Features.Customers.CreateCustomer
     public class Handler : IRequestHandler<Command, CustomerResponse>
     {
         private readonly ICustomerRepository _repository;
+        private readonly ISubscriptionLimitService _subscriptionLimitService;
 
-        public Handler(ICustomerRepository repository)
+        public Handler(
+            ICustomerRepository repository,
+            ISubscriptionLimitService subscriptionLimitService)
         {
             _repository = repository;
+            _subscriptionLimitService = subscriptionLimitService;
         }
 
         public async Task<CustomerResponse> Handle(Command request, CancellationToken cancellationToken)
         {
+            await _subscriptionLimitService.EnsureCanCreateCustomerAsync(
+                cancellationToken);
+
             var name = request.Name.Trim();
             var gstNumber = CustomerMapping.NormalizeOptional(request.GstNumber)?.ToUpperInvariant();
 

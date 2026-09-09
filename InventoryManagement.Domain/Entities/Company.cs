@@ -7,6 +7,7 @@ namespace InventoryManagement.Domain.Entities
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string BillingOwnerUserId { get; set; } = string.Empty;
         public DateTime CreatedAtUtc { get; set; }
 
         public ICollection<CompanyUser> Users { get; set; } = new List<CompanyUser>();

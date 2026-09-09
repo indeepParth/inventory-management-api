@@ -206,6 +206,13 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyInvitations
                 x.UserId == user!.Id);
             membership.Should().NotBeNull();
             membership!.Role.Should().Be(CompanyRoles.Staff);
+
+            var subscription = await context.UserSubscriptions
+                .Include(x => x.Plan)
+                .SingleOrDefaultAsync(x => x.UserId == user!.Id);
+            subscription.Should().NotBeNull();
+            subscription!.Status.Should().Be(SubscriptionStatuses.Active);
+            subscription.Plan.Code.Should().Be(SubscriptionPlans.Free);
         }
 
         [Fact]

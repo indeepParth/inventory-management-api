@@ -1,4 +1,5 @@
 using InventoryManagement.Application.Authorization;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Common.Options;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Persistence;
@@ -12,17 +13,20 @@ namespace InventoryManagement.Infrastructure.Identity
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ApplicationDbContext _context;
+        private readonly ISubscriptionProvisioningService _subscriptionProvisioningService;
         private readonly AdminBootstrapOptions _adminOptions;
         private readonly IHostEnvironment _environment;
 
         public IdentityBootstrapService(
             UserManager<ApplicationUser> userManager,
             ApplicationDbContext context,
+            ISubscriptionProvisioningService subscriptionProvisioningService,
             IOptions<AdminBootstrapOptions> adminOptions,
             IHostEnvironment environment)
         {
             _userManager = userManager;
             _context = context;
+            _subscriptionProvisioningService = subscriptionProvisioningService;
             _adminOptions = adminOptions.Value;
             _environment = environment;
         }
@@ -78,10 +82,14 @@ namespace InventoryManagement.Infrastructure.Identity
                     string.Join(", ", createResult.Errors.Select(x => x.Description)));
             }
 
+            await _subscriptionProvisioningService.EnsureFreeSubscriptionAsync(
+                admin.Id);
+
             var createdAtUtc = DateTime.UtcNow;
             var company = new Company
             {
                 Name = $"{_adminOptions.UserName}'s Company",
+                BillingOwnerUserId = admin.Id,
                 CreatedAtUtc = createdAtUtc
             };
 

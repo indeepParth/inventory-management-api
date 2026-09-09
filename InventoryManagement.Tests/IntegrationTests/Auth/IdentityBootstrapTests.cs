@@ -1,8 +1,10 @@
 using FluentAssertions;
 using InventoryManagement.Application.Authorization;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Common.Options;
 using InventoryManagement.Infrastructure.Identity;
 using InventoryManagement.Infrastructure.Persistence;
+using InventoryManagement.Infrastructure.Services;
 using InventoryManagement.Tests.IntegrationTests.Common;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -29,6 +31,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             var company = context.DbContext.Companies.SingleOrDefault();
             company.Should().NotBeNull();
             company!.Name.Should().Be("admin's Company");
+            company.BillingOwnerUserId.Should().Be(admin!.Id);
 
             var membership = context.DbContext.CompanyUsers.SingleOrDefault(x =>
                 x.CompanyId == company.Id &&
@@ -38,6 +41,13 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
 
             var globalRoles = await context.UserManager.GetRolesAsync(admin!);
             globalRoles.Should().BeEmpty();
+
+            var subscription = context.DbContext.UserSubscriptions
+                .Include(x => x.Plan)
+                .SingleOrDefault(x => x.UserId == admin.Id);
+            subscription.Should().NotBeNull();
+            subscription!.Status.Should().Be(SubscriptionStatuses.Active);
+            subscription.Plan.Code.Should().Be(SubscriptionPlans.Free);
         }
 
         [Fact]
@@ -55,6 +65,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 .Count(x => x.Role == CompanyRoles.Owner)
                 .Should()
                 .Be(1);
+            context.DbContext.UserSubscriptions.Count().Should().Be(1);
         }
 
         [Fact]
@@ -171,6 +182,9 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 .AddDefaultTokenProviders();
 
             services.AddScoped<IdentityBootstrapService>();
+            services.AddScoped<ISubscriptionProvisioningService, SubscriptionProvisioningService>();
+            services.AddScoped<ISubscriptionLimitService, SubscriptionProvisioningService>();
+            services.AddScoped<IActiveCompanyService, TestActiveCompanyService>();
 
             var provider = services.BuildServiceProvider();
             var scope = provider.CreateScope();
@@ -209,6 +223,11 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             public string ApplicationName { get; set; } = "InventoryManagement.Tests";
             public string ContentRootPath { get; set; } = Directory.GetCurrentDirectory();
             public IFileProvider ContentRootFileProvider { get; set; } = null!;
+        }
+
+        private sealed class TestActiveCompanyService : IActiveCompanyService
+        {
+            public int CompanyId => 0;
         }
 
         private sealed class BootstrapTestContext : IAsyncDisposable

@@ -30,6 +30,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Companies
         public async Task CreateCompany_Should_Add_Current_User_As_Owner()
         {
             var user = await RegisterAndAuthenticateAsync();
+            await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var companyName = $"Second company {Guid.NewGuid():N}";
 
             var response = await Client.PostAsJsonAsync(
@@ -201,6 +202,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Companies
             register.Should().NotBeNull();
 
             await AuthenticateAsAsync(userName, password, register!.CompanyId);
+            SetActiveCompanyId(register.CompanyId);
 
             using var scope = _factory.Services.CreateScope();
             var userManager = scope.ServiceProvider
@@ -236,6 +238,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Companies
             var company = new Company
             {
                 Name = $"{user.UserName}'s Company",
+                BillingOwnerUserId = user.Id,
                 CreatedAtUtc = DateTime.UtcNow
             };
 
@@ -282,6 +285,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Companies
             var company = new Company
             {
                 Name = $"Shared company {Guid.NewGuid():N}",
+                BillingOwnerUserId = owner.Id,
                 CreatedAtUtc = DateTime.UtcNow
             };
 

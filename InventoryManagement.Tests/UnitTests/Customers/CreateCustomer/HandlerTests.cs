@@ -1,5 +1,6 @@
 using FluentAssertions;
 using InventoryManagement.Application.Common.Exceptions;
+using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Common.Persistence;
 using InventoryManagement.Application.Features.Customers.CreateCustomer;
 using InventoryManagement.Domain.Entities;
@@ -14,6 +15,10 @@ namespace InventoryManagement.Tests.UnitTests.Customers.CreateCustomer
         {
             Customer? addedCustomer = null;
             var repository = new Mock<ICustomerRepository>();
+            var subscriptionLimitService = new Mock<ISubscriptionLimitService>();
+            subscriptionLimitService
+                .Setup(x => x.EnsureCanCreateCustomerAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
             repository
                 .Setup(x => x.AddAsync(It.IsAny<Customer>(), It.IsAny<CancellationToken>()))
                 .Callback<Customer, CancellationToken>((customer, _) => addedCustomer = customer)
@@ -22,7 +27,9 @@ namespace InventoryManagement.Tests.UnitTests.Customers.CreateCustomer
                 .Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 
-            var response = await new Handler(repository.Object).Handle(new Command
+            var response = await new Handler(
+                repository.Object,
+                subscriptionLimitService.Object).Handle(new Command
             {
                 Name = "  Acme Retail  ",
                 ContactPerson = "  Priya  ",
@@ -46,11 +53,17 @@ namespace InventoryManagement.Tests.UnitTests.Customers.CreateCustomer
         public async Task Handle_Should_Reject_Duplicate_Name()
         {
             var repository = new Mock<ICustomerRepository>();
+            var subscriptionLimitService = new Mock<ISubscriptionLimitService>();
+            subscriptionLimitService
+                .Setup(x => x.EnsureCanCreateCustomerAsync(It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
             repository
                 .Setup(x => x.GetByNameAsync("Acme Retail", It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new Customer { Id = 1, Name = "ACME RETAIL" });
 
-            var action = () => new Handler(repository.Object).Handle(new Command
+            var action = () => new Handler(
+                repository.Object,
+                subscriptionLimitService.Object).Handle(new Command
             {
                 Name = "Acme Retail"
             }, CancellationToken.None);

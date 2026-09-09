@@ -12,15 +12,18 @@ namespace InventoryManagement.Infrastructure.Identity
     {
         private readonly ApplicationDbContext _context;
         private readonly IDefaultCompanyDataService _defaultCompanyDataService;
+        private readonly ISubscriptionProvisioningService _subscriptionProvisioningService;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public UserRegistrationService(
             ApplicationDbContext context,
             IDefaultCompanyDataService defaultCompanyDataService,
+            ISubscriptionProvisioningService subscriptionProvisioningService,
             UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _defaultCompanyDataService = defaultCompanyDataService;
+            _subscriptionProvisioningService = subscriptionProvisioningService;
             _userManager = userManager;
         }
 
@@ -49,10 +52,15 @@ namespace InventoryManagement.Infrastructure.Identity
                     null);
             }
 
+            await _subscriptionProvisioningService.EnsureFreeSubscriptionAsync(
+                user.Id,
+                cancellationToken);
+
             var createdAtUtc = DateTime.UtcNow;
             var company = new Company
             {
                 Name = $"{userName}'s Company",
+                BillingOwnerUserId = user.Id,
                 CreatedAtUtc = createdAtUtc
             };
 

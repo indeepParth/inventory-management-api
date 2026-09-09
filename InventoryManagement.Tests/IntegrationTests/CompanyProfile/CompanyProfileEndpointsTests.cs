@@ -178,6 +178,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         public async Task Profile_Should_Be_Isolated_By_Active_Company()
         {
             await AuthenticateAsync();
+            await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var firstCompanyId = ActiveCompanyId;
 
             var firstProfileResponse = await Client.PutAsJsonAsync(
@@ -244,6 +245,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         public async Task Put_Should_Update_Only_Active_Company_Profile()
         {
             await AuthenticateAsync();
+            await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var firstCompanyId = ActiveCompanyId;
             var secondCompanyId = await CreateOwnedCompanyAsync("Second Company");
 
@@ -322,6 +324,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
             var company = new Company
             {
                 Name = $"{user.UserName}'s Company",
+                BillingOwnerUserId = user.Id,
                 CreatedAtUtc = DateTime.UtcNow
             };
 
@@ -356,12 +359,22 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         private async Task<int> CreateCompanyWithoutMembershipAsync()
         {
             using var scope = _factory.Services.CreateScope();
+            var userManager = scope.ServiceProvider
+                .GetRequiredService<UserManager<ApplicationUser>>();
             var context = scope.ServiceProvider
                 .GetRequiredService<ApplicationDbContext>();
+            var owner = new ApplicationUser
+            {
+                UserName = $"profile_other_owner_{Guid.NewGuid():N}",
+                Email = $"profile_other_owner_{Guid.NewGuid():N}@example.com"
+            };
+            var createResult = await userManager.CreateAsync(owner, "Password123");
+            createResult.Succeeded.Should().BeTrue();
 
             var company = new Company
             {
                 Name = $"Unassigned company {Guid.NewGuid():N}",
+                BillingOwnerUserId = owner.Id,
                 CreatedAtUtc = DateTime.UtcNow
             };
 

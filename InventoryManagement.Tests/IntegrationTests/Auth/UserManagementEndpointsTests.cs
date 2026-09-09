@@ -350,6 +350,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                     var company = new Company
                     {
                         Name = $"{user.UserName}'s Company",
+                        BillingOwnerUserId = user.Id,
                         CreatedAtUtc = DateTime.UtcNow
                     };
 

@@ -23,15 +23,18 @@ namespace InventoryManagement.API.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IDefaultCompanyDataService _defaultCompanyDataService;
         private readonly ICompanyMembershipService _membershipService;
+        private readonly ISubscriptionLimitService _subscriptionLimitService;
 
         public CompaniesController(
             ApplicationDbContext context,
             IDefaultCompanyDataService defaultCompanyDataService,
-            ICompanyMembershipService membershipService)
+            ICompanyMembershipService membershipService,
+            ISubscriptionLimitService subscriptionLimitService)
         {
             _context = context;
             _defaultCompanyDataService = defaultCompanyDataService;
             _membershipService = membershipService;
+            _subscriptionLimitService = subscriptionLimitService;
         }
 
         [HttpGet]
@@ -50,9 +53,14 @@ namespace InventoryManagement.API.Controllers
             var name = ValidateCompanyName(request.Name);
             var userId = GetCurrentUserId();
 
+            await _subscriptionLimitService.EnsureCanCreateCompanyAsync(
+                userId,
+                HttpContext.RequestAborted);
+
             var company = new Company
             {
                 Name = name,
+                BillingOwnerUserId = userId,
                 CreatedAtUtc = DateTime.UtcNow
             };
 

@@ -8,6 +8,7 @@ using InventoryManagement.Infrastructure.Persistence;
 using InventoryManagement.Tests.IntegrationTests.Common;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -67,6 +68,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             var company = await context.Companies.FindAsync(result.CompanyId);
             company.Should().NotBeNull();
             company!.Name.Should().Be($"{request.UserName}'s Company");
+            company.BillingOwnerUserId.Should().Be(user!.Id);
 
             var membership = context.CompanyUsers
                 .SingleOrDefault(x =>
@@ -77,6 +79,18 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
 
             var globalRoles = await userManager.GetRolesAsync(user!);
             globalRoles.Should().BeEmpty();
+
+            var subscription = await context.UserSubscriptions
+                .Include(x => x.Plan)
+                .SingleOrDefaultAsync(x => x.UserId == user!.Id);
+            subscription.Should().NotBeNull();
+            subscription!.Status.Should().Be(SubscriptionStatuses.Active);
+            subscription.Plan.Code.Should().Be(SubscriptionPlans.Free);
+            subscription.Plan.MaxCompanies.Should().Be(1);
+            subscription.Plan.MaxUsersPerCompany.Should().Be(3);
+            subscription.Plan.MaxInvoicesPerMonth.Should().Be(100);
+            subscription.Plan.MaxProducts.Should().Be(500);
+            subscription.Plan.MaxCustomers.Should().Be(500);
         }
 
         [Fact]

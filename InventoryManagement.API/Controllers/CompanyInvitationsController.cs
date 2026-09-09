@@ -26,15 +26,21 @@ namespace InventoryManagement.API.Controllers
         private const string CompanyIdHeaderName = "X-Company-Id";
         private readonly ApplicationDbContext _context;
         private readonly ICompanyMembershipService _membershipService;
+        private readonly ISubscriptionLimitService _subscriptionLimitService;
+        private readonly ISubscriptionProvisioningService _subscriptionProvisioningService;
         private readonly UserManager<ApplicationUser> _userManager;
 
         public CompanyInvitationsController(
             ApplicationDbContext context,
             ICompanyMembershipService membershipService,
+            ISubscriptionLimitService subscriptionLimitService,
+            ISubscriptionProvisioningService subscriptionProvisioningService,
             UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _membershipService = membershipService;
+            _subscriptionLimitService = subscriptionLimitService;
+            _subscriptionProvisioningService = subscriptionProvisioningService;
             _userManager = userManager;
         }
 
@@ -76,6 +82,9 @@ namespace InventoryManagement.API.Controllers
             var normalizedEmail = NormalizeEmailKey(email);
             var role = ValidateRole(request.Role);
             await RequireCanGrantRoleAsync(invitedByUserId, companyId, role);
+            await _subscriptionLimitService.EnsureCanInviteCompanyMemberAsync(
+                companyId,
+                HttpContext.RequestAborted);
 
             var existingMemberUserId = await _context.Users
                 .AsNoTracking()
@@ -196,6 +205,13 @@ namespace InventoryManagement.API.Controllers
             var invitation = await FindInvitationByTokenAsync(token);
             EnsureInvitationCanBeAccepted(invitation);
 
+            if (request.Mode == "newUser")
+            {
+                await _subscriptionLimitService.EnsureCanAddCompanyMemberAsync(
+                    invitation.CompanyId,
+                    HttpContext.RequestAborted);
+            }
+
             ApplicationUser user = request.Mode switch
             {
                 "existingUser" => await GetMatchingCurrentUserAsync(invitation),
@@ -214,6 +230,10 @@ namespace InventoryManagement.API.Controllers
 
             if (membership is null)
             {
+                await _subscriptionLimitService.EnsureCanAddCompanyMemberAsync(
+                    invitation.CompanyId,
+                    HttpContext.RequestAborted);
+
                 _context.CompanyUsers.Add(new CompanyUser
                 {
                     CompanyId = invitation.CompanyId,
@@ -339,6 +359,10 @@ namespace InventoryManagement.API.Controllers
                 throw new BadRequestException(
                     string.Join(",", createResult.Errors.Select(x => x.Description)));
             }
+
+            await _subscriptionProvisioningService.EnsureFreeSubscriptionAsync(
+                user.Id,
+                HttpContext.RequestAborted);
 
             return user;
         }

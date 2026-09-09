@@ -8,6 +8,7 @@ import {
 } from '../features/auth/AuthRoutes'
 import { AppLayout } from '../shared/components/AppLayout'
 import { PublicLayout } from '../shared/components/PublicLayout'
+import { AcceptInvitationPage } from '../pages/AcceptInvitationPage'
 import { CategoriesPage } from '../pages/CategoriesPage'
 import { ChangePasswordPage } from '../pages/ChangePasswordPage'
 import { CompanyProfilePage } from '../pages/CompanyProfilePage'
@@ -44,6 +45,7 @@ export function App() {
         <Routes>
           <Route element={<PublicLayout />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/accept-invitation/:token" element={<AcceptInvitationPage />} />
             <Route element={<PublicOnlyRoute />}>
               <Route path="/login" element={<LoginPage />} />
             </Route>

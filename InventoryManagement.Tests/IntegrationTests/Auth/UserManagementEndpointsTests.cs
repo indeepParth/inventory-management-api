@@ -119,7 +119,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         [Fact]
-        public async Task CreateUser_Should_Create_User_With_Valid_Roles()
+        public async Task CreateUser_Should_Return_BadRequest_Because_Invitations_Are_Required()
         {
             var admin = await CreateUserAsync(CompanyRoles.Owner);
             await AuthenticateAsAsync(Client, admin.UserName, admin.Password, admin.CompanyId);
@@ -136,22 +136,16 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                     Roles = new[] { CompanyRoles.Staff }
                 });
 
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
             var body = await response.Content.ReadAsStringAsync();
-            body.Should().Contain(userName);
-            body.Should().Contain(CompanyRoles.Staff);
+            body.Should().Contain("company invitations");
 
             using var scope = _factory.Services.CreateScope();
             var userManager = scope.ServiceProvider
                 .GetRequiredService<UserManager<ApplicationUser>>();
             var createdUser = await userManager.FindByNameAsync(userName);
-            createdUser.Should().NotBeNull();
-            createdUser!.Email.Should().Be($"{userName}@example.com");
-            await UserShouldBeInRoleAsync(
-                createdUser!.Id,
-                CompanyRoles.Staff,
-                admin.CompanyId!.Value);
+            createdUser.Should().BeNull();
         }
 
         [Fact]
@@ -174,7 +168,26 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         [Fact]
-        public async Task AssignRole_Should_Add_Supported_Role()
+        public async Task AssignRole_Should_Update_Existing_Company_Member_Role()
+        {
+            var admin = await CreateUserAsync(CompanyRoles.Owner);
+            var user = await CreateUserAsync(CompanyRoles.Viewer, admin.CompanyId);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password, admin.CompanyId);
+
+            var response = await Client.PostAsJsonAsync(
+                $"/api/users/{user.Id}/roles",
+                new { Role = CompanyRoles.Staff });
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            await UserShouldBeInRoleAsync(
+                user.Id,
+                CompanyRoles.Staff,
+                admin.CompanyId!.Value);
+        }
+
+        [Fact]
+        public async Task AssignRole_Should_Return_NotFound_When_User_Is_Not_Company_Member()
         {
             var admin = await CreateUserAsync(CompanyRoles.Owner);
             var user = await CreateUserAsync();
@@ -184,12 +197,40 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 $"/api/users/{user.Id}/roles",
                 new { Role = CompanyRoles.Viewer });
 
-            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        }
 
+        [Fact]
+        public async Task AssignRole_Should_Prevent_Admin_Managing_Privileged_Roles()
+        {
+            var owner = await CreateUserAsync(CompanyRoles.Owner);
+            var admin = await CreateUserAsync(CompanyRoles.Admin, owner.CompanyId);
+            var user = await CreateUserAsync(CompanyRoles.Manager, owner.CompanyId);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password, owner.CompanyId);
+
+            var response = await Client.PostAsJsonAsync(
+                $"/api/users/{user.Id}/roles",
+                new { Role = CompanyRoles.Admin });
+
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        [Fact]
+        public async Task AssignRole_Should_Allow_Owner_Managing_Admin_Role()
+        {
+            var owner = await CreateUserAsync(CompanyRoles.Owner);
+            var user = await CreateUserAsync(CompanyRoles.Manager, owner.CompanyId);
+            await AuthenticateAsAsync(Client, owner.UserName, owner.Password, owner.CompanyId);
+
+            var response = await Client.PostAsJsonAsync(
+                $"/api/users/{user.Id}/roles",
+                new { Role = CompanyRoles.Admin });
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
             await UserShouldBeInRoleAsync(
                 user.Id,
-                CompanyRoles.Viewer,
-                admin.CompanyId!.Value);
+                CompanyRoles.Admin,
+                owner.CompanyId!.Value);
         }
 
         [Fact]
@@ -236,7 +277,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
             var body = await response.Content.ReadAsStringAsync();
-            body.Should().Contain("final Owner role");
+            body.Should().Contain("final active Owner role");
         }
 
         [Fact]

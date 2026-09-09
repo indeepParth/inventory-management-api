@@ -109,43 +109,9 @@ namespace InventoryManagement.API.Controllers
         [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<IActionResult> CreateUser(CreateUserRequest request)
         {
-            var roles = (request.Roles ?? new List<string>())
-                .Select(ValidateRole)
-                .Distinct()
-                .ToList();
-
-            if (roles.Count != 1)
-            {
-                throw new BadRequestException("Exactly one company role is required.");
-            }
-
-            var user = new ApplicationUser
-            {
-                UserName = request.UserName,
-                Email = request.Email
-            };
-
-            var createResult = await _userManager.CreateAsync(
-                user,
-                request.Password);
-
-            if (!createResult.Succeeded)
-            {
-                throw new BadRequestException(
-                    string.Join(",", createResult.Errors.Select(x => x.Description)));
-            }
-
-            _context.CompanyUsers.Add(new CompanyUser
-            {
-                CompanyId = GetRequiredCompanyId(),
-                UserId = user.Id,
-                Role = roles.Single(),
-                CreatedAtUtc = DateTime.UtcNow
-            });
-
-            await _context.SaveChangesAsync();
-
-            return Ok(MapUser(user, roles.Single()));
+            await Task.CompletedTask;
+            throw new BadRequestException(
+                "Use company invitations to grant user access.");
         }
 
         [HttpPost("me/change-password")]
@@ -189,13 +155,21 @@ namespace InventoryManagement.API.Controllers
 
             if (membership is null)
             {
-                membership = new CompanyUser
-                {
-                    CompanyId = companyId,
-                    UserId = user.Id,
-                    CreatedAtUtc = DateTime.UtcNow
-                };
-                _context.CompanyUsers.Add(membership);
+                throw new NotFoundException(
+                    "User is not a member of this company.");
+            }
+
+            await RequireCanManageMembershipAsync(
+                companyId,
+                membership.Role,
+                role);
+
+            if (membership.Role == CompanyRoles.Owner &&
+                role != CompanyRoles.Owner &&
+                await IsFinalActiveOwnerAsync(user, companyId))
+            {
+                throw new BadRequestException(
+                    "Cannot change the final active Owner role.");
             }
 
             membership.Role = role;
@@ -213,13 +187,16 @@ namespace InventoryManagement.API.Controllers
             role = ValidateRole(role);
             var user = await FindUserAsync(userId);
             var companyId = GetRequiredCompanyId();
+            await RequireCanManageMembershipAsync(
+                companyId,
+                currentRole: role,
+                requestedRole: null);
 
             if (role == CompanyRoles.Owner &&
-                IsCurrentUser(user) &&
                 await IsFinalActiveOwnerAsync(user, companyId))
             {
                 throw new BadRequestException(
-                    "Cannot remove your own final Owner role.");
+                    "Cannot remove the final active Owner role.");
             }
 
             var membership = await _context.CompanyUsers
@@ -384,6 +361,36 @@ namespace InventoryManagement.API.Controllers
             return activeOwnerCount <= 1;
         }
 
+        private async Task RequireCanManageMembershipAsync(
+            int companyId,
+            string currentRole,
+            string? requestedRole)
+        {
+            var currentUserId =
+                User.FindFirstValue(JwtRegisteredClaimNames.Sub) ??
+                User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            if (string.IsNullOrWhiteSpace(currentUserId))
+            {
+                throw new UnauthorizedAccessException("User not found.");
+            }
+
+            var currentMembership = await _membershipService
+                .RequireCompanyRoleAsync(
+                    currentUserId,
+                    companyId,
+                    [CompanyRoles.Owner, CompanyRoles.Admin],
+                    HttpContext.RequestAborted);
+
+            if ((IsPrivilegedRole(currentRole) ||
+                 IsPrivilegedRole(requestedRole)) &&
+                currentMembership.Role != CompanyRoles.Owner)
+            {
+                throw new ForbiddenException(
+                    "Only an Owner can manage Owner and Admin access.");
+            }
+        }
+
         private async Task<UserManagementResponse> MapUserForActiveCompanyAsync(
             ApplicationUser user)
         {
@@ -430,6 +437,9 @@ namespace InventoryManagement.API.Controllers
             return user.LockoutEnd.HasValue &&
                    user.LockoutEnd.Value > DateTimeOffset.UtcNow;
         }
+
+        private static bool IsPrivilegedRole(string? role) =>
+            role is CompanyRoles.Owner or CompanyRoles.Admin;
     }
 
     public class AssignRoleRequest

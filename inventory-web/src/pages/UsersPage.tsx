@@ -1,13 +1,20 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useAuth } from '../features/auth/AuthContext'
 import { allRoles, type AppRole } from '../features/auth/roleAccess'
 import {
   assignUserRole,
-  createUser,
   disableUser,
   enableUser,
   getUsers,
+  removeUserRole,
   type UserAccount,
 } from '../features/auth/usersApi'
+import {
+  createCompanyInvitation,
+  getCompanyInvitations,
+  revokeCompanyInvitation,
+  type CompanyInvitation,
+} from '../features/companyInvitations/companyInvitationsApi'
 import {
   getErrorMessage,
   getFieldError,
@@ -15,38 +22,54 @@ import {
   type FieldErrors,
 } from '../shared/api/apiErrorMessages'
 import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
+import { formatDate } from '../shared/utils/formatters'
 
-type CreateUserForm = {
-  userName: string
+type InviteForm = {
   email: string
-  password: string
   role: AppRole | ''
 }
 
-const emptyForm: CreateUserForm = {
-  userName: '',
+const emptyForm: InviteForm = {
   email: '',
-  password: '',
   role: '',
 }
 
+function isPrivilegedRole(role: string | undefined): boolean {
+  return role === 'Owner' || role === 'Admin'
+}
+
 export function UsersPage() {
+  const { activeCompany } = useAuth()
   const [users, setUsers] = useState<UserAccount[]>([])
-  const [form, setForm] = useState<CreateUserForm>(emptyForm)
+  const [invitations, setInvitations] = useState<CompanyInvitation[]>([])
+  const [form, setForm] = useState<InviteForm>(emptyForm)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [updatingUserId, setUpdatingUserId] = useState<string | null>(null)
+  const [updatingKey, setUpdatingKey] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [latestInviteUrl, setLatestInviteUrl] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
 
-  const loadUsers = useCallback(async (): Promise<void> => {
+  const canManagePrivilegedRoles = activeCompany?.role === 'Owner'
+  const availableRoles = useMemo(
+    () => allRoles.filter((role) => canManagePrivilegedRoles || !isPrivilegedRole(role)),
+    [canManagePrivilegedRoles],
+  )
+
+  const loadAccess = useCallback(async (): Promise<void> => {
     setIsLoading(true)
     setErrorMessage(null)
 
     try {
-      setUsers(await getUsers())
+      const [loadedUsers, loadedInvitations] = await Promise.all([
+        getUsers(),
+        getCompanyInvitations(),
+      ])
+
+      setUsers(loadedUsers)
+      setInvitations(loadedInvitations)
     } catch (error) {
       setErrorMessage(getErrorMessage(error))
     } finally {
@@ -55,8 +78,8 @@ export function UsersPage() {
   }, [])
 
   useEffect(() => {
-    void loadUsers()
-  }, [loadUsers])
+    void loadAccess()
+  }, [loadAccess])
 
   function resetForm(): void {
     setForm(emptyForm)
@@ -65,22 +88,22 @@ export function UsersPage() {
     setActionError(null)
   }
 
-  async function handleCreateUser(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleCreateInvitation(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     setIsSaving(true)
     setFieldErrors({})
     setActionError(null)
+    setLatestInviteUrl(null)
 
     try {
-      await createUser({
-        userName: form.userName.trim(),
+      const invitation = await createCompanyInvitation({
         email: form.email.trim(),
-        password: form.password,
-        roles: form.role ? [form.role] : [],
+        role: form.role as AppRole,
       })
 
+      setLatestInviteUrl(new URL(invitation.acceptUrl, window.location.origin).toString())
       resetForm()
-      await loadUsers()
+      await loadAccess()
     } catch (error) {
       setFieldErrors(getFieldErrors(error))
       setActionError(getErrorMessage(error))
@@ -89,21 +112,43 @@ export function UsersPage() {
     }
   }
 
-  async function handleRoleChange(
-    user: UserAccount,
-    role: AppRole,
-  ): Promise<void> {
-    setUpdatingUserId(user.id)
+  async function handleRoleChange(user: UserAccount, role: AppRole): Promise<void> {
+    setUpdatingKey(`role-${user.id}`)
     setActionError(null)
 
     try {
       await assignUserRole(user.id, role)
-
-      await loadUsers()
+      await loadAccess()
     } catch (error) {
       setActionError(getErrorMessage(error))
     } finally {
-      setUpdatingUserId(null)
+      setUpdatingKey(null)
+    }
+  }
+
+  async function handleRemoveAccess(user: UserAccount): Promise<void> {
+    const role = user.roles[0] as AppRole | undefined
+
+    if (!role) {
+      return
+    }
+
+    const confirmed = window.confirm(`Remove access for "${user.userName}" from this company?`)
+
+    if (!confirmed) {
+      return
+    }
+
+    setUpdatingKey(`remove-${user.id}`)
+    setActionError(null)
+
+    try {
+      await removeUserRole(user.id, role)
+      await loadAccess()
+    } catch (error) {
+      setActionError(getErrorMessage(error))
+    } finally {
+      setUpdatingKey(null)
     }
   }
 
@@ -115,7 +160,7 @@ export function UsersPage() {
       return
     }
 
-    setUpdatingUserId(user.id)
+    setUpdatingKey(`status-${user.id}`)
     setActionError(null)
 
     try {
@@ -125,11 +170,31 @@ export function UsersPage() {
         await disableUser(user.id)
       }
 
-      await loadUsers()
+      await loadAccess()
     } catch (error) {
       setActionError(getErrorMessage(error))
     } finally {
-      setUpdatingUserId(null)
+      setUpdatingKey(null)
+    }
+  }
+
+  async function handleRevokeInvitation(invitation: CompanyInvitation): Promise<void> {
+    const confirmed = window.confirm(`Revoke invitation for "${invitation.email}"?`)
+
+    if (!confirmed) {
+      return
+    }
+
+    setUpdatingKey(`invite-${invitation.id}`)
+    setActionError(null)
+
+    try {
+      await revokeCompanyInvitation(invitation.id)
+      await loadAccess()
+    } catch (error) {
+      setActionError(getErrorMessage(error))
+    } finally {
+      setUpdatingKey(null)
     }
   }
 
@@ -148,31 +213,25 @@ export function UsersPage() {
             setIsFormOpen(true)
             setActionError(null)
             setFieldErrors({})
+            setLatestInviteUrl(null)
           }}
           type="button"
         >
-          New user
+          Invite user
         </button>
       </div>
 
       {actionError ? <ErrorBanner>{actionError}</ErrorBanner> : null}
+      {latestInviteUrl ? (
+        <div className="feedback-banner success">
+          <span>Invitation link created.</span>
+          <input className="copyable-text" readOnly value={latestInviteUrl} />
+        </div>
+      ) : null}
 
       {isFormOpen ? (
-        <form className="entity-form" onSubmit={(event) => void handleCreateUser(event)}>
+        <form className="entity-form" onSubmit={(event) => void handleCreateInvitation(event)}>
           <div className="form-grid">
-            <label className="form-field">
-              Username
-              <input
-                autoComplete="username"
-                onChange={(event) => setForm((current) => ({ ...current, userName: event.target.value }))}
-                required
-                type="text"
-                value={form.userName}
-              />
-              {getFieldError(fieldErrors, 'userName') ? (
-                <span className="field-error">{getFieldError(fieldErrors, 'userName')}</span>
-              ) : null}
-            </label>
             <label className="form-field">
               Email
               <input
@@ -187,19 +246,6 @@ export function UsersPage() {
               ) : null}
             </label>
             <label className="form-field">
-              Password
-              <input
-                autoComplete="new-password"
-                onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
-                required
-                type="password"
-                value={form.password}
-              />
-              {getFieldError(fieldErrors, 'password') ? (
-                <span className="field-error">{getFieldError(fieldErrors, 'password')}</span>
-              ) : null}
-            </label>
-            <label className="form-field">
               Role
               <select
                 onChange={(event) =>
@@ -209,17 +255,20 @@ export function UsersPage() {
                 value={form.role}
               >
                 <option value="">Select role</option>
-                {allRoles.map((role) => (
+                {availableRoles.map((role) => (
                   <option key={role} value={role}>
                     {role}
                   </option>
                 ))}
               </select>
+              {getFieldError(fieldErrors, 'role') ? (
+                <span className="field-error">{getFieldError(fieldErrors, 'role')}</span>
+              ) : null}
             </label>
           </div>
           <div className="form-actions">
             <button className="primary-button" disabled={isSaving} type="submit">
-              {isSaving ? 'Saving...' : 'Create user'}
+              {isSaving ? 'Sending...' : 'Create invite'}
             </button>
             <button className="secondary-button" onClick={resetForm} type="button">
               Cancel
@@ -231,61 +280,128 @@ export function UsersPage() {
       {isLoading ? <LoadingState>Loading users...</LoadingState> : null}
       {errorMessage ? <ErrorBanner>{errorMessage}</ErrorBanner> : null}
       {!isLoading && !errorMessage && users.length === 0 ? (
-        <EmptyState>No users found.</EmptyState>
+        <EmptyState>No company members found.</EmptyState>
       ) : null}
 
       {!isLoading && !errorMessage && users.length > 0 ? (
-        <div className="table-wrap">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Roles</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.userName}</td>
-                  <td>{user.email || '-'}</td>
-                  <td>
-                    <select
-                      aria-label={`Role for ${user.userName}`}
-                      disabled={updatingUserId === user.id}
-                      onChange={(event) => void handleRoleChange(user, event.target.value as AppRole)}
-                      value={user.roles[0] ?? ''}
-                    >
-                      <option value="" disabled>
-                        No role
-                      </option>
-                      {allRoles.map((role) => (
-                        <option key={role} value={role}>
-                          {role}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>{user.isDisabled ? 'Disabled' : 'Active'}</td>
-                  <td>
-                    <div className="table-actions">
-                      <button
-                        className={user.isDisabled ? 'text-button' : 'danger-button'}
-                        disabled={updatingUserId === user.id}
-                        onClick={() => void handleStatusChange(user)}
-                        type="button"
-                      >
-                        {user.isDisabled ? 'Enable' : 'Disable'}
-                      </button>
-                    </div>
-                  </td>
+        <>
+          <h2 className="users-section-title">Members</h2>
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {users.map((user) => {
+                  const userRole = user.roles[0] as AppRole | undefined
+                  const roleIsRestricted = isPrivilegedRole(userRole) && !canManagePrivilegedRoles
+                  const canRemove = Boolean(userRole) && !roleIsRestricted
+
+                  return (
+                    <tr key={user.id}>
+                      <td>{user.userName}</td>
+                      <td>{user.email || '-'}</td>
+                      <td>
+                        <select
+                          aria-label={`Role for ${user.userName}`}
+                          disabled={updatingKey !== null || roleIsRestricted}
+                          onChange={(event) => void handleRoleChange(user, event.target.value as AppRole)}
+                          value={userRole ?? ''}
+                        >
+                          <option value="" disabled>
+                            No role
+                          </option>
+                          {availableRoles.map((role) => (
+                            <option key={role} value={role}>
+                              {role}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>{user.isDisabled ? 'Disabled' : 'Active'}</td>
+                      <td>
+                        <div className="table-actions">
+                          <button
+                            className={user.isDisabled ? 'text-button' : 'danger-button'}
+                            disabled={updatingKey !== null}
+                            onClick={() => void handleStatusChange(user)}
+                            type="button"
+                          >
+                            {user.isDisabled ? 'Enable' : 'Disable'}
+                          </button>
+                          <button
+                            className="text-button"
+                            disabled={updatingKey !== null || !canRemove}
+                            onClick={() => void handleRemoveAccess(user)}
+                            type="button"
+                          >
+                            Remove access
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : null}
+
+      {!isLoading && !errorMessage ? (
+        <>
+          <h2 className="users-section-title">Invitations</h2>
+          {invitations.length === 0 ? (
+            <EmptyState>No invitations found.</EmptyState>
+          ) : (
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Invited by</th>
+                    <th>Expires</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invitations.map((invitation) => {
+                    const canRevoke = invitation.status === 'Pending' &&
+                      (canManagePrivilegedRoles || !isPrivilegedRole(invitation.role))
+
+                    return (
+                      <tr key={invitation.id}>
+                        <td>{invitation.email}</td>
+                        <td>{invitation.role}</td>
+                        <td>{invitation.status}</td>
+                        <td>{invitation.invitedByUserName || '-'}</td>
+                        <td>{formatDate(invitation.expiresAtUtc)}</td>
+                        <td>
+                          <button
+                            className="text-button"
+                            disabled={updatingKey !== null || !canRevoke}
+                            onClick={() => void handleRevokeInvitation(invitation)}
+                            type="button"
+                          >
+                            Revoke
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       ) : null}
     </section>
   )

@@ -63,6 +63,9 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<CompanyUser> CompanyUsers => Set<CompanyUser>();
 
+        public DbSet<CompanyInvitation> CompanyInvitations =>
+            Set<CompanyInvitation>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -150,6 +153,54 @@ namespace InventoryManagement.Infrastructure.Persistence
 
                 entity.HasOne(x => x.Company)
                       .WithMany(x => x.Users)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Cascade)
+                      .IsRequired();
+            });
+
+            builder.Entity<CompanyInvitation>(entity =>
+            {
+                entity.HasIndex(x => x.TokenHash)
+                      .IsUnique();
+
+                entity.HasIndex(x => new { x.CompanyId, x.NormalizedEmail })
+                      .IsUnique()
+                      .HasFilter("\"Status\" = 'Pending'");
+
+                entity.HasIndex(x => new { x.CompanyId, x.Status, x.CreatedAtUtc });
+
+                entity.Property(x => x.Email)
+                      .HasColumnType("citext")
+                      .HasMaxLength(254)
+                      .IsRequired();
+
+                entity.Property(x => x.NormalizedEmail)
+                      .HasMaxLength(254)
+                      .IsRequired();
+
+                entity.Property(x => x.Role)
+                      .HasMaxLength(50)
+                      .IsRequired();
+
+                entity.Property(x => x.TokenHash)
+                      .HasMaxLength(64)
+                      .IsRequired();
+
+                entity.Property(x => x.Status)
+                      .HasMaxLength(20)
+                      .IsRequired();
+
+                entity.Property(x => x.InvitedByUserId)
+                      .IsRequired();
+
+                entity.Property(x => x.CreatedAtUtc)
+                      .IsRequired();
+
+                entity.Property(x => x.ExpiresAtUtc)
+                      .IsRequired();
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.Invitations)
                       .HasForeignKey(x => x.CompanyId)
                       .OnDelete(DeleteBehavior.Cascade)
                       .IsRequired();

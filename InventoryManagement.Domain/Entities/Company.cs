@@ -25,5 +25,6 @@ namespace InventoryManagement.Domain.Entities
         public ICollection<Payment> Payments { get; set; } = new List<Payment>();
         public ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
         public ICollection<DocumentSequence> DocumentSequences { get; set; } = new List<DocumentSequence>();
+        public ICollection<CompanyInvitation> Invitations { get; set; } = new List<CompanyInvitation>();
     }
 }

@@ -9,13 +9,6 @@ export type UserAccount = {
   isDisabled: boolean
 }
 
-export type CreateUserRequest = {
-  userName: string
-  email: string
-  password: string
-  roles: AppRole[]
-}
-
 export type ChangePasswordRequest = {
   currentPassword: string
   newPassword: string
@@ -24,13 +17,6 @@ export type ChangePasswordRequest = {
 
 export function getUsers(): Promise<UserAccount[]> {
   return apiRequest<UserAccount[]>('/api/Users')
-}
-
-export function createUser(request: CreateUserRequest): Promise<UserAccount> {
-  return apiRequest<UserAccount, CreateUserRequest>('/api/Users', {
-    method: 'POST',
-    body: request,
-  })
 }
 
 export function assignUserRole(userId: string, role: AppRole): Promise<UserAccount> {

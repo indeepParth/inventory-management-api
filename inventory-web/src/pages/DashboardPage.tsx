@@ -63,6 +63,11 @@ export function DashboardPage() {
   const loadDashboard = useCallback(async (): Promise<void> => {
     setIsLoading(true)
     setErrorMessage(null)
+    setStockItems([])
+    setPurchaseSummary(emptySummary())
+    setSalesSummary(emptySummary())
+    setUnpaidCustomers([])
+    setDraftInvoices([])
 
     try {
       const role = activeCompany?.role
@@ -114,7 +119,7 @@ export function DashboardPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [activeCompany?.role])
+  }, [activeCompany?.id, activeCompany?.role])
 
   useEffect(() => {
     void loadDashboard()

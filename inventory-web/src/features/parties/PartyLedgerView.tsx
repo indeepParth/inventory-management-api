@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { getCompanyProfile, type CompanyProfile } from '../companyProfile/companyProfileApi'
+import { ApiError } from '../../shared/api/apiClient'
 import { getErrorMessage } from '../../shared/api/apiErrorMessages'
 import { EmptyState, ErrorBanner, LoadingState } from '../../shared/components/Feedback'
 import { formatCurrency, formatDate, toDateInputValue } from '../../shared/utils/formatters'
@@ -150,6 +152,16 @@ export function PartyLedgerView({
     setErrorMessage(null)
 
     try {
+      let companyProfile: CompanyProfile | null = null
+
+      try {
+        companyProfile = await getCompanyProfile()
+      } catch (error) {
+        if (!(error instanceof ApiError && (error.status === 403 || error.status === 404))) {
+          throw error
+        }
+      }
+
       await downloadPartyLedgerPdf({
         title,
         partyName,
@@ -158,6 +170,7 @@ export function PartyLedgerView({
         totalDebit,
         totalCredit,
         fileName: buildPartyLedgerFileName(title, partyName, fromDate, toDate),
+        companyProfile,
       })
     } catch (error) {
       setErrorMessage(getErrorMessage(error))

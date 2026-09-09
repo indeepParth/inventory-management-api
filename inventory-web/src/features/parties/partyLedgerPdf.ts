@@ -1,5 +1,6 @@
 import { formatCurrency, formatDate } from '../../shared/utils/formatters'
 import { getAppName } from '../../shared/config/appConfig'
+import type { CompanyProfile } from '../companyProfile/companyProfileApi'
 import type { StatementEntry, StatementResponse } from './partiesApi'
 
 export type PartyLedgerPdfDetail = {
@@ -15,6 +16,7 @@ export type PartyLedgerPdfValues = {
   totalDebit: number
   totalCredit: number
   fileName: string
+  companyProfile?: CompanyProfile | null
 }
 
 function getDefaultDescription(entry: StatementEntry): string {
@@ -75,6 +77,20 @@ function buildSafeFileName(value: string): string {
     .toLowerCase()
 }
 
+function buildCompanyDetails(profile?: CompanyProfile | null): string[] {
+  if (!profile) {
+    return []
+  }
+
+  return [
+    profile.address,
+    profile.gstNumber ? `GST: ${profile.gstNumber}` : '',
+    profile.email ? `Email: ${profile.email}` : '',
+    profile.phone ? `Phone: ${profile.phone}` : '',
+    profile.website ? `Website: ${profile.website}` : '',
+  ].filter((detail): detail is string => Boolean(detail))
+}
+
 export function buildPartyLedgerFileName(
   title: string,
   partyName: string,
@@ -93,6 +109,7 @@ export async function downloadPartyLedgerPdf({
   totalDebit,
   totalCredit,
   fileName,
+  companyProfile,
 }: PartyLedgerPdfValues): Promise<void> {
   const [{ default: pdfMake }, { default: pdfFonts }] = await Promise.all([
     import('pdfmake/build/pdfmake'),
@@ -105,6 +122,8 @@ export async function downloadPartyLedgerPdf({
     .filter((detail) => detail.value)
     .map((detail) => `${detail.label}: ${detail.value}`)
   const appName = getAppName()
+  const companyName = companyProfile?.companyName || appName
+  const companyDetails = buildCompanyDetails(companyProfile)
 
   const body = [
     [
@@ -139,7 +158,8 @@ export async function downloadPartyLedgerPdf({
       subject: title,
     },
     content: [
-      { text: appName, style: 'appHeading' },
+      { text: companyName, style: 'appHeading' },
+      ...(companyDetails.length > 0 ? [{ text: companyDetails.join('\n'), style: 'muted' }] : []),
       { text: title, style: 'title' },
       {
         columns: [

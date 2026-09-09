@@ -70,15 +70,15 @@ function isAccountPath(pathname: string): boolean {
 export function AppLayout() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { currentUser, isCurrentUserLoading, logout } = useAuth()
+  const { activeCompany, currentUser, isCurrentUserLoading, logout } = useAuth()
   const visibleDirectNavItems = directNavItems.filter((item) =>
-    hasRouteAccess(currentUser?.roles ?? [], item.policy),
+    hasRouteAccess(activeCompany?.role, item.policy),
   )
   const visibleNavGroups = navGroups
     .map((group) => ({
       ...group,
       items: group.items.filter((item) =>
-        hasRouteAccess(currentUser?.roles ?? [], item.policy),
+        hasRouteAccess(activeCompany?.role, item.policy),
       ),
     }))
     .filter((group) => group.items.length > 0)
@@ -117,7 +117,7 @@ export function AppLayout() {
     )
   }
 
-  const canViewCompanyProfile = hasRouteAccess(currentUser?.roles ?? [], 'adminOnly')
+  const canViewCompanyProfile = hasRouteAccess(activeCompany?.role, 'adminOnly')
   const accountPanelId = 'sidebar-account-items'
   const appName = getAppName()
 
@@ -138,6 +138,9 @@ export function AppLayout() {
                 {isCurrentUserLoading ? 'Loading user...' : currentUser?.username ?? 'Unknown user'}
               </span>
               <span className="app-user-email">{currentUser?.email ?? 'Email not available'}</span>
+              <span className="app-user-email">
+                {activeCompany ? `${activeCompany.name} - ${activeCompany.role}` : 'Company not selected'}
+              </span>
             </span>
             <span className="app-nav-chevron" aria-hidden="true">
               {isAccountMenuOpen ? 'v' : '>'}

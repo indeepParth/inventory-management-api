@@ -4,8 +4,10 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Application.Authorization;
 using InventoryManagement.Application.Features.Auth.Login;
+using InventoryManagement.Domain.Entities;
 using InventoryManagement.Domain.Enums;
 using InventoryManagement.Infrastructure.Identity;
+using InventoryManagement.Infrastructure.Persistence;
 using InventoryManagement.Tests.IntegrationTests.Common;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,9 +33,9 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         [Fact]
-        public async Task Admin_Should_Have_Full_Business_Access()
+        public async Task Owner_Should_Have_Full_Business_Access()
         {
-            await AuthenticateWithRoleAsync(ApplicationRoles.Admin);
+            await AuthenticateWithRoleAsync(CompanyRoles.Owner);
 
             var response = await Client.GetAsync("/api/purchases");
 
@@ -43,7 +45,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         [Fact]
         public async Task Manager_Should_Access_Cost_Reports_But_Not_User_Administration()
         {
-            await AuthenticateWithRoleAsync(ApplicationRoles.Manager);
+            await AuthenticateWithRoleAsync(CompanyRoles.Manager);
 
             var reportResponse = await Client.GetAsync(
                 "/api/inventory-reports/current-stock");
@@ -54,9 +56,19 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         [Fact]
+        public async Task Business_Endpoints_Should_Require_Active_Company_Header()
+        {
+            await AuthenticateWithRoleAsync(CompanyRoles.Owner, includeCompanyHeader: false);
+
+            var response = await Client.GetAsync("/api/products");
+
+            response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        [Fact]
         public async Task Sales_Should_Read_Customers_And_Manage_Sales_But_Not_Purchases_Or_Cost_Reports()
         {
-            await AuthenticateWithRoleAsync(ApplicationRoles.Sales);
+            await AuthenticateWithRoleAsync(CompanyRoles.Sales);
 
             var productsResponse = await Client.GetAsync("/api/products");
             var customersResponse = await Client.GetAsync("/api/customers");
@@ -77,7 +89,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         [Fact]
         public async Task Sales_Should_Be_Authorized_To_Create_Customer_Receipts()
         {
-            await AuthenticateWithRoleAsync(ApplicationRoles.Sales);
+            await AuthenticateWithRoleAsync(CompanyRoles.Sales);
 
             var response = await Client.PostAsJsonAsync(
                 "/api/payments",
@@ -97,7 +109,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         [Fact]
         public async Task Inventory_Should_Manage_Inventory_Flows_But_Not_Sales_Or_Customer_Reads()
         {
-            await AuthenticateWithRoleAsync(ApplicationRoles.Inventory);
+            await AuthenticateWithRoleAsync(CompanyRoles.Inventory);
 
             var productsResponse = await Client.GetAsync("/api/products");
             var suppliersResponse = await Client.GetAsync("/api/suppliers");
@@ -117,7 +129,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         [Fact]
         public async Task Inventory_Should_Not_Access_Cost_Reports_Or_Manual_Adjustments()
         {
-            await AuthenticateWithRoleAsync(ApplicationRoles.Inventory);
+            await AuthenticateWithRoleAsync(CompanyRoles.Inventory);
 
             var reportResponse = await Client.GetAsync(
                 "/api/inventory-reports/current-stock");
@@ -130,8 +142,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         [Theory]
-        [InlineData(ApplicationRoles.Sales, "/api/sales-invoices/1/cancel")]
-        [InlineData(ApplicationRoles.Inventory, "/api/purchases/1/cancel")]
+        [InlineData(CompanyRoles.Sales, "/api/sales-invoices/1/cancel")]
+        [InlineData(CompanyRoles.Inventory, "/api/purchases/1/cancel")]
         public async Task Cancellation_Endpoints_Should_Be_Admin_Or_Manager_Only(
             string role,
             string path)
@@ -143,7 +155,9 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         }
 
-        private async Task AuthenticateWithRoleAsync(string role)
+        private async Task AuthenticateWithRoleAsync(
+            string role,
+            bool includeCompanyHeader = true)
         {
             var user = await CreateUserAsync(role);
 
@@ -164,6 +178,15 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 new AuthenticationHeaderValue(
                     "Bearer",
                     login!.AccessToken);
+
+            Client.DefaultRequestHeaders.Remove("X-Company-Id");
+
+            if (includeCompanyHeader)
+            {
+                Client.DefaultRequestHeaders.Add(
+                    "X-Company-Id",
+                    user.CompanyId.ToString());
+            }
         }
 
         private async Task<TestUser> CreateUserAsync(string role)
@@ -171,18 +194,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             using var scope = _factory.Services.CreateScope();
             var userManager = scope.ServiceProvider
                 .GetRequiredService<UserManager<ApplicationUser>>();
-            var roleManager = scope.ServiceProvider
-                .GetRequiredService<RoleManager<IdentityRole>>();
-
-            foreach (var supportedRole in ApplicationRoles.All)
-            {
-                if (!await roleManager.RoleExistsAsync(supportedRole))
-                {
-                    var roleResult = await roleManager.CreateAsync(
-                        new IdentityRole(supportedRole));
-                    roleResult.Succeeded.Should().BeTrue();
-                }
-            }
+            var context = scope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
 
             var unique = Guid.NewGuid().ToString("N");
             var user = new ApplicationUser
@@ -195,14 +208,31 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             var createResult = await userManager.CreateAsync(user, password);
             createResult.Succeeded.Should().BeTrue();
 
-            var addRoleResult = await userManager.AddToRoleAsync(user, role);
-            addRoleResult.Succeeded.Should().BeTrue();
+            var company = new Company
+            {
+                Name = $"{user.UserName}'s Company",
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
-            return new TestUser(user.UserName!, password);
+            context.Companies.Add(company);
+            await context.SaveChangesAsync();
+
+            context.CompanyUsers.Add(new CompanyUser
+            {
+                CompanyId = company.Id,
+                UserId = user.Id,
+                Role = role,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+
+            await context.SaveChangesAsync();
+
+            return new TestUser(user.UserName!, password, company.Id);
         }
 
         private sealed record TestUser(
             string UserName,
-            string Password);
+            string Password,
+            int CompanyId);
     }
 }

@@ -4,10 +4,13 @@ using InventoryManagement.Application.Authorization;
 using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.DTOs.User;
+using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Identity;
+using InventoryManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace InventoryManagement.API.Controllers
 {
@@ -17,31 +20,36 @@ namespace InventoryManagement.API.Controllers
     public class UsersController : ControllerBase
     {
         private readonly ICurrentUserService _currentUserService;
+        private readonly ICompanyMembershipService _membershipService;
+        private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
 
         public UsersController(
             ICurrentUserService currentUserService,
-            UserManager<ApplicationUser> userManager,
-            RoleManager<IdentityRole> roleManager)
+            ICompanyMembershipService membershipService,
+            ApplicationDbContext context,
+            UserManager<ApplicationUser> userManager)
         {
             _currentUserService = currentUserService;
+            _membershipService = membershipService;
+            _context = context;
             _userManager = userManager;
-            _roleManager = roleManager;
         }
 
         [HttpGet("me")]
         public async Task<IActionResult> Me()
         {
             var user = await FindCurrentUserAsync();
-            var roles = await _userManager.GetRolesAsync(user);
+            var companies = await _membershipService.GetCompaniesForUserAsync(
+                user.Id,
+                HttpContext.RequestAborted);
 
             return Ok(new UserInfoDto
             {
                 Username = user.UserName ?? string.Empty,
                 Email = user.Email ?? string.Empty,
-                Roles = roles.OrderBy(x => x).ToList(),
-                IsDisabled = IsDisabled(user)
+                IsDisabled = IsDisabled(user),
+                Companies = companies.ToList()
             });
         }
 
@@ -49,7 +57,7 @@ namespace InventoryManagement.API.Controllers
         [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public IActionResult AdminOnly()
         {
-            return Ok("Welcome Admin");
+            return Ok("Welcome Owner");
         }
 
         [HttpGet("user-info")]
@@ -57,11 +65,7 @@ namespace InventoryManagement.API.Controllers
         {
             return Ok(new UserInfoDto
             {
-                Username = _currentUserService.Username ?? "",
-                Roles = User.Claims
-                .Where(x => x.Type == ClaimTypes.Role)
-                .Select(x => x.Value)
-                .ToList()
+                Username = _currentUserService.Username ?? ""
             });
         }
 
@@ -79,18 +83,26 @@ namespace InventoryManagement.API.Controllers
         [Authorize(Policy = AuthorizationPolicies.AdminOnly)]
         public async Task<IActionResult> GetUsers()
         {
-            var users = _userManager.Users
-                .OrderBy(x => x.UserName)
-                .ToList();
+            var companyId = GetRequiredCompanyId();
+            var memberships = await _context.CompanyUsers
+                .AsNoTracking()
+                .Where(x => x.CompanyId == companyId)
+                .OrderBy(x => x.UserId)
+                .ToListAsync();
 
             var response = new List<UserManagementResponse>();
 
-            foreach (var user in users)
+            foreach (var membership in memberships)
             {
-                response.Add(await MapUserAsync(user));
+                var user = await _userManager.FindByIdAsync(membership.UserId);
+
+                if (user is not null)
+                {
+                    response.Add(MapUser(user, membership.Role));
+                }
             }
 
-            return Ok(response);
+            return Ok(response.OrderBy(x => x.UserName).ToList());
         }
 
         [HttpPost]
@@ -101,6 +113,11 @@ namespace InventoryManagement.API.Controllers
                 .Select(ValidateRole)
                 .Distinct()
                 .ToList();
+
+            if (roles.Count != 1)
+            {
+                throw new BadRequestException("Exactly one company role is required.");
+            }
 
             var user = new ApplicationUser
             {
@@ -118,28 +135,17 @@ namespace InventoryManagement.API.Controllers
                     string.Join(",", createResult.Errors.Select(x => x.Description)));
             }
 
-            foreach (var role in roles)
+            _context.CompanyUsers.Add(new CompanyUser
             {
-                if (!await _roleManager.RoleExistsAsync(role))
-                {
-                    await _roleManager.CreateAsync(new IdentityRole(role));
-                }
-            }
+                CompanyId = GetRequiredCompanyId(),
+                UserId = user.Id,
+                Role = roles.Single(),
+                CreatedAtUtc = DateTime.UtcNow
+            });
 
-            if (roles.Count > 0)
-            {
-                var roleResult = await _userManager.AddToRolesAsync(
-                    user,
-                    roles);
+            await _context.SaveChangesAsync();
 
-                if (!roleResult.Succeeded)
-                {
-                    throw new BadRequestException(
-                        string.Join(",", roleResult.Errors.Select(x => x.Description)));
-                }
-            }
-
-            return Ok(await MapUserAsync(user));
+            return Ok(MapUser(user, roles.Single()));
         }
 
         [HttpPost("me/change-password")]
@@ -175,24 +181,27 @@ namespace InventoryManagement.API.Controllers
         {
             var role = ValidateRole(request.Role);
             var user = await FindUserAsync(userId);
+            var companyId = GetRequiredCompanyId();
+            var membership = await _context.CompanyUsers
+                .SingleOrDefaultAsync(x =>
+                    x.CompanyId == companyId &&
+                    x.UserId == user.Id);
 
-            if (!await _roleManager.RoleExistsAsync(role))
+            if (membership is null)
             {
-                await _roleManager.CreateAsync(new IdentityRole(role));
-            }
-
-            if (!await _userManager.IsInRoleAsync(user, role))
-            {
-                var result = await _userManager.AddToRoleAsync(user, role);
-
-                if (!result.Succeeded)
+                membership = new CompanyUser
                 {
-                    throw new BadRequestException(
-                        string.Join(",", result.Errors.Select(x => x.Description)));
-                }
+                    CompanyId = companyId,
+                    UserId = user.Id,
+                    CreatedAtUtc = DateTime.UtcNow
+                };
+                _context.CompanyUsers.Add(membership);
             }
 
-            return Ok(await MapUserAsync(user));
+            membership.Role = role;
+            await _context.SaveChangesAsync();
+
+            return Ok(MapUser(user, membership.Role));
         }
 
         [HttpDelete("{userId}/roles/{role}")]
@@ -203,27 +212,29 @@ namespace InventoryManagement.API.Controllers
         {
             role = ValidateRole(role);
             var user = await FindUserAsync(userId);
+            var companyId = GetRequiredCompanyId();
 
-            if (role == ApplicationRoles.Admin &&
+            if (role == CompanyRoles.Owner &&
                 IsCurrentUser(user) &&
-                await IsFinalActiveAdminAsync(user))
+                await IsFinalActiveOwnerAsync(user, companyId))
             {
                 throw new BadRequestException(
-                    "Cannot remove your own final Admin role.");
+                    "Cannot remove your own final Owner role.");
             }
 
-            if (await _userManager.IsInRoleAsync(user, role))
+            var membership = await _context.CompanyUsers
+                .SingleOrDefaultAsync(x =>
+                    x.CompanyId == companyId &&
+                    x.UserId == user.Id &&
+                    x.Role == role);
+
+            if (membership is not null)
             {
-                var result = await _userManager.RemoveFromRoleAsync(user, role);
-
-                if (!result.Succeeded)
-                {
-                    throw new BadRequestException(
-                        string.Join(",", result.Errors.Select(x => x.Description)));
-                }
+                _context.CompanyUsers.Remove(membership);
+                await _context.SaveChangesAsync();
             }
 
-            return Ok(await MapUserAsync(user));
+            return Ok(MapUser(user, string.Empty));
         }
 
         [HttpPost("{userId}/disable")]
@@ -232,10 +243,10 @@ namespace InventoryManagement.API.Controllers
         {
             var user = await FindUserAsync(userId);
 
-            if (await IsFinalActiveAdminAsync(user))
+            if (await IsFinalActiveOwnerAsync(user, GetRequiredCompanyId()))
             {
                 throw new BadRequestException(
-                    "Cannot disable the final active administrator.");
+                    "Cannot disable the final active owner.");
             }
 
             var result = await _userManager.SetLockoutEndDateAsync(
@@ -248,7 +259,7 @@ namespace InventoryManagement.API.Controllers
                     string.Join(",", result.Errors.Select(x => x.Description)));
             }
 
-            return Ok(await MapUserAsync(user));
+            return Ok(await MapUserForActiveCompanyAsync(user));
         }
 
         [HttpPost("{userId}/enable")]
@@ -267,7 +278,7 @@ namespace InventoryManagement.API.Controllers
                     string.Join(",", result.Errors.Select(x => x.Description)));
             }
 
-            return Ok(await MapUserAsync(user));
+            return Ok(await MapUserForActiveCompanyAsync(user));
         }
 
         private async Task<ApplicationUser> FindUserAsync(string userId)
@@ -312,11 +323,11 @@ namespace InventoryManagement.API.Controllers
 
         private static string ValidateRole(string role)
         {
-            if (!ApplicationRoles.All.Contains(role))
+            if (!CompanyRoles.All.Contains(role))
             {
                 throw new BadRequestException(
                     "Role must be one of: " +
-                    string.Join(", ", ApplicationRoles.All));
+                    string.Join(", ", CompanyRoles.All));
             }
 
             return role;
@@ -331,33 +342,87 @@ namespace InventoryManagement.API.Controllers
             return currentUserId == user.Id;
         }
 
-        private async Task<bool> IsFinalActiveAdminAsync(ApplicationUser user)
+        private async Task<bool> IsFinalActiveOwnerAsync(
+            ApplicationUser user,
+            int companyId)
         {
-            if (!await _userManager.IsInRoleAsync(user, ApplicationRoles.Admin) ||
-                IsDisabled(user))
+            if (IsDisabled(user))
             {
                 return false;
             }
 
-            var admins = await _userManager.GetUsersInRoleAsync(
-                ApplicationRoles.Admin);
+            var userMembership = await _context.CompanyUsers
+                .AsNoTracking()
+                .SingleOrDefaultAsync(x =>
+                    x.CompanyId == companyId &&
+                    x.UserId == user.Id);
 
-            return admins.Count(x => !IsDisabled(x)) <= 1;
+            if (userMembership?.Role != CompanyRoles.Owner)
+            {
+                return false;
+            }
+
+            var ownerUserIds = await _context.CompanyUsers
+                .AsNoTracking()
+                .Where(x => x.CompanyId == companyId &&
+                            x.Role == CompanyRoles.Owner)
+                .Select(x => x.UserId)
+                .ToListAsync();
+
+            var activeOwnerCount = 0;
+
+            foreach (var ownerUserId in ownerUserIds)
+            {
+                var owner = await _userManager.FindByIdAsync(ownerUserId);
+
+                if (owner is not null && !IsDisabled(owner))
+                {
+                    activeOwnerCount++;
+                }
+            }
+
+            return activeOwnerCount <= 1;
         }
 
-        private async Task<UserManagementResponse> MapUserAsync(
+        private async Task<UserManagementResponse> MapUserForActiveCompanyAsync(
             ApplicationUser user)
         {
-            var roles = await _userManager.GetRolesAsync(user);
+            var companyId = GetRequiredCompanyId();
+            var role = await _context.CompanyUsers
+                .AsNoTracking()
+                .Where(x => x.CompanyId == companyId &&
+                            x.UserId == user.Id)
+                .Select(x => x.Role)
+                .SingleOrDefaultAsync();
 
+            return MapUser(user, role ?? string.Empty);
+        }
+
+        private static UserManagementResponse MapUser(
+            ApplicationUser user,
+            string role)
+        {
             return new UserManagementResponse
             {
                 Id = user.Id,
                 UserName = user.UserName ?? string.Empty,
                 Email = user.Email ?? string.Empty,
-                Roles = roles.OrderBy(x => x).ToList(),
+                Roles = string.IsNullOrWhiteSpace(role)
+                    ? new List<string>()
+                    : new List<string> { role },
                 IsDisabled = IsDisabled(user)
             };
+        }
+
+        private int GetRequiredCompanyId()
+        {
+            if (!Request.Headers.TryGetValue("X-Company-Id", out var companyHeader) ||
+                !int.TryParse(companyHeader.FirstOrDefault(), out var companyId))
+            {
+                throw new ForbiddenException("Active company is required.");
+            }
+
+            return companyId;
         }
 
         private static bool IsDisabled(ApplicationUser user)

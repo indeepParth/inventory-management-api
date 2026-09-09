@@ -16,26 +16,28 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
     public class IdentityBootstrapTests
     {
         [Fact]
-        public async Task BootstrapAsync_Should_Create_Roles_And_First_Admin_When_Production_Config_Is_Enabled()
+        public async Task BootstrapAsync_Should_Create_First_Owner_Company_When_Production_Config_Is_Enabled()
         {
             await using var context = await CreateBootstrapContextAsync(
                 ValidAdminOptions());
 
             await context.BootstrapService.BootstrapAsync();
 
-            foreach (var role in ApplicationRoles.All)
-            {
-                var exists = await context.RoleManager.RoleExistsAsync(role);
-                exists.Should().BeTrue();
-            }
-
             var admin = await context.UserManager.FindByNameAsync("admin");
             admin.Should().NotBeNull();
 
-            var isAdmin = await context.UserManager.IsInRoleAsync(
-                admin!,
-                ApplicationRoles.Admin);
-            isAdmin.Should().BeTrue();
+            var company = context.DbContext.Companies.SingleOrDefault();
+            company.Should().NotBeNull();
+            company!.Name.Should().Be("admin's Company");
+
+            var membership = context.DbContext.CompanyUsers.SingleOrDefault(x =>
+                x.CompanyId == company.Id &&
+                x.UserId == admin!.Id);
+            membership.Should().NotBeNull();
+            membership!.Role.Should().Be(CompanyRoles.Owner);
+
+            var globalRoles = await context.UserManager.GetRolesAsync(admin!);
+            globalRoles.Should().BeEmpty();
         }
 
         [Fact]
@@ -47,11 +49,12 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             await context.BootstrapService.BootstrapAsync();
             await context.BootstrapService.BootstrapAsync();
 
-            var admins = await context.UserManager.GetUsersInRoleAsync(
-                ApplicationRoles.Admin);
-
-            admins.Should().ContainSingle();
-            context.DbContext.Roles.Count().Should().Be(ApplicationRoles.All.Length);
+            context.DbContext.Users.Count().Should().Be(1);
+            context.DbContext.Companies.Count().Should().Be(1);
+            context.DbContext.CompanyUsers
+                .Count(x => x.Role == CompanyRoles.Owner)
+                .Should()
+                .Be(1);
         }
 
         [Fact]
@@ -82,10 +85,11 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             var admin = await context.UserManager.FindByNameAsync("admin");
             admin.Should().NotBeNull();
 
-            var isAdmin = await context.UserManager.IsInRoleAsync(
-                admin!,
-                ApplicationRoles.Admin);
-            isAdmin.Should().BeTrue();
+            context.DbContext.CompanyUsers
+                .Single(x => x.UserId == admin!.Id)
+                .Role
+                .Should()
+                .Be(CompanyRoles.Owner);
         }
 
         [Fact]
@@ -125,10 +129,10 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 .ThrowAsync<InvalidOperationException>()
                 .WithMessage("*Existing users are not modified*");
 
-            var isAdmin = await context.UserManager.IsInRoleAsync(
-                existingUser,
-                ApplicationRoles.Admin);
-            isAdmin.Should().BeFalse();
+            context.DbContext.CompanyUsers
+                .Any(x => x.UserId == existingUser.Id)
+                .Should()
+                .BeFalse();
         }
 
         private static async Task<BootstrapTestContext> CreateBootstrapContextAsync(
@@ -180,8 +184,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 scope,
                 dbContext,
                 scope.ServiceProvider.GetRequiredService<IdentityBootstrapService>(),
-                scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>(),
-                scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>());
+                scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>());
         }
 
         private static AdminBootstrapOptions ValidAdminOptions()
@@ -218,21 +221,18 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 IServiceScope scope,
                 ApplicationDbContext dbContext,
                 IdentityBootstrapService bootstrapService,
-                UserManager<ApplicationUser> userManager,
-                RoleManager<IdentityRole> roleManager)
+                UserManager<ApplicationUser> userManager)
             {
                 _database = database;
                 _scope = scope;
                 DbContext = dbContext;
                 BootstrapService = bootstrapService;
                 UserManager = userManager;
-                RoleManager = roleManager;
             }
 
             public ApplicationDbContext DbContext { get; }
             public IdentityBootstrapService BootstrapService { get; }
             public UserManager<ApplicationUser> UserManager { get; }
-            public RoleManager<IdentityRole> RoleManager { get; }
 
             public async ValueTask DisposeAsync()
             {

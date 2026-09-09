@@ -5,13 +5,11 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
-using InventoryManagement.Application.Authorization;
 using InventoryManagement.Infrastructure.Identity;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
 using LoginCommand = InventoryManagement.Application.Features.Auth.Login.Command;
 using LoginResponse = InventoryManagement.Application.Features.Auth.Login.Response;
 using RegisterCommand = InventoryManagement.Application.Features.Auth.Register.Command;
+using RegisterResponse = InventoryManagement.Application.Features.Auth.Register.Response;
 
 namespace InventoryManagement.Tests.IntegrationTests.Common
 {
@@ -32,14 +30,16 @@ namespace InventoryManagement.Tests.IntegrationTests.Common
             var username = $"test_{unique}";
             var password = "123456789";
 
-            await Client.PostAsJsonAsync("/api/auth/register", new RegisterCommand
+            var registerResponse = await Client.PostAsJsonAsync("/api/auth/register", new RegisterCommand
             {
                 UserName = username,
                 Email = $"{username}@user.com",
                 Password = password
             });
+            registerResponse.EnsureSuccessStatusCode();
 
-            await AssignRoleAsync(username, ApplicationRoles.Admin);
+            var register = await registerResponse.Content.ReadFromJsonAsync<RegisterResponse>();
+            register.Should().NotBeNull();
 
             var loginResponse = await Client.PostAsJsonAsync("/api/auth/login", new LoginCommand
             {
@@ -54,30 +54,10 @@ namespace InventoryManagement.Tests.IntegrationTests.Common
 
             Client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", login!.AccessToken);
-        }
-
-        private async Task AssignRoleAsync(
-            string username,
-            string role)
-        {
-            using var scope = _factory.Services.CreateScope();
-            var roleManager = scope.ServiceProvider
-                .GetRequiredService<RoleManager<IdentityRole>>();
-            var userManager = scope.ServiceProvider
-                .GetRequiredService<UserManager<ApplicationUser>>();
-
-            if (!await roleManager.RoleExistsAsync(role))
-            {
-                var roleResult = await roleManager.CreateAsync(
-                    new IdentityRole(role));
-                roleResult.Succeeded.Should().BeTrue();
-            }
-
-            var user = await userManager.FindByNameAsync(username);
-            user.Should().NotBeNull();
-
-            var addResult = await userManager.AddToRoleAsync(user!, role);
-            addResult.Succeeded.Should().BeTrue();
+            Client.DefaultRequestHeaders.Remove("X-Company-Id");
+            Client.DefaultRequestHeaders.Add(
+                "X-Company-Id",
+                register!.CompanyId.ToString());
         }
     }
 }

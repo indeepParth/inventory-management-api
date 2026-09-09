@@ -26,9 +26,9 @@ function canMarkDeliveryChargePaid(delivery: DriverDeliveryRow): boolean {
 
 export function DriverDetailPage() {
   const { id } = useParams()
-  const { currentUser } = useAuth()
+  const { activeCompany } = useAuth()
   const driverId = Number(id)
-  const canManageInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
+  const canManageInvoices = hasRouteAccess(activeCompany?.role, 'manageSalesInvoices')
   const [response, setResponse] = useState<DriverDeliveriesResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [pageNumber, setPageNumber] = useState(1)

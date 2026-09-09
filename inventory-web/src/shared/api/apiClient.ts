@@ -1,6 +1,7 @@
 import { getApiBaseUrl } from '../config/apiConfig'
 import {
   clearAuthTokens,
+  getActiveCompanyId,
   getAccessToken,
   getRefreshToken,
   setAuthTokens,
@@ -72,6 +73,12 @@ function buildHeaders(hasBody: boolean, headers?: HeadersInit): Headers {
 
   if (accessToken) {
     requestHeaders.set('Authorization', `Bearer ${accessToken}`)
+  }
+
+  const activeCompanyId = getActiveCompanyId()
+
+  if (activeCompanyId !== null && !requestHeaders.has('X-Company-Id')) {
+    requestHeaders.set('X-Company-Id', String(activeCompanyId))
   }
 
   return requestHeaders

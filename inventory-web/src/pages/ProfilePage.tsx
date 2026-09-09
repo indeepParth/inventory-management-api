@@ -1,7 +1,7 @@
 import { useAuth } from '../features/auth/AuthContext'
 
 export function ProfilePage() {
-  const { currentUser } = useAuth()
+  const { activeCompany, currentUser } = useAuth()
 
   return (
     <section className="content-panel" aria-labelledby="profile-title">
@@ -20,7 +20,7 @@ export function ProfilePage() {
         <span>Email</span>
         <strong>{currentUser?.email || '-'}</strong>
         <span>Roles</span>
-        <strong>{currentUser?.roles.length ? currentUser.roles.join(', ') : '-'}</strong>
+        <strong>{activeCompany?.role ?? '-'}</strong>
         <span>Status</span>
         <strong>{currentUser?.isDisabled ? 'Disabled' : 'Active'}</strong>
       </div>

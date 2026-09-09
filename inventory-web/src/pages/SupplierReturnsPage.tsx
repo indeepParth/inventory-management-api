@@ -24,8 +24,8 @@ function today(): string {
 }
 
 export function SupplierReturnsPage() {
-  const { currentUser } = useAuth()
-  const canCancelReturns = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
+  const { activeCompany } = useAuth()
+  const canCancelReturns = hasRouteAccess(activeCompany?.role, 'adminOrManager')
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [selectedPurchaseId, setSelectedPurchaseId] = useState(0)
   const [returnNumber, setReturnNumber] = useState('')

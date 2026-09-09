@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Application.Authorization;
 using InventoryManagement.Application.Features.CompanyProfile;
+using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Identity;
 using InventoryManagement.Infrastructure.Persistence;
 using InventoryManagement.Tests.IntegrationTests.Common;
@@ -99,7 +100,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         public async Task Non_Admin_Should_Not_Access_Company_Profile()
         {
             await ClearCompanyProfileAsync();
-            await AuthenticateWithRoleAsync(ApplicationRoles.Manager);
+            await AuthenticateWithRoleAsync(CompanyRoles.Manager);
 
             var getResponse = await Client.GetAsync("/api/company-profile");
             var putResponse = await Client.PutAsJsonAsync(
@@ -141,6 +142,10 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
                 new AuthenticationHeaderValue(
                     "Bearer",
                     login!.AccessToken);
+            Client.DefaultRequestHeaders.Remove("X-Company-Id");
+            Client.DefaultRequestHeaders.Add(
+                "X-Company-Id",
+                user.CompanyId.ToString());
         }
 
         private async Task<TestUser> CreateUserAsync(string role)
@@ -148,18 +153,8 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
             using var scope = _factory.Services.CreateScope();
             var userManager = scope.ServiceProvider
                 .GetRequiredService<UserManager<ApplicationUser>>();
-            var roleManager = scope.ServiceProvider
-                .GetRequiredService<RoleManager<IdentityRole>>();
-
-            foreach (var supportedRole in ApplicationRoles.All)
-            {
-                if (!await roleManager.RoleExistsAsync(supportedRole))
-                {
-                    var roleResult = await roleManager.CreateAsync(
-                        new IdentityRole(supportedRole));
-                    roleResult.Succeeded.Should().BeTrue();
-                }
-            }
+            var context = scope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
 
             var unique = Guid.NewGuid().ToString("N");
             var user = new ApplicationUser
@@ -172,14 +167,31 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
             var createResult = await userManager.CreateAsync(user, password);
             createResult.Succeeded.Should().BeTrue();
 
-            var addRoleResult = await userManager.AddToRoleAsync(user, role);
-            addRoleResult.Succeeded.Should().BeTrue();
+            var company = new Company
+            {
+                Name = $"{user.UserName}'s Company",
+                CreatedAtUtc = DateTime.UtcNow
+            };
 
-            return new TestUser(user.UserName!, password);
+            context.Companies.Add(company);
+            await context.SaveChangesAsync();
+
+            context.CompanyUsers.Add(new CompanyUser
+            {
+                CompanyId = company.Id,
+                UserId = user.Id,
+                Role = role,
+                CreatedAtUtc = DateTime.UtcNow
+            });
+
+            await context.SaveChangesAsync();
+
+            return new TestUser(user.UserName!, password, company.Id);
         }
 
         private sealed record TestUser(
             string UserName,
-            string Password);
+            string Password,
+            int CompanyId);
     }
 }

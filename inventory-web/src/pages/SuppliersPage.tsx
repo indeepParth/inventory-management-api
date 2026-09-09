@@ -22,8 +22,8 @@ import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feed
 const pageSize = 10
 
 export function SuppliersPage() {
-  const { currentUser } = useAuth()
-  const canManageSuppliers = hasRouteAccess(currentUser?.roles ?? [], 'manageSuppliers')
+  const { activeCompany } = useAuth()
+  const canManageSuppliers = hasRouteAccess(activeCompany?.role, 'manageSuppliers')
   const [response, setResponse] = useState<PagedResponse<Supplier> | null>(null)
   const [editingSupplier, setEditingSupplier] = useState<Supplier | undefined>()
   const [isFormOpen, setIsFormOpen] = useState(false)

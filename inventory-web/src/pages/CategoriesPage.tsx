@@ -18,8 +18,8 @@ import {
 import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
 
 export function CategoriesPage() {
-  const { currentUser } = useAuth()
-  const canManageProducts = hasRouteAccess(currentUser?.roles ?? [], 'manageProducts')
+  const { activeCompany } = useAuth()
+  const canManageProducts = hasRouteAccess(activeCompany?.role, 'manageProducts')
   const [categories, setCategories] = useState<Category[]>([])
   const [editingCategory, setEditingCategory] = useState<Category | undefined>()
   const [isFormOpen, setIsFormOpen] = useState(false)

@@ -1,4 +1,6 @@
-export type AppRole = 'Admin' | 'Manager' | 'Sales' | 'Inventory'
+import type { CompanyRole } from './authApi'
+
+export type AppRole = CompanyRole
 
 export type RoutePolicy =
   | 'allAuthenticated'
@@ -23,40 +25,40 @@ export type RoutePolicy =
   | 'manageSupplierReturns'
   | 'viewReports'
 
-export const allRoles: AppRole[] = ['Admin', 'Manager', 'Sales', 'Inventory']
+export const allRoles: AppRole[] = ['Owner', 'Manager', 'Sales', 'Inventory']
 
 const policyRoles: Record<RoutePolicy, AppRole[]> = {
   allAuthenticated: allRoles,
-  adminOnly: ['Admin'],
-  adminOrManager: ['Admin', 'Manager'],
-  readProducts: ['Admin', 'Manager', 'Sales', 'Inventory'],
-  manageProducts: ['Admin', 'Manager'],
-  readCustomers: ['Admin', 'Manager', 'Sales'],
-  manageCustomers: ['Admin', 'Manager'],
-  viewCustomerStatements: ['Admin', 'Manager', 'Sales'],
-  readDrivers: ['Admin', 'Manager', 'Sales'],
-  manageDrivers: ['Admin', 'Manager'],
-  readSuppliers: ['Admin', 'Manager', 'Inventory'],
-  manageSuppliers: ['Admin', 'Manager'],
-  viewSupplierStatements: ['Admin', 'Manager'],
-  managePurchases: ['Admin', 'Manager', 'Inventory'],
-  manageDeliveryChallans: ['Admin', 'Manager', 'Sales'],
-  manageSalesInvoices: ['Admin', 'Manager', 'Sales'],
-  viewPayments: ['Admin', 'Manager'],
-  viewStockMovements: ['Admin', 'Manager', 'Inventory'],
-  manageCustomerReturns: ['Admin', 'Manager', 'Inventory'],
-  manageSupplierReturns: ['Admin', 'Manager', 'Inventory'],
-  viewReports: ['Admin', 'Manager'],
+  adminOnly: ['Owner'],
+  adminOrManager: ['Owner', 'Manager'],
+  readProducts: ['Owner', 'Manager', 'Sales', 'Inventory'],
+  manageProducts: ['Owner', 'Manager'],
+  readCustomers: ['Owner', 'Manager', 'Sales'],
+  manageCustomers: ['Owner', 'Manager'],
+  viewCustomerStatements: ['Owner', 'Manager', 'Sales'],
+  readDrivers: ['Owner', 'Manager', 'Sales'],
+  manageDrivers: ['Owner', 'Manager'],
+  readSuppliers: ['Owner', 'Manager', 'Inventory'],
+  manageSuppliers: ['Owner', 'Manager'],
+  viewSupplierStatements: ['Owner', 'Manager'],
+  managePurchases: ['Owner', 'Manager', 'Inventory'],
+  manageDeliveryChallans: ['Owner', 'Manager', 'Sales'],
+  manageSalesInvoices: ['Owner', 'Manager', 'Sales'],
+  viewPayments: ['Owner', 'Manager'],
+  viewStockMovements: ['Owner', 'Manager', 'Inventory'],
+  manageCustomerReturns: ['Owner', 'Manager', 'Inventory'],
+  manageSupplierReturns: ['Owner', 'Manager', 'Inventory'],
+  viewReports: ['Owner', 'Manager'],
 }
 
-export function hasRouteAccess(userRoles: string[], policy: RoutePolicy): boolean {
+export function hasRouteAccess(companyRole: string | undefined, policy: RoutePolicy): boolean {
   if (policy === 'allAuthenticated') {
     return true
   }
 
-  if (userRoles.includes('Admin')) {
+  if (companyRole === 'Owner') {
     return true
   }
 
-  return policyRoles[policy].some((role) => userRoles.includes(role))
+  return policyRoles[policy].some((role) => role === companyRole)
 }

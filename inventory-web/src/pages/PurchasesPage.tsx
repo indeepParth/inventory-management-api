@@ -38,8 +38,8 @@ function getPurchaseStatusClassName(status: Purchase['status']): string {
 }
 
 export function PurchasesPage() {
-  const { currentUser } = useAuth()
-  const canCancelPurchases = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
+  const { activeCompany } = useAuth()
+  const canCancelPurchases = hasRouteAccess(activeCompany?.role, 'adminOrManager')
   const [response, setResponse] = useState<PagedResponse<Purchase> | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])

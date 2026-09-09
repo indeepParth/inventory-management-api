@@ -1,10 +1,15 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using InventoryManagement.Application.Authorization;
 using InventoryManagement.Application.Features.Auth.Register;
+using InventoryManagement.Infrastructure.Identity;
+using InventoryManagement.Infrastructure.Persistence;
 using InventoryManagement.Tests.IntegrationTests.Common;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace InventoryManagement.Tests.IntegrationTests.Auth
 {
@@ -49,6 +54,76 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             result.Should().NotBeNull();
             result.UserName.Should().Be(request.UserName);
             result.Email.Should().Be(request.Email);
+            result.CompanyId.Should().BeGreaterThan(0);
+
+            using var scope = _factory.Services.CreateScope();
+            var context = scope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
+            var userManager = scope.ServiceProvider
+                .GetRequiredService<UserManager<ApplicationUser>>();
+            var user = await userManager.FindByNameAsync(request.UserName);
+            user.Should().NotBeNull();
+
+            var company = await context.Companies.FindAsync(result.CompanyId);
+            company.Should().NotBeNull();
+            company!.Name.Should().Be($"{request.UserName}'s Company");
+
+            var membership = context.CompanyUsers
+                .SingleOrDefault(x =>
+                    x.CompanyId == result.CompanyId &&
+                    x.UserId == user!.Id);
+            membership.Should().NotBeNull();
+            membership!.Role.Should().Be(CompanyRoles.Owner);
+
+            var globalRoles = await userManager.GetRolesAsync(user!);
+            globalRoles.Should().BeEmpty();
+        }
+
+        [Fact]
+        public async Task Registered_User_Should_Login_And_Receive_Company_Context()
+        {
+            var unique = Guid.NewGuid().ToString("N");
+            var userName = $"test_{unique}";
+            var password = "123456789";
+
+            var registerResponse = await Client.PostAsJsonAsync(
+                "/api/auth/register",
+                new Command
+                {
+                    UserName = userName,
+                    Email = $"{userName}@user.com",
+                    Password = password
+                });
+
+            registerResponse.EnsureSuccessStatusCode();
+
+            var loginResponse = await Client.PostAsJsonAsync(
+                "/api/auth/login",
+                new Application.Features.Auth.Login.Command
+                {
+                    UserName = userName,
+                    Password = password
+                });
+
+            loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var login = await loginResponse.Content
+                .ReadFromJsonAsync<Application.Features.Auth.Login.Response>();
+            login.Should().NotBeNull();
+
+            Client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue(
+                    "Bearer",
+                    login!.AccessToken);
+
+            var meResponse = await Client.GetAsync("/api/users/me");
+
+            meResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+
+            var body = await meResponse.Content.ReadAsStringAsync();
+            body.Should().Contain(userName);
+            body.Should().Contain($"{userName}'s Company");
+            body.Should().Contain(CompanyRoles.Owner);
         }
 
         [Fact]

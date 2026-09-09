@@ -91,7 +91,7 @@ export function CompanyProfilePage() {
     <section className="content-panel" aria-labelledby="company-profile-title">
       <div className="page-header">
         <div>
-          <p className="page-kicker">Admin</p>
+          <p className="page-kicker">Owner</p>
           <h1 id="company-profile-title" className="page-title">Company Profile</h1>
         </div>
       </div>

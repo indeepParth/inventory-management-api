@@ -51,7 +51,7 @@ function emptySummary(): RegisterSummary {
 }
 
 export function DashboardPage() {
-  const { currentUser } = useAuth()
+  const { activeCompany } = useAuth()
   const [stockItems, setStockItems] = useState<CurrentStockItem[]>([])
   const [purchaseSummary, setPurchaseSummary] = useState<RegisterSummary>(emptySummary)
   const [salesSummary, setSalesSummary] = useState<RegisterSummary>(emptySummary)
@@ -65,10 +65,10 @@ export function DashboardPage() {
     setErrorMessage(null)
 
     try {
-      const roles = currentUser?.roles ?? []
-      const canReadCustomers = hasRouteAccess(roles, 'readCustomers')
-      const canManageSalesInvoices = hasRouteAccess(roles, 'manageSalesInvoices')
-      const canViewReports = hasRouteAccess(roles, 'viewReports')
+      const role = activeCompany?.role
+      const canReadCustomers = hasRouteAccess(role, 'readCustomers')
+      const canManageSalesInvoices = hasRouteAccess(role, 'manageSalesInvoices')
+      const canViewReports = hasRouteAccess(role, 'viewReports')
 
       const [reportData, customers, invoices] =
         await Promise.all([
@@ -114,16 +114,16 @@ export function DashboardPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentUser?.roles])
+  }, [activeCompany?.role])
 
   useEffect(() => {
     void loadDashboard()
   }, [loadDashboard])
 
-  const roles = currentUser?.roles ?? []
-  const canReadCustomers = hasRouteAccess(roles, 'readCustomers')
-  const canManageSalesInvoices = hasRouteAccess(roles, 'manageSalesInvoices')
-  const canViewReports = hasRouteAccess(roles, 'viewReports')
+  const role = activeCompany?.role
+  const canReadCustomers = hasRouteAccess(role, 'readCustomers')
+  const canManageSalesInvoices = hasRouteAccess(role, 'manageSalesInvoices')
+  const canViewReports = hasRouteAccess(role, 'viewReports')
   const stockValue = stockItems.reduce((total, item) => total + item.stockValue, 0)
   const positiveStockCount = stockItems.filter((item) => item.quantity > 0).length
 

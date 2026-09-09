@@ -43,10 +43,10 @@ function getChallanStatusClassName(status: DeliveryChallan['status']): string {
 }
 
 export function DeliveryChallansPage() {
-  const { currentUser } = useAuth()
+  const { activeCompany } = useAuth()
   const navigate = useNavigate()
-  const canCancelChallans = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
-  const canCreateInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
+  const canCancelChallans = hasRouteAccess(activeCompany?.role, 'adminOrManager')
+  const canCreateInvoices = hasRouteAccess(activeCompany?.role, 'manageSalesInvoices')
   const [response, setResponse] = useState<PagedResponse<DeliveryChallan> | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])

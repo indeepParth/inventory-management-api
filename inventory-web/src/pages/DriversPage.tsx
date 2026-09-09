@@ -22,8 +22,8 @@ import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feed
 const pageSize = 10
 
 export function DriversPage() {
-  const { currentUser } = useAuth()
-  const canManageDrivers = hasRouteAccess(currentUser?.roles ?? [], 'manageDrivers')
+  const { activeCompany } = useAuth()
+  const canManageDrivers = hasRouteAccess(activeCompany?.role, 'manageDrivers')
   const [response, setResponse] = useState<PagedResponse<Driver> | null>(null)
   const [editingDriver, setEditingDriver] = useState<Driver | undefined>()
   const [isFormOpen, setIsFormOpen] = useState(false)

@@ -57,9 +57,9 @@ function getPaymentStateClassName(payment: Payment): string {
 }
 
 export function PaymentsPage() {
-  const { currentUser } = useAuth()
-  const canReversePayments = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
-  const canViewInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
+  const { activeCompany } = useAuth()
+  const canReversePayments = hasRouteAccess(activeCompany?.role, 'adminOrManager')
+  const canViewInvoices = hasRouteAccess(activeCompany?.role, 'manageSalesInvoices')
   const [response, setResponse] = useState<PagedResponse<Payment> | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])

@@ -12,30 +12,31 @@ namespace InventoryManagement.Application.Features.Auth.Register
 {
     public class Handler : IRequestHandler<Command, Response>
     {
-        private readonly IIdentityService _identityService;
+        private readonly IUserRegistrationService _registrationService;
 
-        public Handler(IIdentityService identityService)
+        public Handler(IUserRegistrationService registrationService)
         {
-            _identityService = identityService;
+            _registrationService = registrationService;
         }
         
         public async Task<Response> Handle(Command request, CancellationToken cancellationToken)
         {
-            var result = await _identityService.CreateUserAsync(
+            var result = await _registrationService.RegisterOwnerAsync(
                 request.UserName,
                 request.Email,
-                request.Password
-            );
+                request.Password,
+                cancellationToken);
 
-            if (!result.success)
+            if (!result.Success)
             {
-                throw new BadRequestException(string.Join(",", result.error));
+                throw new BadRequestException(string.Join(",", result.Errors));
             }
 
             return new Response
             {
                 UserName = request.UserName,
-                Email = request.Email
+                Email = request.Email,
+                CompanyId = result.CompanyId!.Value
             };
         }
     }

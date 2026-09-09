@@ -6,7 +6,6 @@ import {
   disableUser,
   enableUser,
   getUsers,
-  removeUserRole,
   type UserAccount,
 } from '../features/auth/usersApi'
 import {
@@ -21,14 +20,14 @@ type CreateUserForm = {
   userName: string
   email: string
   password: string
-  roles: AppRole[]
+  role: AppRole | ''
 }
 
 const emptyForm: CreateUserForm = {
   userName: '',
   email: '',
   password: '',
-  roles: [],
+  role: '',
 }
 
 export function UsersPage() {
@@ -66,15 +65,6 @@ export function UsersPage() {
     setActionError(null)
   }
 
-  function setRole(role: AppRole, isSelected: boolean): void {
-    setForm((current) => ({
-      ...current,
-      roles: isSelected
-        ? [...current.roles, role]
-        : current.roles.filter((currentRole) => currentRole !== role),
-    }))
-  }
-
   async function handleCreateUser(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     setIsSaving(true)
@@ -86,7 +76,7 @@ export function UsersPage() {
         userName: form.userName.trim(),
         email: form.email.trim(),
         password: form.password,
-        roles: form.roles,
+        roles: form.role ? [form.role] : [],
       })
 
       resetForm()
@@ -102,17 +92,12 @@ export function UsersPage() {
   async function handleRoleChange(
     user: UserAccount,
     role: AppRole,
-    isSelected: boolean,
   ): Promise<void> {
     setUpdatingUserId(user.id)
     setActionError(null)
 
     try {
-      if (isSelected) {
-        await assignUserRole(user.id, role)
-      } else {
-        await removeUserRole(user.id, role)
-      }
+      await assignUserRole(user.id, role)
 
       await loadUsers()
     } catch (error) {
@@ -214,21 +199,23 @@ export function UsersPage() {
                 <span className="field-error">{getFieldError(fieldErrors, 'password')}</span>
               ) : null}
             </label>
-            <fieldset className="role-fieldset">
-              <legend>Roles</legend>
-              <div className="role-checkboxes">
+            <label className="form-field">
+              Role
+              <select
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, role: event.target.value as AppRole | '' }))
+                }
+                required
+                value={form.role}
+              >
+                <option value="">Select role</option>
                 {allRoles.map((role) => (
-                  <label className="checkbox-field" key={role}>
-                    <input
-                      checked={form.roles.includes(role)}
-                      onChange={(event) => setRole(role, event.target.checked)}
-                      type="checkbox"
-                    />
+                  <option key={role} value={role}>
                     {role}
-                  </label>
+                  </option>
                 ))}
-              </div>
-            </fieldset>
+              </select>
+            </label>
           </div>
           <div className="form-actions">
             <button className="primary-button" disabled={isSaving} type="submit">
@@ -265,19 +252,21 @@ export function UsersPage() {
                   <td>{user.userName}</td>
                   <td>{user.email || '-'}</td>
                   <td>
-                    <div className="role-checkboxes compact">
+                    <select
+                      aria-label={`Role for ${user.userName}`}
+                      disabled={updatingUserId === user.id}
+                      onChange={(event) => void handleRoleChange(user, event.target.value as AppRole)}
+                      value={user.roles[0] ?? ''}
+                    >
+                      <option value="" disabled>
+                        No role
+                      </option>
                       {allRoles.map((role) => (
-                        <label className="checkbox-field" key={role}>
-                          <input
-                            checked={user.roles.includes(role)}
-                            disabled={updatingUserId === user.id}
-                            onChange={(event) => void handleRoleChange(user, role, event.target.checked)}
-                            type="checkbox"
-                          />
+                        <option key={role} value={role}>
                           {role}
-                        </label>
+                        </option>
                       ))}
-                    </div>
+                    </select>
                   </td>
                   <td>{user.isDisabled ? 'Disabled' : 'Active'}</td>
                   <td>

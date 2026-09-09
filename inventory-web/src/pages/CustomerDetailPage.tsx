@@ -158,11 +158,11 @@ function getInvoiceStatusClassName(status: SalesInvoiceStatus): string {
 
 export function CustomerDetailPage() {
   const { id } = useParams()
-  const { currentUser } = useAuth()
-  const canCreateInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
-  const canReceivePayments = hasRouteAccess(currentUser?.roles ?? [], 'viewPayments')
-  const canViewLedger = hasRouteAccess(currentUser?.roles ?? [], 'viewCustomerStatements')
-  const canManageCustomers = hasRouteAccess(currentUser?.roles ?? [], 'manageCustomers')
+  const { activeCompany } = useAuth()
+  const canCreateInvoices = hasRouteAccess(activeCompany?.role, 'manageSalesInvoices')
+  const canReceivePayments = hasRouteAccess(activeCompany?.role, 'viewPayments')
+  const canViewLedger = hasRouteAccess(activeCompany?.role, 'viewCustomerStatements')
+  const canManageCustomers = hasRouteAccess(activeCompany?.role, 'manageCustomers')
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [invoiceResponse, setInvoiceResponse] = useState<PagedResponse<SalesInvoice> | null>(null)
   const [accountOutstandingInvoiceCount, setAccountOutstandingInvoiceCount] = useState(0)

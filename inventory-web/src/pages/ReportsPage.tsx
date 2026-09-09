@@ -23,8 +23,8 @@ const pageSize = 10
 type ReportTab = 'stock' | 'purchases' | 'sales' | 'grossProfit'
 
 export function ReportsPage() {
-  const { currentUser } = useAuth()
-  const canViewInvoices = hasRouteAccess(currentUser?.roles ?? [], 'manageSalesInvoices')
+  const { activeCompany } = useAuth()
+  const canViewInvoices = hasRouteAccess(activeCompany?.role, 'manageSalesInvoices')
   const [tab, setTab] = useState<ReportTab>('stock')
   const [stock, setStock] = useState<PagedResponse<CurrentStockItem> | null>(null)
   const [purchases, setPurchases] = useState<RegisterResponse<PurchaseRegisterItem> | null>(null)

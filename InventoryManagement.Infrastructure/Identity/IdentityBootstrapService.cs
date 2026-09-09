@@ -1,5 +1,7 @@
 using InventoryManagement.Application.Authorization;
 using InventoryManagement.Application.Common.Options;
+using InventoryManagement.Domain.Entities;
+using InventoryManagement.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -8,27 +10,25 @@ namespace InventoryManagement.Infrastructure.Identity
 {
     public class IdentityBootstrapService
     {
-        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ApplicationDbContext _context;
         private readonly AdminBootstrapOptions _adminOptions;
         private readonly IHostEnvironment _environment;
 
         public IdentityBootstrapService(
-            RoleManager<IdentityRole> roleManager,
             UserManager<ApplicationUser> userManager,
+            ApplicationDbContext context,
             IOptions<AdminBootstrapOptions> adminOptions,
             IHostEnvironment environment)
         {
-            _roleManager = roleManager;
             _userManager = userManager;
+            _context = context;
             _adminOptions = adminOptions.Value;
             _environment = environment;
         }
 
         public async Task BootstrapAsync()
         {
-            await SeedRolesAsync();
-
             if (!_adminOptions.Enabled ||
                 (!_environment.IsProduction() &&
                  !_adminOptions.AllowOutsideProduction))
@@ -38,10 +38,13 @@ namespace InventoryManagement.Infrastructure.Identity
 
             ValidateAdminBootstrapOptions();
 
-            var existingAdmins = await _userManager
-                .GetUsersInRoleAsync(ApplicationRoles.Admin);
+            var existingOwners = _context.CompanyUsers
+                .Where(x => x.Role == CompanyRoles.Owner)
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToList();
 
-            if (existingAdmins.Count > 0)
+            if (existingOwners.Count > 0)
             {
                 return;
             }
@@ -75,37 +78,25 @@ namespace InventoryManagement.Infrastructure.Identity
                     string.Join(", ", createResult.Errors.Select(x => x.Description)));
             }
 
-            var roleResult = await _userManager.AddToRoleAsync(
-                admin,
-                ApplicationRoles.Admin);
-
-            if (!roleResult.Succeeded)
+            var createdAtUtc = DateTime.UtcNow;
+            var company = new Company
             {
-                throw new InvalidOperationException(
-                    "Admin bootstrap role assignment failed: " +
-                    string.Join(", ", roleResult.Errors.Select(x => x.Description)));
-            }
-        }
+                Name = $"{_adminOptions.UserName}'s Company",
+                CreatedAtUtc = createdAtUtc
+            };
 
-        private async Task SeedRolesAsync()
-        {
-            foreach (var role in ApplicationRoles.All)
+            _context.Companies.Add(company);
+            await _context.SaveChangesAsync();
+
+            _context.CompanyUsers.Add(new CompanyUser
             {
-                if (await _roleManager.RoleExistsAsync(role))
-                {
-                    continue;
-                }
+                CompanyId = company.Id,
+                UserId = admin.Id,
+                Role = CompanyRoles.Owner,
+                CreatedAtUtc = createdAtUtc
+            });
 
-                var result = await _roleManager.CreateAsync(
-                    new IdentityRole(role));
-
-                if (!result.Succeeded)
-                {
-                    throw new InvalidOperationException(
-                        $"Role '{role}' could not be created: " +
-                        string.Join(", ", result.Errors.Select(x => x.Description)));
-                }
-            }
+            await _context.SaveChangesAsync();
         }
 
         private void ValidateAdminBootstrapOptions()

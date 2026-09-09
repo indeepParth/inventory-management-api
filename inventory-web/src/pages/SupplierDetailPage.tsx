@@ -17,10 +17,10 @@ const pageSize = 10
 
 export function SupplierDetailPage() {
   const { id } = useParams()
-  const { currentUser } = useAuth()
+  const { activeCompany } = useAuth()
   const supplierId = Number(id)
-  const canViewPurchases = hasRouteAccess(currentUser?.roles ?? [], 'managePurchases')
-  const canViewLedger = hasRouteAccess(currentUser?.roles ?? [], 'viewSupplierStatements')
+  const canViewPurchases = hasRouteAccess(activeCompany?.role, 'managePurchases')
+  const canViewLedger = hasRouteAccess(activeCompany?.role, 'viewSupplierStatements')
   const [supplier, setSupplier] = useState<Supplier | null>(null)
   const [purchaseResponse, setPurchaseResponse] = useState<PagedResponse<Purchase> | null>(null)
   const [isLoading, setIsLoading] = useState(true)

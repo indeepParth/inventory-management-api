@@ -23,8 +23,8 @@ import { formatCurrency } from '../shared/utils/formatters'
 const pageSize = 10
 
 export function CustomersPage() {
-  const { currentUser } = useAuth()
-  const canManageCustomers = hasRouteAccess(currentUser?.roles ?? [], 'manageCustomers')
+  const { activeCompany } = useAuth()
+  const canManageCustomers = hasRouteAccess(activeCompany?.role, 'manageCustomers')
   const [response, setResponse] = useState<PagedResponse<Customer> | null>(null)
   const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>()
   const [isFormOpen, setIsFormOpen] = useState(false)

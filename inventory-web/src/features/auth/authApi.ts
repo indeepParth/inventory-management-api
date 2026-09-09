@@ -11,11 +11,19 @@ export type LoginResponse = {
   expiresAt: string
 }
 
+export type CompanyRole = 'Owner' | 'Manager' | 'Sales' | 'Inventory'
+
+export type UserCompany = {
+  id: number
+  name: string
+  role: CompanyRole
+}
+
 export type CurrentUser = {
   username: string
   email?: string
-  roles: string[]
   isDisabled: boolean
+  companies: UserCompany[]
 }
 
 export function login(request: LoginRequest): Promise<LoginResponse> {

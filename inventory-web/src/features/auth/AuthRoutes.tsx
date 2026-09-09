@@ -30,7 +30,7 @@ type RoleProtectedRouteProps = {
 }
 
 export function RoleProtectedRoute({ policy }: RoleProtectedRouteProps) {
-  const { currentUser, isAuthenticated, isAuthResolved, isCurrentUserLoading } = useAuth()
+  const { activeCompany, isAuthenticated, isAuthResolved, isCurrentUserLoading } = useAuth()
 
   if (!isAuthResolved || isCurrentUserLoading) {
     return <AuthLoadingState />
@@ -40,7 +40,7 @@ export function RoleProtectedRoute({ policy }: RoleProtectedRouteProps) {
     return <Navigate to="/login" replace />
   }
 
-  if (!hasRouteAccess(currentUser?.roles ?? [], policy)) {
+  if (!hasRouteAccess(activeCompany?.role, policy)) {
     return <AccessDeniedPage />
   }
 

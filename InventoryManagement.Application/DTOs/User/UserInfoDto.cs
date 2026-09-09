@@ -9,7 +9,7 @@ namespace InventoryManagement.Application.DTOs.User
     {
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public List<string> Roles { get; set; } = new();
         public bool IsDisabled { get; set; }
+        public List<UserCompanyDto> Companies { get; set; } = new();
     }
 }

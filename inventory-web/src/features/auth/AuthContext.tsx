@@ -7,13 +7,20 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { clearAuthTokens, getStoredAuthTokens, setAuthTokens } from '../../shared/api/tokenStorage'
+import {
+  clearAuthTokens,
+  getActiveCompanyId,
+  getStoredAuthTokens,
+  setActiveCompanyId,
+  setAuthTokens,
+} from '../../shared/api/tokenStorage'
 import {
   getCurrentUser,
   login as loginRequest,
   type CurrentUser,
   type LoginRequest,
   type LoginResponse,
+  type UserCompany,
 } from './authApi'
 
 type AuthState = {
@@ -21,6 +28,7 @@ type AuthState = {
   refreshToken: string | null
   expiresAt: string | null
   currentUser: CurrentUser | null
+  activeCompany: UserCompany | null
   isAuthenticated: boolean
   isAuthResolved: boolean
   isCurrentUserLoading: boolean
@@ -41,10 +49,31 @@ function getInitialAuthState(): AuthState {
     refreshToken: storedTokens?.refreshToken ?? null,
     expiresAt: storedTokens?.expiresAt ?? null,
     currentUser: null,
+    activeCompany: null,
     isAuthenticated: Boolean(storedTokens?.accessToken),
     isAuthResolved: !storedTokens?.accessToken,
     isCurrentUserLoading: Boolean(storedTokens?.accessToken),
   }
+}
+
+function resolveActiveCompany(currentUser: CurrentUser): UserCompany | null {
+  const storedCompanyId = getActiveCompanyId()
+  const storedCompany = storedCompanyId === null
+    ? undefined
+    : currentUser.companies.find((company) => company.id === storedCompanyId)
+
+  if (storedCompany) {
+    return storedCompany
+  }
+
+  if (currentUser.companies.length === 1) {
+    const [company] = currentUser.companies
+    setActiveCompanyId(company.id)
+
+    return company
+  }
+
+  return null
 }
 
 function mapLoginResponse(response: LoginResponse, currentUser: CurrentUser): AuthState {
@@ -53,6 +82,7 @@ function mapLoginResponse(response: LoginResponse, currentUser: CurrentUser): Au
     refreshToken: response.refreshToken,
     expiresAt: response.expiresAt,
     currentUser,
+    activeCompany: resolveActiveCompany(currentUser),
     isAuthenticated: true,
     isAuthResolved: true,
     isCurrentUserLoading: false,
@@ -73,6 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       refreshToken: null,
       expiresAt: null,
       currentUser: null,
+      activeCompany: null,
       isAuthenticated: false,
       isAuthResolved: true,
       isCurrentUserLoading: false,
@@ -98,6 +129,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setAuthState((currentState) => ({
           ...currentState,
           currentUser,
+          activeCompany: resolveActiveCompany(currentUser),
           isAuthenticated: true,
           isAuthResolved: true,
           isCurrentUserLoading: false,

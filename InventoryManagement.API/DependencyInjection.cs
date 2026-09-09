@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using InventoryManagement.API.Authorization;
 using InventoryManagement.API.Configuration;
 using InventoryManagement.API.HealthChecks;
 using InventoryManagement.API.Services;
@@ -10,6 +11,7 @@ using InventoryManagement.Application.Common.Identity;
 using InventoryManagement.Application.Common.Interfaces;
 using InventoryManagement.Application.Common.Options;
 using InventoryManagement.Infrastructure.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -59,7 +61,8 @@ namespace InventoryManagement.API
                             HttpMethods.Delete)
                         .WithHeaders(
                             "Authorization",
-                            "Content-Type");
+                            "Content-Type",
+                            "X-Company-Id");
                 });
             });
 
@@ -102,130 +105,141 @@ namespace InventoryManagement.API
 
             services.AddHttpContextAccessor();
             services.AddScoped<ICurrentUserService, CurrentUserService>();
+            services.AddScoped<IAuthorizationHandler, CompanyRoleAuthorizationHandler>();
 
             services.AddAuthorization(options =>
             {
                 options.AddPolicy(AuthorizationPolicies.AdminOnly,
-                    policy => policy.RequireRole(ApplicationRoles.Admin));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Owner));
                 options.AddPolicy(AuthorizationPolicies.AdminOrManager,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager));
 
                 options.AddPolicy(AuthorizationPolicies.ReadProducts,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Sales,
-                        ApplicationRoles.Inventory));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Sales,
+                        CompanyRoles.Inventory));
                 options.AddPolicy(AuthorizationPolicies.ManageProducts,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager));
 
                 options.AddPolicy(AuthorizationPolicies.ReadCustomers,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Sales));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Sales));
                 options.AddPolicy(AuthorizationPolicies.ManageCustomers,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager));
                 options.AddPolicy(AuthorizationPolicies.ViewCustomerStatements,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Sales));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Sales));
 
                 options.AddPolicy(AuthorizationPolicies.ReadDrivers,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Sales));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Sales));
                 options.AddPolicy(AuthorizationPolicies.ManageDrivers,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager));
 
                 options.AddPolicy(AuthorizationPolicies.ReadSuppliers,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Inventory));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Inventory));
                 options.AddPolicy(AuthorizationPolicies.ManageSuppliers,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager));
                 options.AddPolicy(AuthorizationPolicies.ViewSupplierStatements,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager));
 
                 options.AddPolicy(AuthorizationPolicies.ManagePurchases,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Inventory));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Inventory));
                 options.AddPolicy(AuthorizationPolicies.ManageDeliveryChallans,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Sales));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Sales));
                 options.AddPolicy(AuthorizationPolicies.ManageSalesInvoices,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Sales));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Sales));
                 options.AddPolicy(AuthorizationPolicies.ManageSupplierReturns,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Inventory));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Inventory));
                 options.AddPolicy(AuthorizationPolicies.ManageCustomerReturns,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Inventory));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Inventory));
 
                 options.AddPolicy(AuthorizationPolicies.ViewPayments,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager));
                 options.AddPolicy(AuthorizationPolicies.CreateCustomerReceipts,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Sales));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Sales));
 
                 options.AddPolicy(AuthorizationPolicies.ViewStockMovements,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Inventory));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Inventory));
                 options.AddPolicy(AuthorizationPolicies.RecordStockDamage,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Inventory));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Inventory));
 
                 options.AddPolicy(AuthorizationPolicies.ViewProductStockLedger,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Inventory));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Inventory));
                 options.AddPolicy(AuthorizationPolicies.ViewSalesReports,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager,
-                        ApplicationRoles.Sales));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager,
+                        CompanyRoles.Sales));
                 options.AddPolicy(AuthorizationPolicies.ViewCostReports,
-                    policy => policy.RequireRole(
-                        ApplicationRoles.Admin,
-                        ApplicationRoles.Manager));
+                    policy => AddCompanyRolePolicy(
+                        policy,
+                        CompanyRoles.Manager));
             });
 
             return services;
+        }
+
+        private static void AddCompanyRolePolicy(
+            AuthorizationPolicyBuilder policy,
+            params string[] allowedRoles)
+        {
+            policy.RequireAuthenticatedUser();
+            policy.AddRequirements(new CompanyRoleRequirement(allowedRoles));
         }
     }
 }

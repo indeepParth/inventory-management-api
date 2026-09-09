@@ -59,6 +59,10 @@ namespace InventoryManagement.Infrastructure.Persistence
 
         public DbSet<CompanyProfile> CompanyProfiles => Set<CompanyProfile>();
 
+        public DbSet<Company> Companies => Set<Company>();
+
+        public DbSet<CompanyUser> CompanyUsers => Set<CompanyUser>();
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -101,6 +105,39 @@ namespace InventoryManagement.Infrastructure.Persistence
                 entity.Property(x => x.Email).HasMaxLength(254);
                 entity.Property(x => x.Phone).HasMaxLength(30);
                 entity.Property(x => x.Website).HasMaxLength(200);
+            });
+
+            builder.Entity<Company>(entity =>
+            {
+                entity.Property(x => x.Name)
+                      .HasColumnType("citext")
+                      .HasMaxLength(150)
+                      .IsRequired();
+
+                entity.Property(x => x.CreatedAtUtc)
+                      .IsRequired();
+            });
+
+            builder.Entity<CompanyUser>(entity =>
+            {
+                entity.HasIndex(x => new { x.CompanyId, x.UserId })
+                      .IsUnique();
+
+                entity.Property(x => x.UserId)
+                      .IsRequired();
+
+                entity.Property(x => x.Role)
+                      .HasMaxLength(50)
+                      .IsRequired();
+
+                entity.Property(x => x.CreatedAtUtc)
+                      .IsRequired();
+
+                entity.HasOne(x => x.Company)
+                      .WithMany(x => x.Users)
+                      .HasForeignKey(x => x.CompanyId)
+                      .OnDelete(DeleteBehavior.Cascade)
+                      .IsRequired();
             });
 
             builder.Entity<Category>(entity =>

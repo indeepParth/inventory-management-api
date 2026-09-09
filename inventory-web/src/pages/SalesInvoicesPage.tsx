@@ -44,8 +44,8 @@ function getInvoiceStatusClassName(status: SalesInvoice['status']): string {
 }
 
 export function SalesInvoicesPage() {
-  const { currentUser } = useAuth()
-  const canCancelInvoices = hasRouteAccess(currentUser?.roles ?? [], 'adminOrManager')
+  const { activeCompany } = useAuth()
+  const canCancelInvoices = hasRouteAccess(activeCompany?.role, 'adminOrManager')
   const [response, setResponse] = useState<PagedResponse<SalesInvoice> | null>(null)
   const [customers, setCustomers] = useState<Customer[]>([])
   const [drivers, setDrivers] = useState<Driver[]>([])

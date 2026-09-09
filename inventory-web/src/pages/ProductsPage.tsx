@@ -43,8 +43,8 @@ async function getProductOptions(): Promise<Product[]> {
 }
 
 export function ProductsPage() {
-  const { currentUser } = useAuth()
-  const canManageProducts = hasRouteAccess(currentUser?.roles ?? [], 'manageProducts')
+  const { activeCompany } = useAuth()
+  const canManageProducts = hasRouteAccess(activeCompany?.role, 'manageProducts')
   const [productsResponse, setProductsResponse] = useState<PagedResponse<Product> | null>(null)
   const [productOptions, setProductOptions] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])

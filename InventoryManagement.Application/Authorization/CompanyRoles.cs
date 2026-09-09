@@ -1,15 +1,15 @@
 namespace InventoryManagement.Application.Authorization
 {
-    public static class ApplicationRoles
+    public static class CompanyRoles
     {
-        public const string Admin = nameof(Admin);
+        public const string Owner = nameof(Owner);
         public const string Manager = nameof(Manager);
         public const string Sales = nameof(Sales);
         public const string Inventory = nameof(Inventory);
 
         public static readonly string[] All =
         [
-            Admin,
+            Owner,
             Manager,
             Sales,
             Inventory

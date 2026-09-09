@@ -18,8 +18,8 @@ import {
 import { EmptyState, ErrorBanner, LoadingState } from '../shared/components/Feedback'
 
 export function UnitsPage() {
-  const { currentUser } = useAuth()
-  const canManageProducts = hasRouteAccess(currentUser?.roles ?? [], 'manageProducts')
+  const { activeCompany } = useAuth()
+  const canManageProducts = hasRouteAccess(activeCompany?.role, 'manageProducts')
   const [units, setUnits] = useState<Unit[]>([])
   const [editingUnit, setEditingUnit] = useState<Unit | undefined>()
   const [isFormOpen, setIsFormOpen] = useState(false)

@@ -4,8 +4,11 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Application.Authorization;
 using InventoryManagement.Application.Features.Auth.Login;
+using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Identity;
+using InventoryManagement.Infrastructure.Persistence;
 using InventoryManagement.Tests.IntegrationTests.Common;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -43,9 +46,9 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         [Fact]
         public async Task GetUsers_Should_List_Users_With_Roles_Without_Secrets()
         {
-            var admin = await CreateUserAsync(ApplicationRoles.Admin);
-            var salesUser = await CreateUserAsync(ApplicationRoles.Sales);
-            await AuthenticateAsAsync(Client, admin.UserName, admin.Password);
+            var admin = await CreateUserAsync(CompanyRoles.Owner);
+            var salesUser = await CreateUserAsync(CompanyRoles.Sales, admin.CompanyId);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password, admin.CompanyId);
 
             var response = await Client.GetAsync("/api/users");
 
@@ -53,7 +56,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
 
             var body = await response.Content.ReadAsStringAsync();
             body.Should().Contain(salesUser.UserName);
-            body.Should().Contain(ApplicationRoles.Sales);
+            body.Should().Contain(CompanyRoles.Sales);
             body.Should().NotContain("passwordHash");
             body.Should().NotContain("securityStamp");
             body.Should().NotContain("concurrencyStamp");
@@ -63,8 +66,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         [Fact]
         public async Task Me_Should_Return_Current_User_Details()
         {
-            var user = await CreateUserAsync(ApplicationRoles.Sales);
-            await AuthenticateAsAsync(Client, user.UserName, user.Password);
+            var user = await CreateUserAsync(CompanyRoles.Sales);
+            await AuthenticateAsAsync(Client, user.UserName, user.Password, user.CompanyId);
 
             var response = await Client.GetAsync("/api/users/me");
 
@@ -73,15 +76,15 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             var body = await response.Content.ReadAsStringAsync();
             body.Should().Contain(user.UserName);
             body.Should().Contain(user.Email);
-            body.Should().Contain(ApplicationRoles.Sales);
+            body.Should().Contain(CompanyRoles.Sales);
             body.Should().Contain("isDisabled");
         }
 
         [Fact]
         public async Task ChangePassword_Should_Update_Current_User_Password()
         {
-            var user = await CreateUserAsync(ApplicationRoles.Sales);
-            await AuthenticateAsAsync(Client, user.UserName, user.Password);
+            var user = await CreateUserAsync(CompanyRoles.Sales);
+            await AuthenticateAsAsync(Client, user.UserName, user.Password, user.CompanyId);
 
             var response = await Client.PostAsJsonAsync(
                 "/api/users/me/change-password",
@@ -100,8 +103,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         [Fact]
         public async Task ChangePassword_Should_Reject_Wrong_Current_Password()
         {
-            var user = await CreateUserAsync(ApplicationRoles.Sales);
-            await AuthenticateAsAsync(Client, user.UserName, user.Password);
+            var user = await CreateUserAsync(CompanyRoles.Sales);
+            await AuthenticateAsAsync(Client, user.UserName, user.Password, user.CompanyId);
 
             var response = await Client.PostAsJsonAsync(
                 "/api/users/me/change-password",
@@ -118,8 +121,8 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         [Fact]
         public async Task CreateUser_Should_Create_User_With_Valid_Roles()
         {
-            var admin = await CreateUserAsync(ApplicationRoles.Admin);
-            await AuthenticateAsAsync(Client, admin.UserName, admin.Password);
+            var admin = await CreateUserAsync(CompanyRoles.Owner);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password, admin.CompanyId);
             var unique = Guid.NewGuid().ToString("N");
             var userName = $"created_{unique}";
 
@@ -130,14 +133,14 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                     UserName = userName,
                     Email = $"{userName}@example.com",
                     Password = "Password123",
-                    Roles = new[] { ApplicationRoles.Sales }
+                    Roles = new[] { CompanyRoles.Sales }
                 });
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
             var body = await response.Content.ReadAsStringAsync();
             body.Should().Contain(userName);
-            body.Should().Contain(ApplicationRoles.Sales);
+            body.Should().Contain(CompanyRoles.Sales);
 
             using var scope = _factory.Services.CreateScope();
             var userManager = scope.ServiceProvider
@@ -145,16 +148,17 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             var createdUser = await userManager.FindByNameAsync(userName);
             createdUser.Should().NotBeNull();
             createdUser!.Email.Should().Be($"{userName}@example.com");
-            (await userManager.IsInRoleAsync(
-                createdUser,
-                ApplicationRoles.Sales)).Should().BeTrue();
+            await UserShouldBeInRoleAsync(
+                createdUser!.Id,
+                CompanyRoles.Sales,
+                admin.CompanyId!.Value);
         }
 
         [Fact]
         public async Task CreateUser_Should_Reject_Non_Admin_User()
         {
-            var user = await CreateUserAsync(ApplicationRoles.Sales);
-            await AuthenticateAsAsync(Client, user.UserName, user.Password);
+            var user = await CreateUserAsync(CompanyRoles.Sales);
+            await AuthenticateAsAsync(Client, user.UserName, user.Password, user.CompanyId);
 
             var response = await Client.PostAsJsonAsync(
                 "/api/users",
@@ -163,7 +167,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                     UserName = $"created_{Guid.NewGuid():N}",
                     Email = "created@example.com",
                     Password = "Password123",
-                    Roles = new[] { ApplicationRoles.Sales }
+                    Roles = new[] { CompanyRoles.Sales }
                 });
 
             response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
@@ -172,29 +176,32 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         [Fact]
         public async Task AssignRole_Should_Add_Supported_Role()
         {
-            var admin = await CreateUserAsync(ApplicationRoles.Admin);
+            var admin = await CreateUserAsync(CompanyRoles.Owner);
             var user = await CreateUserAsync();
-            await AuthenticateAsAsync(Client, admin.UserName, admin.Password);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password, admin.CompanyId);
 
             var response = await Client.PostAsJsonAsync(
                 $"/api/users/{user.Id}/roles",
-                new { Role = ApplicationRoles.Inventory });
+                new { Role = CompanyRoles.Inventory });
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            await UserShouldBeInRoleAsync(user.Id, ApplicationRoles.Inventory);
+            await UserShouldBeInRoleAsync(
+                user.Id,
+                CompanyRoles.Inventory,
+                admin.CompanyId!.Value);
         }
 
         [Fact]
         public async Task AssignRole_Should_Reject_Unsupported_Role()
         {
-            var admin = await CreateUserAsync(ApplicationRoles.Admin);
+            var admin = await CreateUserAsync(CompanyRoles.Owner);
             var user = await CreateUserAsync();
-            await AuthenticateAsAsync(Client, admin.UserName, admin.Password);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password, admin.CompanyId);
 
             var response = await Client.PostAsJsonAsync(
                 $"/api/users/{user.Id}/roles",
-                new { Role = "Owner" });
+                new { Role = "Admin" });
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
@@ -202,40 +209,41 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         [Fact]
         public async Task RemoveRole_Should_Remove_Role()
         {
-            var admin = await CreateUserAsync(ApplicationRoles.Admin);
-            var user = await CreateUserAsync(ApplicationRoles.Manager);
-            await AuthenticateAsAsync(Client, admin.UserName, admin.Password);
+            var admin = await CreateUserAsync(CompanyRoles.Owner);
+            var user = await CreateUserAsync(CompanyRoles.Manager, admin.CompanyId);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password, admin.CompanyId);
 
             var response = await Client.DeleteAsync(
-                $"/api/users/{user.Id}/roles/{ApplicationRoles.Manager}");
+                $"/api/users/{user.Id}/roles/{CompanyRoles.Manager}");
 
             response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            await UserShouldNotBeInRoleAsync(user.Id, ApplicationRoles.Manager);
+            await UserShouldNotBeInRoleAsync(
+                user.Id,
+                CompanyRoles.Manager,
+                admin.CompanyId!.Value);
         }
 
         [Fact]
-        public async Task RemoveRole_Should_Prevent_Admin_Removing_Own_Final_Admin_Role()
+        public async Task RemoveRole_Should_Prevent_Owner_Removing_Own_Final_Owner_Role()
         {
-            var admin = await CreateUserAsync(ApplicationRoles.Admin);
-            await MakeOnlyActiveAdminAsync(admin.Id);
-            await AuthenticateAsAsync(Client, admin.UserName, admin.Password);
+            var admin = await CreateUserAsync(CompanyRoles.Owner);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password, admin.CompanyId);
 
             var response = await Client.DeleteAsync(
-                $"/api/users/{admin.Id}/roles/{ApplicationRoles.Admin}");
+                $"/api/users/{admin.Id}/roles/{CompanyRoles.Owner}");
 
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
             var body = await response.Content.ReadAsStringAsync();
-            body.Should().Contain("final Admin role");
+            body.Should().Contain("final Owner role");
         }
 
         [Fact]
-        public async Task DisableUser_Should_Prevent_Disabling_Final_Active_Admin()
+        public async Task DisableUser_Should_Prevent_Disabling_Final_Active_Owner()
         {
-            var admin = await CreateUserAsync(ApplicationRoles.Admin);
-            await MakeOnlyActiveAdminAsync(admin.Id);
-            await AuthenticateAsAsync(Client, admin.UserName, admin.Password);
+            var admin = await CreateUserAsync(CompanyRoles.Owner);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password, admin.CompanyId);
 
             var response = await Client.PostAsync(
                 $"/api/users/{admin.Id}/disable",
@@ -244,15 +252,15 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
             var body = await response.Content.ReadAsStringAsync();
-            body.Should().Contain("final active administrator");
+            body.Should().Contain("final active owner");
         }
 
         [Fact]
         public async Task DisableAndEnableUser_Should_Update_Disabled_State()
         {
-            var admin = await CreateUserAsync(ApplicationRoles.Admin);
+            var admin = await CreateUserAsync(CompanyRoles.Owner);
             var user = await CreateUserAsync();
-            await AuthenticateAsAsync(Client, admin.UserName, admin.Password);
+            await AuthenticateAsAsync(Client, admin.UserName, admin.Password, admin.CompanyId);
 
             var disableResponse = await Client.PostAsync(
                 $"/api/users/{user.Id}/disable",
@@ -270,21 +278,14 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         private async Task<TestUser> CreateUserAsync(
-            params string[] roles)
+            string? role = null,
+            int? companyId = null)
         {
             using var scope = _factory.Services.CreateScope();
             var userManager = scope.ServiceProvider
                 .GetRequiredService<UserManager<ApplicationUser>>();
-            var roleManager = scope.ServiceProvider
-                .GetRequiredService<RoleManager<IdentityRole>>();
-
-            foreach (var role in ApplicationRoles.All)
-            {
-                if (!await roleManager.RoleExistsAsync(role))
-                {
-                    await roleManager.CreateAsync(new IdentityRole(role));
-                }
-            }
+            var context = scope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
 
             var unique = Guid.NewGuid().ToString("N");
             var user = new ApplicationUser
@@ -299,21 +300,47 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 password);
             createResult.Succeeded.Should().BeTrue();
 
-            foreach (var role in roles)
+            var effectiveCompanyId = companyId;
+
+            if (role is not null)
             {
-                var addRoleResult = await userManager.AddToRoleAsync(
-                    user,
-                    role);
-                addRoleResult.Succeeded.Should().BeTrue();
+                if (effectiveCompanyId is null)
+                {
+                    var company = new Company
+                    {
+                        Name = $"{user.UserName}'s Company",
+                        CreatedAtUtc = DateTime.UtcNow
+                    };
+
+                    context.Companies.Add(company);
+                    await context.SaveChangesAsync();
+                    effectiveCompanyId = company.Id;
+                }
+
+                context.CompanyUsers.Add(new CompanyUser
+                {
+                    CompanyId = effectiveCompanyId.Value,
+                    UserId = user.Id,
+                    Role = role,
+                    CreatedAtUtc = DateTime.UtcNow
+                });
+
+                await context.SaveChangesAsync();
             }
 
-            return new TestUser(user.Id, user.UserName!, user.Email!, password);
+            return new TestUser(
+                user.Id,
+                user.UserName!,
+                user.Email!,
+                password,
+                effectiveCompanyId);
         }
 
         private static async Task AuthenticateAsAsync(
             HttpClient client,
             string userName,
-            string password)
+            string password,
+            int? companyId = null)
         {
             var response = await client.PostAsJsonAsync(
                 "/api/auth/login",
@@ -332,37 +359,51 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
                 new AuthenticationHeaderValue(
                     "Bearer",
                     login!.AccessToken);
+
+            client.DefaultRequestHeaders.Remove("X-Company-Id");
+
+            if (companyId is not null)
+            {
+                client.DefaultRequestHeaders.Add(
+                    "X-Company-Id",
+                    companyId.Value.ToString());
+            }
         }
 
         private async Task UserShouldBeInRoleAsync(
             string userId,
-            string role)
+            string role,
+            int companyId)
         {
-            var isInRole = await IsUserInRoleAsync(userId, role);
+            var isInRole = await IsUserInRoleAsync(userId, role, companyId);
 
             isInRole.Should().BeTrue();
         }
 
         private async Task UserShouldNotBeInRoleAsync(
             string userId,
-            string role)
+            string role,
+            int companyId)
         {
-            var isInRole = await IsUserInRoleAsync(userId, role);
+            var isInRole = await IsUserInRoleAsync(userId, role, companyId);
 
             isInRole.Should().BeFalse();
         }
 
         private async Task<bool> IsUserInRoleAsync(
             string userId,
-            string role)
+            string role,
+            int companyId)
         {
             using var scope = _factory.Services.CreateScope();
-            var userManager = scope.ServiceProvider
-                .GetRequiredService<UserManager<ApplicationUser>>();
-            var user = await userManager.FindByIdAsync(userId);
-            user.Should().NotBeNull();
+            var context = scope.ServiceProvider
+                .GetRequiredService<ApplicationDbContext>();
 
-            return await userManager.IsInRoleAsync(user!, role);
+            return await context.CompanyUsers
+                .AnyAsync(x =>
+                    x.UserId == userId &&
+                    x.CompanyId == companyId &&
+                    x.Role == role);
         }
 
         private async Task UserShouldBeDisabledAsync(string userId)
@@ -391,29 +432,11 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             return user!;
         }
 
-        private async Task MakeOnlyActiveAdminAsync(string adminUserId)
-        {
-            using var scope = _factory.Services.CreateScope();
-            var userManager = scope.ServiceProvider
-                .GetRequiredService<UserManager<ApplicationUser>>();
-
-            var admins = await userManager.GetUsersInRoleAsync(
-                ApplicationRoles.Admin);
-
-            foreach (var admin in admins.Where(x => x.Id != adminUserId))
-            {
-                var result = await userManager.RemoveFromRoleAsync(
-                    admin,
-                    ApplicationRoles.Admin);
-
-                result.Succeeded.Should().BeTrue();
-            }
-        }
-
         private sealed record TestUser(
             string Id,
             string UserName,
             string Email,
-            string Password);
+            string Password,
+            int? CompanyId);
     }
 }

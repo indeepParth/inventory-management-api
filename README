@@ -1,8 +1,8 @@
-# Inventory Management API
+# Inventory Management
 
-A production-oriented **ASP.NET Core Web API** built with **Clean Architecture**, **Vertical Slice Architecture**, **CQRS + MediatR**, **ASP.NET Identity**, **JWT Authentication**, **Refresh Token Rotation**, **Serilog**, and **Docker**.
+A production-oriented inventory management application with a **.NET 8 ASP.NET Core Web API**, **React + TypeScript + Vite** frontend, **PostgreSQL**, **Clean Architecture**, **Vertical Slice Architecture**, **CQRS + MediatR**, **ASP.NET Identity**, **JWT Authentication**, **Refresh Token Rotation**, **Serilog**, and **Docker**.
 
-The project focuses on maintainability, scalability, and modern backend development practices rather than a simple CRUD implementation.
+The project supports multi-company inventory workflows, company-scoped authorization, company-isolated master data and transactions, invitation-based member access, and a SaaS-ready subscription foundation.
 
 ---
 
@@ -22,18 +22,22 @@ The project focuses on maintainability, scalability, and modern backend developm
 * ASP.NET Identity
 * JWT Authentication
 * Refresh Token Rotation
+* Company-scoped membership roles
 * Policy-based Authorization
+* Active company selection through `X-Company-Id`
 
 ### Inventory Workflows
 
-* Product, category, supplier, and customer management
+* Multi-company registration, company selection, invitations, and member access
+* Product, category, unit, supplier, customer, and driver management
+* Company-scoped subscriptions with Free plan limit checks
 * Stock ledger with damage, adjustment, and reversal movements
 * Purchase draft, edit, post, and cancel lifecycle
 * Delivery challan draft, edit, post, and cancel lifecycle
 * Direct sales invoices and invoices created from posted challans
-* Customer payments and payment reversals
+* Customer and supplier payments with payment reversals
 * Customer and supplier returns
-* Current stock, ledger, register, and gross profit reports
+* Current stock, ledger, register, gross profit, and statement reports
 
 ### Logging & Error Handling
 
@@ -45,7 +49,9 @@ The project focuses on maintainability, scalability, and modern backend developm
 
 * Entity Framework Core
 * PostgreSQL
-* Automatic EF Core Migrations on Startup
+* Company-scoped indexes and constraints
+* Case-insensitive uniqueness with PostgreSQL `citext`
+* Automatic EF Core Migrations on Startup in Development
 
 ### DevOps
 
@@ -72,76 +78,48 @@ Documents are created as drafts where applicable. Drafts do not change stock or 
 
 ## API Overview
 
-All routes except authentication require a bearer access token. Swagger provides complete request and response schemas.
+Swagger provides complete request and response schemas. Authentication routes
+and public invitation token routes do not require an active company. Most
+business routes require a bearer access token and `X-Company-Id`; backend
+authorization validates the caller's membership and role for that company.
 
-### Authentication and Master Data
+### Authentication, Account, And Company
 
 | Area | Routes |
 | --- | --- |
-| Authentication | `POST /api/Auth/Register`, `/api/Auth/Login`, `/api/Auth/RefreshToken` |
-| Products | `/api/products` |
-| Categories | `/api/categories` |
-| Suppliers | `/api/suppliers` |
-| Customers | `/api/customers` |
-| Stock ledger | `GET /api/stock-movements` |
-| Manual corrections | `POST /api/stock-movements/damage`, `/adjustment`, `/{id}/reverse` |
+| Authentication | `POST /api/Auth/Register`, `POST /api/Auth/Login`, `POST /api/Auth/RefreshToken` |
+| Current user | `GET /api/Users/me`, `POST /api/Users/me/change-password` |
+| Company access | `GET /api/companies`, `POST /api/companies`, `PUT /api/companies/{companyId}`, `GET /api/companies/current/access` |
+| Members | `GET /api/Users`, `POST /api/Users/{userId}/roles`, `DELETE /api/Users/{userId}/roles/{role}`, `POST /api/Users/{userId}/disable`, `POST /api/Users/{userId}/enable` |
+| Invitations | `GET /api/company-invitations`, `POST /api/company-invitations`, `DELETE /api/company-invitations/{id}`, `GET /api/company-invitations/{token}`, `POST /api/company-invitations/{token}/accept` |
+| Company profile | `GET /api/company-profile`, `PUT /api/company-profile` |
+| Subscription | `GET /api/subscription/current` |
 
-### Purchases
+### Master Data And Stock
 
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/purchases` | List purchases with paging and filters |
-| `GET` | `/api/purchases/{id}` | Get a purchase |
-| `POST` | `/api/purchases` | Create a draft |
-| `PUT` | `/api/purchases/{id}` | Edit a draft |
-| `POST` | `/api/purchases/{id}/post` | Receive stock |
-| `POST` | `/api/purchases/{id}/cancel` | Cancel or reverse a purchase |
+| Area | Routes |
+| --- | --- |
+| Products | `GET/POST /api/products`, `GET/PUT/DELETE /api/products/{id}` |
+| Product units | `GET/POST /api/products/{productId}/unit-conversions`, `PUT/PATCH /api/products/{productId}/unit-conversions/{id}` |
+| Categories | `GET/POST /api/categories`, `GET/PUT/DELETE /api/categories/{id}` |
+| Units | `GET/POST /api/units`, `GET/PUT/DELETE /api/units/{id}` |
+| Customers | `GET/POST /api/customers`, `GET/PUT /api/customers/{id}`, `PATCH /api/customers/{id}/deactivate` |
+| Suppliers | `GET/POST /api/suppliers`, `GET/PUT/DELETE /api/suppliers/{id}` |
+| Drivers | `GET/POST /api/drivers`, `GET/PUT /api/drivers/{id}`, `PATCH /api/drivers/{id}/deactivate`, `GET /api/drivers/{id}/deliveries` |
+| Stock movements | `GET /api/stock-movements`, `POST /api/stock-movements/damage`, `POST /api/stock-movements/adjustment`, `POST /api/stock-movements/{id}/reverse` |
 
-### Delivery Challans
+### Transactions
 
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/delivery-challans` | List challans with paging and filters |
-| `GET` | `/api/delivery-challans/{id}` | Get a challan |
-| `POST` | `/api/delivery-challans` | Create a draft |
-| `PUT` | `/api/delivery-challans/{id}` | Edit a draft |
-| `POST` | `/api/delivery-challans/{id}/post` | Issue stock |
-| `POST` | `/api/delivery-challans/{id}/cancel` | Cancel or reverse a challan |
+| Area | Routes |
+| --- | --- |
+| Purchases | `GET/POST /api/purchases`, `GET/PUT /api/purchases/{id}`, `POST /api/purchases/{id}/post`, `POST /api/purchases/{id}/cancel` |
+| Delivery challans | `GET/POST /api/delivery-challans`, `GET/PUT /api/delivery-challans/{id}`, `POST /api/delivery-challans/{id}/post`, `POST /api/delivery-challans/{id}/cancel`, `POST /api/delivery-challans/{id}/delivery-charge/mark-paid` |
+| Sales invoices | `GET/POST /api/sales-invoices`, `POST /api/sales-invoices/from-challans`, `GET/PUT /api/sales-invoices/{id}`, `POST /api/sales-invoices/{id}/post`, `POST /api/sales-invoices/{id}/cancel`, `POST /api/sales-invoices/{id}/delivery-charge/mark-paid` |
+| Payments | `GET /api/payments`, `POST /api/payments`, `POST /api/payments/{id}/reverse` |
+| Customer returns | `GET /api/customer-returns/{id}`, `POST /api/customer-returns`, `POST /api/customer-returns/{id}/post`, `POST /api/customer-returns/{id}/cancel` |
+| Supplier returns | `GET /api/supplier-returns/{id}`, `POST /api/supplier-returns`, `POST /api/supplier-returns/{id}/post`, `POST /api/supplier-returns/{id}/cancel` |
 
-### Sales Invoices
-
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/sales-invoices` | List invoices with paging and filters |
-| `GET` | `/api/sales-invoices/{id}` | Get an invoice |
-| `POST` | `/api/sales-invoices` | Create a draft direct invoice |
-| `POST` | `/api/sales-invoices/from-challans` | Create an invoice from posted challan items |
-| `PUT` | `/api/sales-invoices/{id}` | Edit a draft direct invoice |
-| `POST` | `/api/sales-invoices/{id}/post` | Post a direct invoice |
-| `POST` | `/api/sales-invoices/{id}/cancel` | Cancel an invoice |
-
-### Payments
-
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/payments` | List customer payments |
-| `POST` | `/api/payments` | Record a payment |
-| `POST` | `/api/payments/{id}/reverse` | Reverse a payment |
-
-### Returns
-
-| Method | Route | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/customer-returns/{id}` | Get a customer return |
-| `POST` | `/api/customer-returns` | Create a draft customer return |
-| `POST` | `/api/customer-returns/{id}/post` | Post a customer return |
-| `POST` | `/api/customer-returns/{id}/cancel` | Cancel a customer return |
-| `GET` | `/api/supplier-returns/{id}` | Get a supplier return |
-| `POST` | `/api/supplier-returns` | Create a draft supplier return |
-| `POST` | `/api/supplier-returns/{id}/post` | Post a supplier return |
-| `POST` | `/api/supplier-returns/{id}/cancel` | Cancel a supplier return |
-
-### Reports
+### Reports And Ledgers
 
 | Route | Filters and result |
 | --- | --- |
@@ -150,32 +128,47 @@ All routes except authentication require a bearer access token. Swagger provides
 | `GET /api/inventory-reports/purchase-register` | Purchases and summary by date, supplier, product, and status |
 | `GET /api/inventory-reports/sales-register` | Sales and summary by date, customer, product, source, and status |
 | `GET /api/inventory-reports/gross-profit` | Revenue, cost of goods sold, returns, and gross profit |
+| `GET /api/customers/{id}/statement` | Customer ledger by date range |
+| `GET /api/suppliers/{id}/statement` | Supplier ledger by date range |
 
-Paged endpoints use `pageNumber` and `pageSize`.
+Paged endpoints use `pageNumber` and `pageSize`. Report filters are applied
+inside the active company scope.
 
 ---
 
 ## Architecture
 
+```text
+React/Vite SPA
+    |
+    | Bearer token + X-Company-Id
+    v
+ASP.NET Core API
+    |
+    +-- Controllers and authorization policies
+    +-- MediatR feature handlers and FluentValidation
+    +-- Application services for company access and subscription limits
+    +-- EF Core repositories scoped by active company
+    v
+PostgreSQL
 ```
-                    Client
-                       │
-                       ▼
-              ASP.NET Core API
-                       │
-        ┌──────────────┼──────────────┐
-        ▼                             ▼
- Authentication                Product Module
-        │                             │
-        ▼                             ▼
- ASP.NET Identity              CQRS + MediatR
-        │                             │
-        └──────────────┬──────────────┘
-                       ▼
-                  Entity Framework
-                       ▼
-                  PostgreSQL
-```
+
+The backend follows Clean Architecture:
+
+* `InventoryManagement.API` owns controllers, middleware, authentication,
+  authorization policy registration, Swagger, CORS, rate limiting, and startup.
+* `InventoryManagement.Application` owns CQRS requests, handlers, validators,
+  DTOs, policy constants, and service abstractions.
+* `InventoryManagement.Domain` owns entities and enums.
+* `InventoryManagement.Infrastructure` owns EF Core, migrations, repositories,
+  Identity, document numbering, company membership, default company data, and
+  subscription-limit services.
+* `InventoryManagement.Tests` contains unit and integration tests.
+* `inventory-web` contains the React/TypeScript/Vite frontend.
+
+Users can belong to multiple companies through `CompanyUser`. Business data,
+document sequences, profile data, reports, and subscription-limited actions are
+enforced on the backend; frontend route hiding is not relied on for security.
 
 ---
 
@@ -183,18 +176,26 @@ Paged endpoints use `pageNumber` and `pageSize`.
 
 | Technology            | Description                   |
 | --------------------- | ----------------------------- |
-| ASP.NET Core 8        | Web API Framework             |
-| C#                    | Programming Language          |
-| Entity Framework Core | ORM                           |
+| ASP.NET Core 8        | Web API framework             |
+| C#                    | Backend language              |
+| React                 | Frontend UI library           |
+| TypeScript            | Frontend language             |
+| Vite                  | Frontend build tool           |
+| pdfmake               | Browser PDF generation        |
+| Entity Framework Core | ORM and migrations            |
+| Npgsql                | PostgreSQL EF Core provider   |
 | PostgreSQL            | Database                      |
-| MediatR               | CQRS                          |
-| ASP.NET Identity      | User Management               |
+| MediatR               | CQRS request handling         |
+| FluentValidation      | Request validation            |
+| ASP.NET Identity      | User management               |
 | JWT                   | Authentication                |
-| FluentValidation      | Request Validation            |
-| Serilog               | Structured Logging            |
+| Serilog               | Structured logging            |
+| ASP.NET Rate Limiting | API rate limiting             |
+| Swagger / OpenAPI     | API documentation             |
 | Docker                | Containerization              |
-| Docker Compose        | Local Development Environment |
-| xUnit                 | Unit Testing                  |
+| Docker Compose        | Local orchestration           |
+| xUnit                 | Unit and integration testing  |
+| FluentAssertions      | Test assertions               |
 | Moq                   | Mocking Framework             |
 
 ---
@@ -203,31 +204,22 @@ Paged endpoints use `pageNumber` and `pageSize`.
 
 ```
 InventoryManagement.API
+    Controllers, middleware, startup, auth policies, Swagger, CORS, rate limits
 
 InventoryManagement.Application
-    Features
-        Auth
-        Categories
-        Customers
-        CustomerReturns
-        DeliveryChallans
-        InventoryReports
-        Payments
-        Products
-        Purchases
-        SalesInvoices
-        StockMovements
-        Suppliers
-        SupplierReturns
+    Features, handlers, validators, DTOs, persistence interfaces, service abstractions
 
 InventoryManagement.Domain
-    Entities and Enums
+    Entities and enums
 
 InventoryManagement.Infrastructure
-    Persistence, Repositories, Identity, and Services
+    EF Core DbContext, migrations, repositories, Identity, services
 
 InventoryManagement.Tests
-    Unit and Integration Tests
+    Unit and integration tests
+
+inventory-web
+    React, TypeScript, and Vite frontend
 ```
 
 ---
@@ -239,6 +231,40 @@ InventoryManagement.Tests
 ```
 git clone <repository-url>
 cd InventoryManagement
+```
+
+### Run without Docker
+
+Run PostgreSQL locally and make sure the `DefaultConnection` in
+`InventoryManagement.API/appsettings.Development.json` points to that database.
+The default development launch profile uses `http://localhost:5050`; the HTTPS
+profile also serves `https://localhost:7175`.
+
+Apply migrations when setting up a fresh local database:
+
+```powershell
+dotnet ef database update --project InventoryManagement.Infrastructure --startup-project InventoryManagement.API
+```
+
+Start the backend API from the repository root:
+
+```powershell
+dotnet run --project InventoryManagement.API
+```
+
+Start the frontend from the `inventory-web` folder, not the repository root:
+
+```powershell
+cd inventory-web
+npm install
+npm run dev
+```
+
+For local frontend requests, set `VITE_API_BASE_URL` in
+`inventory-web/.env.local` to the backend URL, for example:
+
+```powershell
+VITE_API_BASE_URL=http://localhost:5050
 ```
 
 ### Run with Docker
@@ -399,82 +425,46 @@ The application automatically:
 
 ## Authentication Flow
 
-```
+```text
 Register
-    │
-    ▼
+  -> User account, default company, Owner membership, Free subscription
 Login
-    │
-    ▼
-JWT Access Token
-    │
-    ▼
-API Requests
-    │
-    ▼
-Access Token Expires
-    │
-    ▼
-Refresh Token
-    │
-    ▼
-New Access Token
+  -> JWT access token and refresh token
+Frontend bootstrap
+  -> GET /api/Users/me
+  -> Select active company
+Company-scoped API requests
+  -> Bearer token + X-Company-Id
+Access token expires
+  -> Refresh token rotation
+  -> New access token
 ```
-
----
-
-## Implemented Features
-
-* ✅ Clean Architecture
-* ✅ Vertical Slice Architecture
-* ✅ CQRS + MediatR
-* ✅ Repository Pattern
-* ✅ ASP.NET Identity
-* ✅ JWT Authentication
-* ✅ Refresh Token Rotation
-* ✅ Policy-based Authorization
-* ✅ FluentValidation
-* ✅ Global Exception Middleware
-* ✅ Serilog Logging
-* ✅ PostgreSQL
-* ✅ Docker
-* ✅ Docker Compose
-* ✅ Automatic EF Core Migrations
-* ✅ Product, category, supplier, and customer management
-* ✅ Stock ledger and manual corrections
-* ✅ Purchase, challan, invoice, payment, and return workflows
-* ✅ Inventory and gross profit reports
-* ✅ Pagination, searching, and filtering
-* ✅ Integration tests
 
 ---
 
 ## Roadmap
 
-### Completed
+### Current Baseline
 
-* Clean Architecture
-* Vertical Slice Architecture
-* CQRS
-* JWT Authentication
-* Refresh Tokens
-* Serilog
-* Docker
-* Docker Compose
-* Inventory document workflows
-* Payments and returns
-* Inventory reporting
-* Pagination, searching, and filtering
-* Integration tests
+* Clean Architecture and vertical feature slices
+* React/Vite frontend with authenticated app shell and company switcher
+* ASP.NET Identity, JWT authentication, and refresh token rotation
+* Company-scoped roles: Owner, Admin, Manager, Staff, Viewer
+* Company invitations, member management, and per-company profile
+* Company-isolated master data, transactions, reports, ledgers, and document sequences
+* User-owned Free subscription plan with limit-enforcement hooks
+* PostgreSQL, Docker, Docker Compose, health checks, rate limiting, and structured logging
+* Backend integration tests for core workflows and tenant isolation
 
-### Planned
+### Possible Next Work
 
-* GitHub Actions CI/CD
-* Response Caching
-* API Versioning
-* OpenTelemetry
-* Redis Caching
-* SQL Server Support
+* Payment provider integration, checkout, billing portal, and webhooks
+* Paid plan management and pricing/upgrade UI
+* Email delivery for invitation links
+* Ownership and billing-owner transfer workflows
+* Per-company tax defaults and document settings
+* OpenTelemetry and deeper production observability
+* Response caching, API versioning, and CI/CD hardening
 
 ---
 
@@ -482,14 +472,13 @@ New Access Token
 
 This project is designed to demonstrate practical experience with:
 
-* Backend Architecture
-* Authentication & Authorization
-* API Design
-* Dependency Injection
-* Validation Pipelines
-* Logging & Monitoring
-* Containerization
-* Modern .NET Development Practices
+* Full-stack application architecture
+* Multi-company authorization and tenant isolation
+* API design with stable public contracts
+* CQRS, validation pipelines, and repository-backed persistence
+* Inventory, stock, payment, return, and reporting workflows
+* SaaS-ready subscription modeling without payment-provider coupling
+* Production-minded configuration, logging, health checks, and containerization
 
 ---
 

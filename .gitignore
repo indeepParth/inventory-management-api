@@ -49,3 +49,6 @@ docker-data/
 
 # Temporary
 *.tmp
+
+#personal
+_MyTask

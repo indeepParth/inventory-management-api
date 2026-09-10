@@ -46,7 +46,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DocumentNumbers
         [Fact]
         public async Task Create_Flows_Should_Generate_Calendar_Year_Document_Numbers()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
 
             var firstPurchase = await CreatePurchaseAsync(

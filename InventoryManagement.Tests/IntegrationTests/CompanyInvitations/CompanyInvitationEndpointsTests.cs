@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Application.Authorization;
+using InventoryManagement.Application.DTOs.User;
 using InventoryManagement.Application.Features.Auth.Login;
 using InventoryManagement.Application.Features.Auth.Register;
 using InventoryManagement.Domain.Entities;
@@ -252,7 +253,19 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyInvitations
                 .ReadFromJsonAsync<RegisterResponse>();
             register.Should().NotBeNull();
 
-            await AuthenticateAsAsync(userName, password, register!.CompanyId);
+            await AuthenticateAsAsync(userName, password);
+
+            var companyName = $"{userName}'s Company";
+            var companyResponse = await Client.PostAsJsonAsync(
+                "/api/companies",
+                new { Name = companyName });
+            companyResponse.EnsureSuccessStatusCode();
+
+            var company = await companyResponse.Content.ReadFromJsonAsync<UserCompanyDto>();
+            company.Should().NotBeNull();
+
+            Client.DefaultRequestHeaders.Remove("X-Company-Id");
+            Client.DefaultRequestHeaders.Add("X-Company-Id", company!.Id.ToString());
 
             using var scope = _factory.Services.CreateScope();
             var userManager = scope.ServiceProvider
@@ -265,7 +278,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyInvitations
                 userName,
                 $"{userName}@example.com",
                 password,
-                register.CompanyId);
+                company.Id);
         }
 
         private async Task<TestUser> CreateUserAsync(

@@ -6,6 +6,7 @@ using System.Net.Http.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using InventoryManagement.Application.Authorization;
+using InventoryManagement.Application.DTOs.User;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Identity;
 using InventoryManagement.Infrastructure.Persistence;
@@ -62,10 +63,28 @@ namespace InventoryManagement.Tests.IntegrationTests.Common
             Client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", login!.AccessToken);
             Client.DefaultRequestHeaders.Remove("X-Company-Id");
-            Client.DefaultRequestHeaders.Add(
-                "X-Company-Id",
-                register!.CompanyId.ToString());
-            ActiveCompanyId = register.CompanyId;
+            ActiveCompanyId = 0;
+        }
+
+        protected async Task<int> AuthenticateAndCreateCompanyAsync(
+            string? companyName = null)
+        {
+            await AuthenticateAsync();
+
+            var unique = Guid.NewGuid().ToString("N");
+            var response = await Client.PostAsJsonAsync(
+                "/api/companies",
+                new
+                {
+                    Name = companyName ?? $"Test Company {unique}"
+                });
+            response.EnsureSuccessStatusCode();
+
+            var company = await response.Content.ReadFromJsonAsync<UserCompanyDto>();
+            company.Should().NotBeNull();
+
+            SetActiveCompanyId(company!.Id);
+            return company.Id;
         }
 
         protected async Task<int> GetUnitIdAsync(string name = "Piece")

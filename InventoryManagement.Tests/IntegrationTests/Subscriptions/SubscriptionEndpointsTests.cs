@@ -30,7 +30,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Subscriptions
         [Fact]
         public async Task Current_Should_Return_Free_Plan_And_Usage()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.GetAsync("/api/subscription/current");
 
@@ -53,9 +53,29 @@ namespace InventoryManagement.Tests.IntegrationTests.Subscriptions
         }
 
         [Fact]
-        public async Task CreateCompany_Should_Block_Second_Owned_Company_On_Free_Plan()
+        public async Task Current_Should_Return_Free_Plan_And_Zero_Owned_Companies_Before_First_Company()
         {
             await AuthenticateAsync();
+
+            var response = await Client.GetAsync("/api/subscription/current");
+
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            var subscription = await response.Content
+                .ReadFromJsonAsync<CurrentSubscriptionDto>();
+            subscription.Should().NotBeNull();
+            subscription!.Status.Should().Be(SubscriptionStatuses.Active);
+            subscription.Plan.Code.Should().Be(SubscriptionPlans.Free);
+            subscription.Usage.OwnedCompanies.Should().Be(0);
+            subscription.Usage.CompanyUsers.Should().BeNull();
+            subscription.Usage.Products.Should().BeNull();
+            subscription.Usage.Customers.Should().BeNull();
+            subscription.Usage.InvoicesThisMonth.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task CreateCompany_Should_Block_Second_Owned_Company_On_Free_Plan()
+        {
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.PostAsJsonAsync(
                 "/api/companies",
@@ -72,7 +92,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Subscriptions
         [Fact]
         public async Task Invite_Should_Block_When_Free_Company_Has_Three_Reserved_Users()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             await AddDirectCompanyMemberAsync(ActiveCompanyId);
             await AddDirectCompanyMemberAsync(ActiveCompanyId);
 
@@ -92,7 +112,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Subscriptions
         [Fact]
         public async Task Product_Customer_And_Invoice_Creation_Should_Respect_Limits()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             await SetActiveCompanyBillingPlanLimitsAsync(maxProducts: 0);
             var productResponse = await Client.PostAsJsonAsync(
@@ -141,7 +161,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Subscriptions
         [Fact]
         public async Task Invited_New_User_Should_Get_Free_Subscription_But_Not_Own_Company()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var invitedEmail = $"sub_invited_{Guid.NewGuid():N}@example.com";
             var inviteResponse = await Client.PostAsJsonAsync(
                 "/api/company-invitations",

@@ -22,7 +22,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Statements
         [Fact]
         public async Task Customer_Statement_Should_Calculate_Opening_Running_And_Summary_Balances()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var customerId = await SeedCustomerStatementAsync();
 
             var firstResponse = await Client.GetAsync(
@@ -57,7 +57,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Statements
         [Fact]
         public async Task Supplier_Statement_Should_Calculate_Equivalent_Purchase_Ledger()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var supplierId = await SeedSupplierStatementAsync();
 
             var response = await Client.GetAsync(
@@ -84,7 +84,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Statements
         [Fact]
         public async Task Statement_Should_Return_Structured_Validation_For_Invalid_Range()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.GetAsync(
                 "/api/customers/1/statement" +

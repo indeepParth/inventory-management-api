@@ -22,7 +22,7 @@ public class ProductUnitConversionEndpointsTests : TestBase
     [Fact]
     public async Task CreateConversion_Should_Create_BaseUnitConversion()
     {
-        await AuthenticateAsync();
+        await AuthenticateAndCreateCompanyAsync();
         var product = await CreateProductAsync(baseUnitId: 4);
         await CreateConversionAsync(product.Id, unitId: 4, factor: 1m);
 
@@ -39,7 +39,7 @@ public class ProductUnitConversionEndpointsTests : TestBase
     [Fact]
     public async Task CreateConversion_Should_Block_Duplicate_ProductUnit()
     {
-        await AuthenticateAsync();
+        await AuthenticateAndCreateCompanyAsync();
         var product = await CreateProductAsync(baseUnitId: 4);
 
         var command = new CreateConversionCommand
@@ -62,7 +62,7 @@ public class ProductUnitConversionEndpointsTests : TestBase
     [Fact]
     public async Task UpdateAndDeactivate_Should_Work_For_NonBaseConversion()
     {
-        await AuthenticateAsync();
+        await AuthenticateAndCreateCompanyAsync();
         var product = await CreateProductAsync(baseUnitId: 4);
         var conversion = await CreateConversionAsync(product.Id, unitId: 1, factor: 4m);
 
@@ -91,7 +91,7 @@ public class ProductUnitConversionEndpointsTests : TestBase
     [Fact]
     public async Task BaseConversion_Should_Not_Allow_NonOneFactor_Or_Deactivation()
     {
-        await AuthenticateAsync();
+        await AuthenticateAndCreateCompanyAsync();
         var product = await CreateProductAsync(baseUnitId: 4);
         await CreateConversionAsync(product.Id, unitId: 4, factor: 1m);
         var baseConversion = (await GetConversionsAsync(product.Id))

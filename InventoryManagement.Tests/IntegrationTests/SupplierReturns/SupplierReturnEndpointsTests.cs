@@ -30,7 +30,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SupplierReturns
         [Fact]
         public async Task Post_And_Cancel_Should_Reverse_Stock_Payable_And_Value()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedAsync();
             var purchase = await CreateAndPostPurchaseAsync(seed);
             var supplierReturn = await CreateReturnAsync(purchase, 2);
@@ -105,7 +105,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SupplierReturns
         [Fact]
         public async Task Post_Should_Reject_Quantity_Already_Returned()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedAsync();
             var purchase = await CreateAndPostPurchaseAsync(seed);
             var first = await CreateReturnAsync(purchase, 3);
@@ -127,7 +127,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SupplierReturns
         [Fact]
         public async Task Post_Should_Reject_Insufficient_Available_Stock()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedAsync();
             var purchase = await CreateAndPostPurchaseAsync(seed);
             var supplierReturn = await CreateReturnAsync(purchase, 2);
@@ -153,7 +153,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SupplierReturns
         [Fact]
         public async Task Create_Should_Reject_NonPosted_Purchase()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedAsync();
             var purchase = await CreatePurchaseAsync(seed);
 

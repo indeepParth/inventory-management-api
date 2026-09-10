@@ -24,7 +24,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
         [Fact]
         public async Task Create_And_Post_Should_Store_Entered_Unit_And_Post_Base_Quantity()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedProductWithConversionAsync();
 
             var createResponse = await Client.PostAsJsonAsync(
@@ -85,7 +85,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
         [Fact]
         public async Task Create_Should_Reject_Unit_Without_Active_Product_Conversion()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedProductWithConversionAsync();
             var invalidUnitId = await GetUnitIdAsync("Kilogram");
 
@@ -117,7 +117,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
         public async Task MarkDeliveryChargePaid_Should_Persist_For_Allowed_Statuses(
             DeliveryChallanStatus status)
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var challanId = await SeedChallanAsync(status, deliveryCharge: 80);
 
             var response = await Client.PostAsync(
@@ -146,7 +146,7 @@ namespace InventoryManagement.Tests.IntegrationTests.DeliveryChallans
             DeliveryChallanStatus status,
             decimal deliveryCharge)
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var challanId = await SeedChallanAsync(status, deliveryCharge);
 
             var response = await Client.PostAsync(

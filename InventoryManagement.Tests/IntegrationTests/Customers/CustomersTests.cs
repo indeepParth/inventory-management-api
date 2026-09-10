@@ -30,7 +30,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
         [Fact]
         public async Task Create_Then_Get_Should_Return_Customer()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var command = ValidCommand();
 
             var createResponse = await Client.PostAsJsonAsync("/api/customers", command);
@@ -59,7 +59,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
         [Fact]
         public async Task Create_Should_Reject_Case_Insensitive_Duplicate_Name()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var name = $"Customer {Guid.NewGuid():N}";
             var first = ValidCommand();
             first.Name = name;
@@ -77,7 +77,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
         [Fact]
         public async Task Create_Should_Reject_Duplicate_Or_Invalid_Gstin()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var gstNumber = "27AAPFU0939F1ZV";
             var first = ValidCommand();
             first.Name = $"First {Guid.NewGuid():N}";
@@ -101,7 +101,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
         [Fact]
         public async Task GetCustomers_Should_Page_Search_And_Filter()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var matching = ValidCommand();
             matching.Name = $"Search target {Guid.NewGuid():N}";
             matching.Phone = "5550001234";
@@ -128,7 +128,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
         [Fact]
         public async Task Update_Should_Edit_Customer_And_Preserve_CreatedAtUtc()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var createResponse = await Client.PostAsJsonAsync("/api/customers", ValidCommand());
             var created = await createResponse.Content.ReadFromJsonAsync<CustomerResponse>();
             created.Should().NotBeNull();
@@ -160,7 +160,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
         [Fact]
         public async Task Update_Should_Reject_Duplicate_Name_And_Gstin()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var first = await CreateCustomerAsync();
             var second = await CreateCustomerAsync();
 
@@ -176,7 +176,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Customers
         [Fact]
         public async Task Deactivate_Should_Be_Idempotent_And_Keep_Customer_Queryable()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var customer = await CreateCustomerAsync();
 
             var firstResponse = await Client.PatchAsync(

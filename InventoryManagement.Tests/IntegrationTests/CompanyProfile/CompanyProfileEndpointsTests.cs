@@ -29,7 +29,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         [Fact]
         public async Task Get_Should_Return_Empty_Profile_When_Not_Configured()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var profile = await Client.GetFromJsonAsync<CompanyProfileResponse>(
                 "/api/company-profile");
@@ -43,7 +43,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         [Fact]
         public async Task Put_Should_Upsert_And_Get_Should_Return_Profile()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var request = new
             {
@@ -78,7 +78,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         [Fact]
         public async Task Put_Should_Return_Validation_Error_For_Missing_Company_Name()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.PutAsJsonAsync(
                 "/api/company-profile",
@@ -98,7 +98,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         [Fact]
         public async Task Owner_And_Admin_Should_Access_Company_Profile()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var ownerGetResponse = await Client.GetAsync("/api/company-profile");
             ownerGetResponse.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -135,7 +135,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         [Fact]
         public async Task Missing_Or_Invalid_Company_Header_Should_Be_Forbidden()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             Client.DefaultRequestHeaders.Remove("X-Company-Id");
 
@@ -160,7 +160,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         [Fact]
         public async Task Non_Member_Should_Not_Access_Company_Profile()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var otherCompanyId = await CreateCompanyWithoutMembershipAsync();
 
             SetActiveCompanyId(otherCompanyId);
@@ -177,7 +177,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         [Fact]
         public async Task Profile_Should_Be_Isolated_By_Active_Company()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var firstCompanyId = ActiveCompanyId;
 
@@ -244,7 +244,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CompanyProfile
         [Fact]
         public async Task Put_Should_Update_Only_Active_Company_Profile()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var firstCompanyId = ActiveCompanyId;
             var secondCompanyId = await CreateOwnedCompanyAsync("Second Company");

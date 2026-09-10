@@ -2,10 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
 using InventoryManagement.Application.Common.Exceptions;
 using InventoryManagement.Application.Common.Identity;
-using InventoryManagement.Application.Common.Persistence;
 using MediatR;
 
 namespace InventoryManagement.Application.Features.Auth.Register
@@ -21,7 +19,7 @@ namespace InventoryManagement.Application.Features.Auth.Register
         
         public async Task<Response> Handle(Command request, CancellationToken cancellationToken)
         {
-            var result = await _registrationService.RegisterOwnerAsync(
+            var result = await _registrationService.RegisterAsync(
                 request.UserName,
                 request.Email,
                 request.Password,
@@ -35,8 +33,7 @@ namespace InventoryManagement.Application.Features.Auth.Register
             return new Response
             {
                 UserName = request.UserName,
-                Email = request.Email,
-                CompanyId = result.CompanyId!.Value
+                Email = request.Email
             };
         }
     }

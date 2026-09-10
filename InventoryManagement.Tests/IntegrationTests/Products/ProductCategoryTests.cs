@@ -19,7 +19,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
         [Fact]
         public async Task CreateProduct_Should_Require_CategoryId()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.PostAsJsonAsync("/api/products", new CreateProductCommand
             {
@@ -35,7 +35,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
         [Fact]
         public async Task CreateProduct_Should_Reject_Invalid_CategoryId()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.PostAsJsonAsync("/api/products", new CreateProductCommand
             {
@@ -52,7 +52,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
         [Fact]
         public async Task CreateProduct_Should_Reject_Invalid_BaseUnitId()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var category = await CreateCategoryAsync();
 
             var response = await Client.PostAsJsonAsync("/api/products", new CreateProductCommand
@@ -70,7 +70,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
         [Fact]
         public async Task UpdateProduct_Should_Reject_Invalid_CategoryId()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var category = await CreateCategoryAsync();
             var unitId = await GetUnitIdAsync();
 

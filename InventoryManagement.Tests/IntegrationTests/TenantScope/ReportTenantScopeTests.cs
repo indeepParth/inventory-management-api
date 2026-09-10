@@ -36,7 +36,7 @@ namespace InventoryManagement.Tests.IntegrationTests.TenantScope
         [Fact]
         public async Task Reports_Ledgers_And_Dashboard_Source_Apis_Should_Use_Active_Company()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var companyAId = ActiveCompanyId;
             var companyA = await SeedReportDataAsync("A");
@@ -147,7 +147,7 @@ namespace InventoryManagement.Tests.IntegrationTests.TenantScope
         [InlineData("/api/drivers/1/deliveries")]
         public async Task Report_Endpoints_Should_Require_Company_Context(string path)
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             Client.DefaultRequestHeaders.Remove("X-Company-Id");
 
             var response = await Client.GetAsync(path);

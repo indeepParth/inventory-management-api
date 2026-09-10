@@ -31,7 +31,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
         [Fact]
         public async Task Get_Should_Filter_Page_And_Sort_Newest_First()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var now = new DateTime(2026, 6, 30, 8, 0, 0, DateTimeKind.Utc);
             var baseUnitId = await GetUnitIdAsync("Piece");
             int productId;

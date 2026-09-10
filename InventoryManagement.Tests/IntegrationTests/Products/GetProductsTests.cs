@@ -18,7 +18,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Products
         [Fact]
         public async Task GetProducts_Should_Return_Pagination_Metadata()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var category = await CreateCategoryAsync();
             var unitId = await GetUnitIdAsync();
 

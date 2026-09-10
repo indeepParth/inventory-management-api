@@ -24,7 +24,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
         [Fact]
         public async Task GetDeliveries_Should_Return_Only_Posted_And_Invoiced_By_Default()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDriverDeliveriesAsync();
 
             var response = await Client.GetAsync($"/api/drivers/{seed.DriverId}/deliveries");
@@ -59,7 +59,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
         [Fact]
         public async Task GetDeliveries_Should_Filter_By_Date_Range()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDriverDeliveriesAsync();
 
             var response = await Client.GetAsync(
@@ -81,7 +81,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
             string paymentStatus,
             bool isPaid)
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDriverDeliveriesAsync();
 
             var response = await Client.GetAsync(
@@ -99,7 +99,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Drivers
         [Fact]
         public async Task MarkPaid_Should_Work_For_Labor_Only_Invoice()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDriverDeliveriesAsync();
 
             var markResponse = await Client.PostAsync(

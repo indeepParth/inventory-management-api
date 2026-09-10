@@ -44,7 +44,7 @@ namespace InventoryManagement.Tests.IntegrationTests.TenantScope
         [Fact]
         public async Task Active_Company_Should_Not_Read_Or_Mutate_Other_Company_Master_Data()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var companyAId = ActiveCompanyId;
             var companyA = await SeedMasterDataAsync("A");
@@ -86,7 +86,7 @@ namespace InventoryManagement.Tests.IntegrationTests.TenantScope
         [Fact]
         public async Task Transaction_Create_Should_Reject_Cross_Company_Master_References()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var companyA = await SeedMasterDataAsync("A");
             await CreateAndSelectCompanyAsync();
@@ -177,7 +177,7 @@ namespace InventoryManagement.Tests.IntegrationTests.TenantScope
         [Fact]
         public async Task Active_Company_Should_Not_Mutate_Other_Company_Transactions()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var companyAId = ActiveCompanyId;
             await SeedMasterDataAsync("A");
@@ -210,7 +210,7 @@ namespace InventoryManagement.Tests.IntegrationTests.TenantScope
         [Fact]
         public async Task Active_Company_Profile_And_Members_Should_Not_Expose_Other_Company_Data()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var companyAId = ActiveCompanyId;
             await UpsertCompanyProfileAsync("Company A profile");

@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Application.Authorization;
+using InventoryManagement.Application.DTOs.User;
 using InventoryManagement.Domain.Entities;
 using InventoryManagement.Infrastructure.Identity;
 using InventoryManagement.Infrastructure.Persistence;
@@ -29,8 +30,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Companies
         [Fact]
         public async Task CreateCompany_Should_Add_Current_User_As_Owner()
         {
-            var user = await RegisterAndAuthenticateAsync();
-            await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
+            var user = await RegisterAndAuthenticateWithoutCompanyAsync();
             var companyName = $"Second company {Guid.NewGuid():N}";
 
             var response = await Client.PostAsJsonAsync(
@@ -180,7 +180,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Companies
             await act.Should().ThrowAsync<DbUpdateException>();
         }
 
-        private async Task<TestUser> RegisterAndAuthenticateAsync()
+        private async Task<TestUser> RegisterAndAuthenticateWithoutCompanyAsync()
         {
             var unique = Guid.NewGuid().ToString("N");
             var userName = $"company_{unique}";
@@ -201,8 +201,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Companies
                 .ReadFromJsonAsync<RegisterResponse>();
             register.Should().NotBeNull();
 
-            await AuthenticateAsAsync(userName, password, register!.CompanyId);
-            SetActiveCompanyId(register.CompanyId);
+            await AuthenticateAsAsync(userName, password);
 
             using var scope = _factory.Services.CreateScope();
             var userManager = scope.ServiceProvider
@@ -214,8 +213,30 @@ namespace InventoryManagement.Tests.IntegrationTests.Companies
                 user!.Id,
                 userName,
                 password,
-                register.CompanyId,
-                $"{userName}'s Company");
+                0,
+                string.Empty);
+        }
+
+        private async Task<TestUser> RegisterAndAuthenticateAsync()
+        {
+            var user = await RegisterAndAuthenticateWithoutCompanyAsync();
+            var companyName = $"{user.UserName}'s Company";
+
+            var response = await Client.PostAsJsonAsync(
+                "/api/companies",
+                new { Name = companyName });
+            response.EnsureSuccessStatusCode();
+
+            var company = await response.Content.ReadFromJsonAsync<UserCompanyDto>();
+            company.Should().NotBeNull();
+
+            SetActiveCompanyId(company!.Id);
+
+            return user with
+            {
+                CompanyId = company.Id,
+                CompanyName = companyName
+            };
         }
 
         private async Task<TestUser> CreateUserWithCompanyAsync(string role)
@@ -321,6 +342,14 @@ namespace InventoryManagement.Tests.IntegrationTests.Companies
             string password,
             int companyId)
         {
+            await AuthenticateAsAsync(userName, password);
+            Client.DefaultRequestHeaders.Add("X-Company-Id", companyId.ToString());
+        }
+
+        private async Task AuthenticateAsAsync(
+            string userName,
+            string password)
+        {
             var response = await Client.PostAsJsonAsync(
                 "/api/auth/login",
                 new LoginCommand
@@ -337,7 +366,6 @@ namespace InventoryManagement.Tests.IntegrationTests.Companies
             Client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", login!.AccessToken);
             Client.DefaultRequestHeaders.Remove("X-Company-Id");
-            Client.DefaultRequestHeaders.Add("X-Company-Id", companyId.ToString());
         }
 
         private sealed record CompanySummary(int Id, string Name, string Role);

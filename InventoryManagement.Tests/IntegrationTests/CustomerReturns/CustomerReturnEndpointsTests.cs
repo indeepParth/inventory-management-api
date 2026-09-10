@@ -30,7 +30,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
         [Fact]
         public async Task Post_And_Cancel_Should_Reverse_Stock_Account_And_History()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedAsync();
             var invoice = await CreateAndPostInvoiceAsync(seed);
 
@@ -122,7 +122,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
         [Fact]
         public async Task Post_Should_Reject_Quantity_Already_Returned()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedAsync();
             var invoice = await CreateAndPostInvoiceAsync(seed);
             var first = await CreateReturnAsync(invoice, 2);
@@ -144,7 +144,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
         [Fact]
         public async Task Create_Should_Reject_NonPosted_Invoice_And_Wrong_Item()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedAsync();
             var invoice = await CreateInvoiceAsync(seed);
 
@@ -204,7 +204,7 @@ namespace InventoryManagement.Tests.IntegrationTests.CustomerReturns
         [Fact]
         public async Task Post_Paid_Invoice_Return_Should_Create_Customer_Credit()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedAsync();
             var invoice = await CreateAndPostInvoiceAsync(seed);
             using (var scope = _factory.Services.CreateScope())

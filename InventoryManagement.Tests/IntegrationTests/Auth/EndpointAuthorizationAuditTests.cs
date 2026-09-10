@@ -31,7 +31,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         public async Task Company_Scoped_Get_Endpoints_Should_Require_Active_Company(
             string path)
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             Client.DefaultRequestHeaders.Remove("X-Company-Id");
 
             var response = await Client.GetAsync(path);

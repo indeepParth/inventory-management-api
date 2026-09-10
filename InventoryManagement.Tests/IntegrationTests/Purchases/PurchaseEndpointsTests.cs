@@ -27,7 +27,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
         [Fact]
         public async Task Create_Then_Get_Should_Return_Server_Totals_Without_Changing_Stock()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPurchaseDependenciesAsync();
 
             var command = new Command
@@ -89,7 +89,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
         [Fact]
         public async Task Create_Should_Return_Validation_Errors_For_Empty_Items()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.PostAsJsonAsync("/api/purchases", new Command
             {
@@ -106,7 +106,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
         [Fact]
         public async Task List_Should_Page_And_Apply_All_Filters()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPurchaseDependenciesAsync();
             var matchingNumber = $"MATCH-{Guid.NewGuid():N}";
             var matchingBill = $"FILTER-{Guid.NewGuid():N}";
@@ -144,7 +144,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
         [Fact]
         public async Task Update_Draft_Should_Replace_Lines_Without_Changing_Stock()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPurchaseDependenciesAsync();
             var created = await CreatePurchaseAsync(
                 seed,
@@ -202,7 +202,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
         [Fact]
         public async Task Post_Should_Apply_Multiple_And_Repeated_Items_Only_Once()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var first = await SeedPurchaseDependenciesAsync();
             var second = await SeedAdditionalProductAsync(4, 10);
             var createResponse = await Client.PostAsJsonAsync("/api/purchases", new Command
@@ -290,7 +290,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
         [Fact]
         public async Task Post_Should_Roll_Back_All_Changes_When_A_Ledger_Insert_Fails()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var first = await SeedPurchaseDependenciesAsync();
             var second = await SeedAdditionalProductAsync(7, 11);
             var createResponse = await Client.PostAsJsonAsync("/api/purchases", new Command
@@ -384,7 +384,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
         [Fact]
         public async Task Cancel_Draft_Should_Not_Change_Stock_And_Should_Be_Idempotent()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPurchaseDependenciesAsync();
             var purchase = await CreatePurchaseAsync(
                 seed,
@@ -427,7 +427,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
         [Fact]
         public async Task Cancel_Posted_Should_Restore_Stock_And_Preserve_Original_Movement()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPurchaseDependenciesAsync();
             var createResponse = await Client.PostAsJsonAsync("/api/purchases", new Command
             {
@@ -484,7 +484,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Purchases
         [Fact]
         public async Task Cancel_Posted_Should_Reject_Insufficient_Remaining_Stock()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPurchaseDependenciesAsync();
             var createResponse = await Client.PostAsJsonAsync("/api/purchases", new Command
             {

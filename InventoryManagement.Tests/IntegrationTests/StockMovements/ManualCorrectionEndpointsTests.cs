@@ -45,7 +45,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
         [Fact]
         public async Task Damage_Should_Record_Negative_Movement_At_Average_Cost()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var productId = await SeedProductAsync(10, 25);
 
             var response = await Client.PostAsJsonAsync(
@@ -86,7 +86,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
             decimal quantityChange,
             decimal expectedStock)
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var productId = await SeedProductAsync(10, 18);
 
             var response = await Client.PostAsJsonAsync(
@@ -110,7 +110,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
         [Fact]
         public async Task Correction_Should_Reject_Missing_Reason_And_Negative_Stock()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var productId = await SeedProductAsync(2, 10);
             var missingReason = await Client.PostAsJsonAsync(
                 "/api/stock-movements/damage",
@@ -149,7 +149,7 @@ namespace InventoryManagement.Tests.IntegrationTests.StockMovements
         [Fact]
         public async Task Reverse_Should_Append_Compensating_Movement_Only_Once()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var productId = await SeedProductAsync(10, 25);
             var damageResponse = await Client.PostAsJsonAsync(
                 "/api/stock-movements/damage",

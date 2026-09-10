@@ -23,7 +23,7 @@ namespace InventoryManagement.Tests.IntegrationTests.TenantScope
         [Fact]
         public async Task Master_Data_Should_Be_Isolated_By_Active_Company()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             await SetActiveCompanyBillingPlanLimitsAsync(maxCompanies: 2);
             var firstCompanyId = ActiveCompanyId;
             var first = await SeedMasterDataAsync("Shared master", "27ABCDE1234F1Z5");

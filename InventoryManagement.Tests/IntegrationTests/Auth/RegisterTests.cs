@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
 using InventoryManagement.Application.Authorization;
+using InventoryManagement.Application.DTOs.User;
 using InventoryManagement.Application.Features.Auth.Register;
 using InventoryManagement.Infrastructure.Identity;
 using InventoryManagement.Infrastructure.Persistence;
@@ -55,7 +56,6 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             result.Should().NotBeNull();
             result.UserName.Should().Be(request.UserName);
             result.Email.Should().Be(request.Email);
-            result.CompanyId.Should().BeGreaterThan(0);
 
             using var scope = _factory.Services.CreateScope();
             var context = scope.ServiceProvider
@@ -65,17 +65,9 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
             var user = await userManager.FindByNameAsync(request.UserName);
             user.Should().NotBeNull();
 
-            var company = await context.Companies.FindAsync(result.CompanyId);
-            company.Should().NotBeNull();
-            company!.Name.Should().Be($"{request.UserName}'s Company");
-            company.BillingOwnerUserId.Should().Be(user!.Id);
-
-            var membership = context.CompanyUsers
-                .SingleOrDefault(x =>
-                    x.CompanyId == result.CompanyId &&
-                    x.UserId == user!.Id);
-            membership.Should().NotBeNull();
-            membership!.Role.Should().Be(CompanyRoles.Owner);
+            context.Companies.Should().BeEmpty();
+            context.CompanyUsers.Should().BeEmpty();
+            context.Units.Should().BeEmpty();
 
             var globalRoles = await userManager.GetRolesAsync(user!);
             globalRoles.Should().BeEmpty();
@@ -94,7 +86,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
         }
 
         [Fact]
-        public async Task Registered_User_Should_Login_And_Receive_Company_Context()
+        public async Task Registered_User_Should_Login_And_Return_Empty_Company_List()
         {
             var unique = Guid.NewGuid().ToString("N");
             var userName = $"test_{unique}";
@@ -134,10 +126,10 @@ namespace InventoryManagement.Tests.IntegrationTests.Auth
 
             meResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-            var body = await meResponse.Content.ReadAsStringAsync();
-            body.Should().Contain(userName);
-            body.Should().Contain($"{userName}'s Company");
-            body.Should().Contain(CompanyRoles.Owner);
+            var me = await meResponse.Content.ReadFromJsonAsync<UserInfoDto>();
+            me.Should().NotBeNull();
+            me!.Username.Should().Be(userName);
+            me.Companies.Should().BeEmpty();
         }
 
         [Fact]

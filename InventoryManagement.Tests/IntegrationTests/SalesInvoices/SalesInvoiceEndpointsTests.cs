@@ -37,7 +37,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Create_Then_Get_Should_Return_Posted_With_Stock_And_Debt_Effects()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             const decimal existingBalance = 40m;
             await SetCustomerBalanceAsync(seed.CustomerId, existingBalance);
@@ -115,7 +115,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Create_With_Driver_Should_Include_Driver_And_Labor_Charges()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             int driverId;
             using (var scope = _factory.Services.CreateScope())
@@ -176,7 +176,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Create_Should_Return_Structured_Validation_For_Empty_Items()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.PostAsJsonAsync(
                 "/api/sales-invoices",
@@ -198,7 +198,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Create_Should_Reject_Duplicate_Invoice_Number()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var invoiceNumber = $"DUPLICATE-{Guid.NewGuid():N}";
             await CreateInvoiceAsync(
@@ -232,7 +232,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task List_Should_Page_And_Apply_All_Filters()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var matching = await CreateInvoiceAsync(
                 seed,
@@ -263,7 +263,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Update_Draft_Should_Recalculate_Totals_And_Reject_Paid_Invoice()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var created = await SeedDraftInvoiceAsync(
                 seed,
@@ -353,7 +353,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Post_Direct_Invoice_Should_Update_Stock_Debt_And_Profit_Data_Once()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var first = await SeedDependenciesAsync();
             var second = await SeedAdditionalProductAsync(8, 11);
             const decimal existingBalance = 25m;
@@ -468,7 +468,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Post_Legacy_Draft_Should_Add_To_Existing_Customer_Balance()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             const decimal existingBalance = 30m;
             await SetCustomerBalanceAsync(seed.CustomerId, existingBalance);
@@ -496,7 +496,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Create_Should_Reject_Aggregate_Insufficient_Stock_Atomically()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var createResponse = await Client.PostAsJsonAsync(
                 "/api/sales-invoices",
@@ -540,7 +540,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Post_Should_Roll_Back_When_A_Movement_Insert_Fails()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             using (var scope = _factory.Services.CreateScope())
             {
@@ -620,7 +620,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Challan_Invoice_Should_Create_Debt_Without_Reducing_Stock_Twice()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var firstChallan = await CreateAndPostChallanAsync(
                 seed, 2, $"DC-A-{Guid.NewGuid():N}", deliveryCharge: 30);
@@ -734,7 +734,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Challan_Invoice_Should_Bill_Entered_Quantity_And_Not_Converted_Base_Quantity()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var baseUnitId = await GetUnitIdAsync("Ton");
             int convertedUnitId;
@@ -846,7 +846,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Challan_Invoice_Should_Apply_Delivery_Charge_Rules()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var secondProduct = await SeedAdditionalProductAsync(8, 11);
             var chargedChallan = await CreateAndPostChallanAsync(
@@ -913,7 +913,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Challan_Invoice_Should_Reject_Different_Customers()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var first = await SeedDependenciesAsync();
             var second = await SeedDependenciesAsync();
             var firstChallan = await CreateAndPostChallanAsync(
@@ -953,7 +953,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Cancel_Draft_Should_Have_No_Stock_Or_Debt_Effects()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var invoice = await SeedDraftInvoiceAsync(
                 seed,
@@ -987,7 +987,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Cancel_Posted_Direct_Should_Restore_Stock_Debt_And_Be_Idempotent()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var invoice = await CreateInvoiceAsync(
                 seed,
@@ -1047,7 +1047,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Cancel_Challan_Invoice_Should_Release_Challan_Without_Stock_Change()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var challan = await CreateAndPostChallanAsync(
                 seed, 2, $"DC-CANCEL-{Guid.NewGuid():N}");
@@ -1122,7 +1122,7 @@ namespace InventoryManagement.Tests.IntegrationTests.SalesInvoices
         [Fact]
         public async Task Cancel_Paid_Invoice_Should_Be_Rejected()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedDependenciesAsync();
             var invoice = await CreateInvoiceAsync(
                 seed,

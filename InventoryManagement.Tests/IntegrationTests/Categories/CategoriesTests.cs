@@ -18,7 +18,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Categories
         [Fact]
         public async Task CreateCategory_Should_Create_Category()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.PostAsJsonAsync("/api/categories", new CreateCategoryCommand
             {
@@ -37,7 +37,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Categories
         [Fact]
         public async Task CreateCategory_Should_Reject_Duplicate_Name()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var name = $"Duplicate {Guid.NewGuid():N}";
 
             var request = new CreateCategoryCommand
@@ -56,7 +56,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Categories
         [Fact]
         public async Task Categories_Should_Support_Get_Update_And_Delete()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var category = await CreateCategoryAsync();
 
             var getResponse = await Client.GetAsync($"/api/categories/{category.Id}");
@@ -77,7 +77,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Categories
         [Fact]
         public async Task DeleteCategory_Should_Be_Blocked_When_Category_Has_Products()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var category = await CreateCategoryAsync();
 
             var productResponse = await Client.PostAsJsonAsync("/api/products", new CreateProductCommand

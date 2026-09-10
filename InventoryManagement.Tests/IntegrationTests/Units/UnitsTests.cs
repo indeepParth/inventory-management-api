@@ -17,7 +17,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Units
         [Fact]
         public async Task GetUnits_Should_Return_Default_Seeded_Units()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.GetAsync("/api/units");
 
@@ -36,7 +36,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Units
         [Fact]
         public async Task CreateUnit_Should_Create_Unit()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.PostAsJsonAsync("/api/units", new CreateUnitCommand
             {
@@ -58,7 +58,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Units
         [Fact]
         public async Task CreateUnit_Should_Reject_Duplicate_Name()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var name = $"Duplicate {Guid.NewGuid():N}";
 
             var request = new CreateUnitCommand
@@ -77,7 +77,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Units
         [Fact]
         public async Task CreateUnit_Should_Validate_Name_And_ShortName()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
 
             var response = await Client.PostAsJsonAsync("/api/units", new CreateUnitCommand
             {
@@ -91,7 +91,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Units
         [Fact]
         public async Task Units_Should_Support_Get_Update_And_Delete()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var unit = await CreateUnitAsync();
 
             var getResponse = await Client.GetAsync($"/api/units/{unit.Id}");

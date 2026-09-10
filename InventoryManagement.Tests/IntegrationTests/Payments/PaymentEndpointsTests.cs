@@ -25,7 +25,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
         [Fact]
         public async Task Create_Should_Atomically_Update_Invoice_And_Customer()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPostedInvoiceAsync(100);
 
             var response = await Client.PostAsJsonAsync("/api/payments", new Command
@@ -63,7 +63,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
         [Fact]
         public async Task Create_Overpayment_Should_Roll_Back_All_Changes()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPostedInvoiceAsync(100);
             var receiptNumber = $"OVER-{Guid.NewGuid():N}";
 
@@ -95,7 +95,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
         [Fact]
         public async Task Reverse_Should_Create_Compensating_Record_And_Restore_Balances()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPostedInvoiceAsync(100);
             var createResponse = await Client.PostAsJsonAsync("/api/payments", new Command
             {
@@ -153,7 +153,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
         [Fact]
         public async Task Get_Should_Return_Filtered_Paginated_Immutable_Ledger()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPostedInvoiceAsync(100);
             var receipt = $"FILTER-{Guid.NewGuid():N}";
             (await Client.PostAsJsonAsync("/api/payments", new Command
@@ -189,7 +189,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
         [Fact]
         public async Task Supplier_Payments_Should_Progress_Purchase_To_Paid_And_Filter()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPostedPurchaseAsync(100);
             var firstNumber = $"SUP-PAY-{Guid.NewGuid():N}";
 
@@ -258,7 +258,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
         [Fact]
         public async Task Supplier_Overpayment_Should_Roll_Back_All_Changes()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPostedPurchaseAsync(100);
             var paymentNumber = $"SUP-OVER-{Guid.NewGuid():N}";
 
@@ -287,7 +287,7 @@ namespace InventoryManagement.Tests.IntegrationTests.Payments
         [Fact]
         public async Task Supplier_Payment_Reversal_Should_Create_Compensating_Record()
         {
-            await AuthenticateAsync();
+            await AuthenticateAndCreateCompanyAsync();
             var seed = await SeedPostedPurchaseAsync(100);
             var createResponse = await Client.PostAsJsonAsync("/api/payments", new Command
             {
